@@ -1,0 +1,25 @@
+{
+  "outputDirectory": "dist",
+  "functions": {
+    "api/ssr.ts": {
+      "includeFiles": "{dist/**,firebase-applet-config.json,firebase.json}"
+    }
+  },
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(favicon\\.ico|robots\\.txt|sitemap\\.xml)",
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/ssr"
+    }
+  ]
+}

@@ -1,0 +1,243 @@
+  const BlogManager = () => {
+    const [posts, setPosts] = useState<BlogPost[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [editingPost, setEditingPost] = useState<Partial<BlogPost> | null>(null);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [aiPrompt, setAiPrompt] = useState('');
+    const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+
+    const handleGenerateBlog = async () => {
+      if (!aiPrompt.trim()) return;
+      setIsGenerating(true);
+      try {
+        const genData = await generateBlogPostData(aiPrompt, commSettings?.geminiApiKey);
+        setEditingPost({
+          ...editingPost,
+          title: genData.title,
+          excerpt: genData.excerpt,
+          content: genData.content,
+          category: genData.category,
+          tags: genData.tags,
+          slug: genData.title
+            .toLowerCase()
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+        });
+        setIsAiModalOpen(false);
+        setAiPrompt('');
+        alert("Success! AI has generated the blog post content.");
+      } catch (err: any) {
+        alert(err.message || "Failed to generate blog post.");
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    useEffect(() => {
+      const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'));
+      let unsubFallback: (() => void) | null = null;
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost)));
+        setLoading(false);
+      }, (error) => {
+        console.error("Posts fetch error:", error);
+        if (unsubFallback) unsubFallback();
+        unsubFallback = onSnapshot(collection(db, 'posts'), (snap) => {
+          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as BlogPost));
+          // Sort in memory (desc)
+          list.sort((a, b) => {
+            const tA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const tB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return tB - tA;
+          });
+          setPosts(list);
+        });
+        setLoading(false);
+      });
+      return () => {
+        unsubscribe();
+        if (unsubFallback) unsubFallback();
+      };
+    }, []);
+
+    const handleSavePost = async (e: FormEvent) => {
+      e.preventDefault();
+      if (!editingPost?.title || !editingPost?.slug) return;
+
+      const postData = {
+        ...editingPost,
+        seo: editingPost.seo || { title: '', description: '' },
+        updatedAt: serverTimestamp(),
+      };
+
+      if (!postData.createdAt) {
+        postData.createdAt = serverTimestamp();
+      }
+
+      try {
+        if (editingPost.id) {
+          await updateDoc(doc(db, 'posts', editingPost.id), postData);
+        } else {
+          await addDoc(collection(db, 'posts'), postData);
+        }
+        setIsModalOpen(false);
+        setEditingPost(null);
+      } catch (err) {
+        console.error("Error saving post:", err);
+      }
+    };
+
+    const handleDeletePost = async (id: string) => {
+      if (confirm("Delete this post?")) {
+        await deleteDoc(doc(db, 'posts', id));
+      }
+    };
+
+    if (loading) return <div className="flex justify-center p-20"><Icons.Loader2 className="animate-spin text-primary" /></div>;
+
+    return (
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Blog Articles</h2>
+            <p className="text-gray-500 font-medium text-sm">Create and manage your stories and news.</p>
+          </div>
+          <button 
+            onClick={() => { setEditingPost({ status: 'draft', tags: [] }); setIsModalOpen(true); }}
+            className="bg-primary text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest flex items-center gap-2"
+          >
+            <Icons.Plus className="h-4 w-4" /> New Article
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {posts.map(post => (
+            <div key={post.id} className="bg-white rounded-[10px] border border-gray-100 shadow-sm overflow-hidden group">
+              <div className="aspect-video relative overflow-hidden">
+                <img 
+                  src={post.featuredImage || 'https://picsum.photos/seed/blog/800/600'} 
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105" 
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <button onClick={() => { setEditingPost(post); setIsModalOpen(true); }} className="p-2 bg-white/90 backdrop-blur rounded-lg text-blue-600 shadow-lg">
+                    <Icons.Edit2 className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => handleDeletePost(post.id)} className="p-2 bg-white/90 backdrop-blur rounded-lg text-red-600 shadow-lg">
+                    <Icons.Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                <div className="absolute bottom-4 left-4">
+                  <span className={cn(
+                    "px-2 py-1 rounded text-[10px] font-black uppercase tracking-widest",
+                    post.status === 'published' ? "bg-orange-500 text-white" : "bg-amber-500 text-white"
+                  )}>
+                    {post.status}
+                  </span>
+                </div>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">{post.category}</span>
+                </div>
+                <h3 className="font-black text-gray-900 line-clamp-1 mb-2">{post.title}</h3>
+                <p className="text-xs text-gray-500 line-clamp-2">{post.excerpt}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <AnimatePresence>
+          {isModalOpen && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsModalOpen(false)}
+                className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative w-full max-w-4xl max-h-[90vh] overflow-y-auto bg-white rounded-3xl shadow-2xl p-8 space-y-6 scrollbar-hide"
+              >
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <h3 className="text-xl font-black text-gray-900">{editingPost?.id ? 'Edit Article' : 'New Article'}</h3>
+                      {!editingPost?.id && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAiModalOpen(true)}
+                          className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/10 transition-all border border-primary/20"
+                        >
+                          <Sparkles className="h-3 w-3" /> AI Write
+                        </button>
+                      )}
+                    </div>
+                    <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-900">
+                      <Icons.X className="h-6 w-6" />
+                    </button>
+                  </div>
+
+                <form onSubmit={handleSavePost} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Title</label>
+                      <input 
+                        required
+                        value={editingPost?.title || ''}
+                        onChange={e => setEditingPost({ 
+                          ...editingPost, 
+                          title: e.target.value, 
+                          slug: e.target.value
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '')
+                            .replace(/\s+/g, '-')
+                            .replace(/-+/g, '-') 
+                        })}
+                        placeholder="Article Title"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Slug</label>
+                      <input 
+                        required
+                        value={editingPost?.slug || ''}
+                        onChange={e => setEditingPost({ ...editingPost, slug: e.target.value })}
+                        placeholder="url-slug"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Category</label>
+                      <input 
+                        value={editingPost?.category || ''}
+                        onChange={e => setEditingPost({ ...editingPost, category: e.target.value })}
+                        placeholder="e.g. Travel Tips"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Author</label>
+                      <input 
+                        value={editingPost?.author || ''}
+                        onChange={e => setEditingPost({ ...editingPost, author: e.target.value })}
+                        placeholder="Author Name"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Status</label>
+                      <select 
+                        value={editingPost?.status || 'draft'}
+                        onChange={e => setEditingPost({ ...editingPost, status: e.target.value as any, publishedAt: e.target.value === 'published' ? (editingPost?.publishedAt || serverTimestamp()) : null })}
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all appearance-none"
+                      >

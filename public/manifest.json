@@ -1,0 +1,24 @@
+{
+  "name": "Tripbone",
+  "short_name": "Tripbone",
+  "description": "AI-Powered Tour Operator Software & Booking Platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#00A651",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/api/uploads/q08dkhNCIxtWc4kuqnrv",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "any"
+    },
+    {
+      "src": "/api/uploads/q08dkhNCIxtWc4kuqnrv",
+      "sizes": "512x512",
+      "type": "image/webp",
+      "purpose": "maskable"
+    }
+  ]
+}

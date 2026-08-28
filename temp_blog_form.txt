@@ -1,0 +1,158 @@
+                <form onSubmit={handleSavePost} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Title</label>
+                      <input 
+                        required
+                        value={editingPost?.title || ''}
+                        onChange={e => setEditingPost({ 
+                          ...editingPost, 
+                          title: e.target.value, 
+                          slug: e.target.value
+                            .toLowerCase()
+                            .replace(/[^\w\s-]/g, '')
+                            .replace(/\s+/g, '-')
+                            .replace(/-+/g, '-') 
+                        })}
+                        placeholder="Article Title"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Slug</label>
+                      <input 
+                        required
+                        value={editingPost?.slug || ''}
+                        onChange={e => setEditingPost({ ...editingPost, slug: e.target.value })}
+                        placeholder="url-slug"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-3 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Category</label>
+                      <input 
+                        value={editingPost?.category || ''}
+                        onChange={e => setEditingPost({ ...editingPost, category: e.target.value })}
+                        placeholder="e.g. Travel Tips"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Author</label>
+                      <input 
+                        value={editingPost?.author || ''}
+                        onChange={e => setEditingPost({ ...editingPost, author: e.target.value })}
+                        placeholder="Author Name"
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Status</label>
+                      <select 
+                        value={editingPost?.status || 'draft'}
+                        onChange={e => setEditingPost({ ...editingPost, status: e.target.value as any, publishedAt: e.target.value === 'published' ? (editingPost?.publishedAt || serverTimestamp()) : null })}
+                        className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all appearance-none"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Featured Image</label>
+                    <div className="flex gap-4 items-center">
+                      <div className="h-24 w-40 bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl overflow-hidden relative group">
+                        <img 
+                          src={editingPost?.featuredImage || 'https://picsum.photos/seed/placeholder/800/600'} 
+                          className="w-full h-full object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center">
+                          <Icons.Upload className="h-6 w-6 text-white" />
+                          <input 
+                            type="file"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
+                                try {
+                                  const url = await uploadImage(file);
+                                  setEditingPost({ ...editingPost, featuredImage: url });
+                                } catch (err) {
+                                  alert("Upload failed.");
+                                }
+                              }
+                            }}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-bold text-gray-400">Paste Image URL, Upload, or Pick from Gallery</p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              openMediaGallery((urls) => {
+                                if (urls[0]) {
+                                  setEditingPost({ ...editingPost, featuredImage: urls[0] });
+                                }
+                              }, false);
+                            }}
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-black px-2.5 py-1 rounded-md border border-blue-100 flex items-center gap-1 transition-all"
+                          >
+                            <ImageIcon className="h-3 w-3" />
+                            Pick from Gallery
+                          </button>
+                        </div>
+                        <input 
+                          value={editingPost?.featuredImage || ''}
+                          onChange={e => setEditingPost({ ...editingPost, featuredImage: e.target.value })}
+                          placeholder="https://..."
+                          className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Tags (Comma separated)</label>
+                    <input 
+                      value={editingPost?.tags?.join(', ') || ''}
+                      onChange={e => setEditingPost({ ...editingPost, tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean) })}
+                      placeholder="e.g. Travel, Bali, Adventure"
+                      className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-bold text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Short Excerpt</label>
+                    <textarea 
+                      rows={2}
+                      value={editingPost?.excerpt || ''}
+                      onChange={e => setEditingPost({ ...editingPost, excerpt: e.target.value })}
+                      placeholder="Brief summary for archive page..."
+                      className="w-full rounded-xl border-2 border-gray-50 bg-gray-50/50 p-4 font-medium text-sm focus:border-primary focus:bg-white outline-none transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-4">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Full Content</label>
+                    <RichTextEditor 
+                      content={editingPost?.content || ''}
+                      onChange={(html) => setEditingPost({ ...editingPost, content: html })}
+                      placeholder="Start writing your article..."
+                    />
+                  </div>
+
+                  <div className="pt-6 border-t border-gray-100 space-y-4">
+                    <div className="flex items-center gap-2 mb-2">
+                        <Icons.Share2 className="h-4 w-4 text-primary" />
+                        <h4 className="text-sm font-black text-gray-900 uppercase tracking-tight">SEO Settings (Custom Meta)</h4>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                        <div className="space-y-1">

@@ -1,0 +1,394 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", serif;
+
+  /* Map weights to the requested specific Poppins weights (200-800) */
+  --font-weight-thin: 200;
+  --font-weight-extralight: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  --font-weight-black: 900;
+  
+  --color-primary: var(--primary-color, #FF7A00);
+  --color-secondary: var(--secondary-color, #1F3B1F);
+}
+
+:root {
+  --primary-color: #FF7A00;
+  --secondary-color: #1F3B1F;
+  --font-body: "Plus Jakarta Sans";
+  --font-heading: "Plus Jakarta Sans";
+}
+
+@layer base {
+  html, body {
+    @apply w-full m-0 p-0;
+    max-width: 100%;
+    overflow-x: clip;
+    touch-action: manipulation;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply text-gray-900 bg-white antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+}
+
+.font-heading {
+  font-family: var(--font-heading), sans-serif;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@layer utilities {
+  @media print {
+    /* Reset html, body, and all app root wrappers so overflow doesn't clip multi-page printing */
+    html, body, #root, main, div {
+      overflow: visible !important;
+      height: auto !important;
+      max-height: none !important;
+      min-height: 0 !important;
+      position: static !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+
+    /* Explicitly hide non-printable UI components */
+    nav, header, footer, aside, .no-print, .actions-area, button:not(.print-include), input:not(.print-include), select:not(.print-include) {
+      display: none !important;
+    }
+
+    /* Print container formatting */
+    .print-container {
+      display: block !important;
+      visibility: visible !important;
+      position: static !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+      border: none !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      overflow: visible !important;
+    }
+
+    .print-only {
+      display: block !important;
+    }
+
+    /* Clean margins and page size */
+    @page {
+      size: A4 portrait;
+      margin: 12mm 10mm 12mm 10mm;
+    }
+
+    /* Prevent awkward page breaks inside day blocks */
+    .print-page-break {
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
+    }
+
+    /* Force background colors and colors to print accurately */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Adjust main container for printing */
+    .booking-success-page {
+      padding: 0 !important;
+      background: white !important;
+    }
+
+    .voucher-card {
+      box-shadow: none !important;
+      border: 1px solid #eee !important;
+      margin: 0 !important;
+      border-radius: 0 !important;
+      width: 100% !important;
+      max-width: 100% !important;
+      display: block !important;
+    }
+
+    /* Prevent page breaks inside key elements */
+    .voucher-section {
+      page-break-inside: avoid;
+    }
+
+    /* Adjust layout to fit print width */
+    .lg\:grid-cols-\[1\.5fr_1fr\] {
+      grid-template-columns: 1fr !important;
+    }
+
+    .p-12 {
+      padding: 2rem !important;
+    }
+  }
+}
+
+/* Custom typography overrides for improved mobile and desktop readability */
+/* Prevent iOS Safari auto-zoom on input focusing for absolute layout stability */
+@media (max-width: 767px) {
+  input, select, textarea, [contenteditable] {
+    font-size: 16px !important;
+  }
+}
+
+body {
+  font-family: var(--font-body), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* ==========================================================================
+   THEME PRESET OVERRIDES (Polished, Non-Destructive & Accessible)
+   ========================================================================== */
+
+/* 1. SWISS MINIMALIST PRESET (Ultra-Clean Monochrome) */
+.theme-swiss-minimalist {
+  --primary-color: #0f172a;
+  --secondary-color: #18181b;
+}
+
+.theme-swiss-minimalist body:not(.admin-body) {
+  background-color: #fafafa;
+  color: #0f172a;
+}
+
+.theme-swiss-minimalist:not(.admin-panel) .btn-primary {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15) !important;
+}
+
+/* 2. TECHNICAL DARK GRID PRESET (Midnight Slate Dark) */
+.theme-tech-dark {
+  --primary-color: #10b981;
+  --secondary-color: #38bdf8;
+}
+
+.theme-tech-dark body:not(.admin-body) {
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.theme-tech-dark:not(.admin-panel) .btn-primary {
+  background-color: #10b981 !important;
+  color: #0f172a !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.25) !important;
+}
+
+/* 3. ELEGANT EDITORIAL PRESET (Modern Boutique Luxe) */
+.theme-elegant-editorial {
+  --primary-color: #c2410c;
+  --secondary-color: #78350f;
+}
+
+.theme-elegant-editorial body:not(.admin-body) {
+  background-color: #faf9f5;
+  color: #1c1917;
+}
+
+.theme-elegant-editorial:not(.admin-panel) .btn-primary {
+  background-color: #c2410c !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(194, 65, 12, 0.2) !important;
+}
+
+/* 4. NORDIC FOREST PRESET (Nordic Eco Sanctuary) */
+.theme-nordic-forest {
+  --primary-color: #065f46;
+  --secondary-color: #047857;
+}
+
+.theme-nordic-forest body:not(.admin-body) {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.theme-nordic-forest:not(.admin-panel) .btn-primary {
+  background-color: #065f46 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(6, 95, 70, 0.2) !important;
+}
+
+/* 5. RETRO ADVENTURE PRESET (Urban Wanderlust) */
+.theme-retro-adventure {
+  --primary-color: #d97706;
+  --secondary-color: #1e3a8a;
+}
+
+.theme-retro-adventure body:not(.admin-body) {
+  background-color: #fafaf9;
+  color: #1c1917;
+}
+
+.theme-retro-adventure:not(.admin-panel) .btn-primary {
+  background-color: #d97706 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.2) !important;
+}
+
+/* 6. TOKYO NEON PRESET (Tokyo Minimal Dark) */
+.theme-tokyo-neon {
+  --primary-color: #f43f5e;
+  --secondary-color: #8b5cf6;
+}
+
+.theme-tokyo-neon body:not(.admin-body) {
+  background-color: #09090b;
+  color: #f4f4f5;
+}
+
+.theme-tokyo-neon:not(.admin-panel) .btn-primary {
+  background-color: #f43f5e !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(244, 63, 94, 0.25) !important;
+}
+
+/* 7. MEDITERRANEAN BREEZE PRESET (Mediterranean Azure) */
+.theme-mediterranean-breeze {
+  --primary-color: #0284c7;
+  --secondary-color: #0369a1;
+}
+
+.theme-mediterranean-breeze body:not(.admin-body) {
+  background-color: #f0f9ff;
+  color: #0f172a;
+}
+
+.theme-mediterranean-breeze:not(.admin-panel) .btn-primary {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.22) !important;
+}
+
+/* 8. BRUTALIST MONO PRESET (Monochrome Architectural) */
+.theme-brutalist-mono {
+  --primary-color: #000000;
+  --secondary-color: #27272a;
+}
+
+.theme-brutalist-mono body:not(.admin-body) {
+  background-color: #ffffff;
+  color: #09090b;
+}
+
+.theme-brutalist-mono:not(.admin-panel) .btn-primary {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* 9. ROYAL SAFARI PRESET (Regal Wilderness Luxe) */
+.theme-royal-safari {
+  --primary-color: #d97706;
+  --secondary-color: #b45309;
+}
+
+.theme-royal-safari body:not(.admin-body) {
+  background-color: #0b0f19;
+  color: #f9fafb;
+}
+
+.theme-royal-safari:not(.admin-panel) .btn-primary {
+  background-color: #d97706 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.22) !important;
+}
+
+/* 10. ZEN OASIS PRESET (Zen Botanical) */
+.theme-zen-oasis {
+  --primary-color: #059669;
+  --secondary-color: #047857;
+}
+
+.theme-zen-oasis body:not(.admin-body) {
+  background-color: #fafcfa;
+  color: #1e293b;
+}
+
+.theme-zen-oasis:not(.admin-panel) .btn-primary {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.2) !important;
+}
+
+/* 11. ALPINE CHALET PRESET (Alpine Resort) */
+.theme-alpine-chalet {
+  --primary-color: #9a3412;
+  --secondary-color: #7c2d12;
+}
+
+.theme-alpine-chalet body:not(.admin-body) {
+  background-color: #faf8f5;
+  color: #1c1917;
+}
+
+.theme-alpine-chalet:not(.admin-panel) .btn-primary {
+  background-color: #9a3412 !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(154, 52, 18, 0.2) !important;
+}
+
+/* 12. IBIZA SUNSET PRESET (Ibiza Riviera Coral) */
+.theme-sunset-ibiza {
+  --primary-color: #ff385c;
+  --secondary-color: #f97316;
+}
+
+.theme-sunset-ibiza body:not(.admin-body) {
+  background-color: #fffdfb;
+  color: #0f172a;
+}
+
+.theme-sunset-ibiza:not(.admin-panel) .btn-primary {
+  background-color: #ff385c !important;
+  color: #ffffff !important;
+  border-radius: 9999px !important;
+  font-weight: 700 !important;
+  box-shadow: 0 4px 14px rgba(255, 56, 92, 0.25) !important;
+}
+
+
+
