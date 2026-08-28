@@ -103,7 +103,7 @@ function AppContent() {
   const isAuth = location.pathname === '/login' || location.pathname === '/forgot-password';
   const isDashboard = location.pathname.startsWith('/customer');
   const isCheckout = location.pathname.startsWith('/checkout');
-  const isTourDetail = location.pathname.startsWith('/tour/');
+  const isTourDetail = location.pathname.startsWith('/tour/') || (location.pathname.startsWith('/tours/') && location.pathname !== '/tours');
 
   // Dynamic Tenant Branding Styles Override
   useEffect(() => {
@@ -438,6 +438,7 @@ function AppContent() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/destinations" element={<Destinations />} />
               <Route path="/tour/:slug" element={<TourDetail />} />
+              <Route path="/tours/:slug" element={<TourDetail />} />
               <Route path="/checkout/:tourId" element={<Checkout />} />
               <Route path="/superadmin/*" element={<ForbiddenSuperAdmin />} />
               <Route path="/admin/*" element={<Admin />} />

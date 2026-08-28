@@ -129,8 +129,8 @@ export default function MobileHomePresets({
     return (
       <Link
         key={tour.id}
-        to={`/tours/${tour.slug || tour.id}`}
-        className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
+        to={`/tour/${tour.slug || tour.id}`}
+        className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer"
       >
         <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
           <SmartImage
@@ -192,8 +192,8 @@ export default function MobileHomePresets({
     return (
       <Link
         key={tour.id}
-        to={`/tours/${tour.slug || tour.id}`}
-        className="w-[78vw] max-w-[280px] shrink-0 snap-start bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm block text-left group"
+        to={`/tour/${tour.slug || tour.id}`}
+        className="w-[78vw] max-w-[280px] shrink-0 snap-start bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm block text-left group cursor-pointer"
       >
         <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
           <SmartImage
@@ -381,14 +381,17 @@ export default function MobileHomePresets({
 
         {/* 3. CAR RENTAL & PRIVATE DRIVER SHOWCASE CARD */}
         <div className="px-4">
-          <div className="bg-white rounded-2xl p-4 border border-orange-100 shadow-sm space-y-3">
+          <Link
+            to="/car-rental"
+            className="bg-white rounded-2xl p-4 border border-orange-100 shadow-sm space-y-3 block hover:border-orange-300 transition-all group cursor-pointer"
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-orange-50 text-orange-600 rounded-xl">
+                <div className="p-2 bg-orange-50 text-orange-600 rounded-xl group-hover:bg-orange-100 transition-colors">
                   <LucideIcons.Car className="w-5 h-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-black text-gray-900">Bali Private Car & Chauffeur</h4>
+                  <h4 className="text-sm font-black text-gray-900 group-hover:text-orange-600 transition-colors">Bali Private Car & Chauffeur</h4>
                   <p className="text-[10px] text-gray-500 font-medium">Custom 10-Hour Charter with English Driver</p>
                 </div>
               </div>
@@ -413,22 +416,22 @@ export default function MobileHomePresets({
             </div>
 
             <div className="flex items-center gap-2 pt-1">
-              <Link
-                to="/car-rental"
-                className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-bold text-xs text-center shadow-sm hover:bg-orange-600 transition-colors"
-              >
+              <span className="flex-1 py-2.5 bg-orange-500 text-white rounded-xl font-bold text-xs text-center shadow-sm group-hover:bg-orange-600 transition-colors">
                 Book Private Chauffeur
-              </Link>
-              <a
-                href={`https://wa.me/${(settings?.whatsappNumber || '+6281234567890').replace(/[^0-9]/g, '')}?text=Hi,%20I%20would%20like%20to%20inquire%20about%20Bali%20Private%20Car%20Rental`}
-                target="_blank"
-                rel="noreferrer"
-                className="p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl"
+              </span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(`https://wa.me/${(settings?.whatsappNumber || '+6281234567890').replace(/[^0-9]/g, '')}?text=Hi,%20I%20would%20like%20to%20inquire%20about%20Bali%20Private%20Car%20Rental`, '_blank');
+                }}
+                className="p-2.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl hover:bg-emerald-100 transition-colors z-10"
               >
                 <LucideIcons.MessageCircle className="w-4 h-4" />
-              </a>
+              </button>
             </div>
-          </div>
+          </Link>
         </div>
 
         {/* 4. GUEST FAVORITES: 2-COLUMN GRID (Klook Signature Layout) */}
@@ -598,8 +601,8 @@ export default function MobileHomePresets({
             {filteredTours.slice(0, 4).map((tour) => (
               <Link
                 key={tour.id}
-                to={`/tours/${tour.slug || tour.id}`}
-                className="flex gap-3 bg-white p-2.5 rounded-2xl border border-gray-100 shadow-xs hover:border-blue-200 transition-all"
+                to={`/tour/${tour.slug || tour.id}`}
+                className="flex gap-3 bg-white p-2.5 rounded-2xl border border-gray-100 shadow-xs hover:border-blue-200 transition-all cursor-pointer group"
               >
                 <div className="w-28 h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100 relative">
                   <SmartImage
@@ -644,16 +647,19 @@ export default function MobileHomePresets({
 
         {/* 3. Car Rental Banner */}
         <div className="px-4">
-          <div className="p-4 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-between text-left">
+          <Link
+            to="/car-rental"
+            className="p-4 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-center justify-between text-left block hover:border-blue-300 transition-all group cursor-pointer"
+          >
             <div className="space-y-1 max-w-[65%]">
               <span className="text-[9px] font-black text-blue-600 uppercase">Private Transportation</span>
-              <h4 className="text-xs font-black text-gray-900">Custom Bali Chauffeur Charter</h4>
+              <h4 className="text-xs font-black text-gray-900 group-hover:text-blue-600 transition-colors">Custom Bali Chauffeur Charter</h4>
               <p className="text-[10px] text-gray-500">Full day air-conditioned private vehicle.</p>
             </div>
-            <Link to="/car-rental" className="px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-xs">
+            <span className="px-3 py-2 bg-blue-600 text-white text-xs font-bold rounded-xl shadow-xs group-hover:bg-blue-700 transition-colors">
               Explore
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (Horizontal Carousel) */}
@@ -754,7 +760,7 @@ export default function MobileHomePresets({
           </div>
           <div className="flex overflow-x-auto gap-4 px-4 no-scrollbar">
             {filteredTours.slice(0, 5).map((tour) => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="w-[72vw] shrink-0 block group">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="w-[72vw] shrink-0 block group cursor-pointer">
                 <div className="aspect-[4/3] rounded-2xl overflow-hidden bg-gray-100 relative mb-2">
                   <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" aspectRatio="auto" width={300} quality={75} />
                   <span className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 backdrop-blur-xs text-gray-900 rounded-full text-[9px] font-black uppercase">
@@ -777,14 +783,17 @@ export default function MobileHomePresets({
 
         {/* 3. Car Rental Showcase */}
         <div className="px-4">
-          <div className="rounded-3xl border border-gray-200 p-5 space-y-3 bg-stone-50">
+          <Link
+            to="/car-rental"
+            className="rounded-3xl border border-gray-200 p-5 space-y-3 bg-stone-50 block hover:border-gray-300 transition-all group cursor-pointer"
+          >
             <span className="text-[10px] font-black uppercase text-stone-500 tracking-widest">Private Chauffeur</span>
-            <h4 className="text-base font-black text-gray-900">Travel at Your Own Rhythm</h4>
+            <h4 className="text-base font-black text-gray-900 group-hover:text-primary transition-colors">Travel at Your Own Rhythm</h4>
             <p className="text-xs text-gray-600 leading-relaxed">Book a certified local Balinese private driver with modern air-conditioned MPVs.</p>
-            <Link to="/car-rental" className="inline-block px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold">
+            <span className="inline-block px-4 py-2.5 bg-gray-900 text-white rounded-xl text-xs font-bold group-hover:bg-gray-800 transition-colors">
               View Fleet & Rates
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (2-Column) */}
@@ -870,7 +879,7 @@ export default function MobileHomePresets({
           <h3 className="text-base font-black text-gray-900">Featured Bali Day Trips</h3>
           <div className="grid grid-cols-2 gap-3">
             {filteredTours.slice(0, 6).map(tour => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-xs block group">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="bg-white rounded-xl overflow-hidden border border-gray-200 shadow-xs block group cursor-pointer">
                 <div className="aspect-[4/3] bg-gray-100 relative">
                   <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover" aspectRatio="auto" width={220} quality={75} />
                   <span className="absolute top-2 left-2 bg-[#d93b3b] text-white text-[8px] font-black px-1.5 py-0.5 rounded">
@@ -892,13 +901,16 @@ export default function MobileHomePresets({
 
         {/* 3. Car Rental Card */}
         <div className="px-4">
-          <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-2">
-            <h4 className="text-xs font-black text-gray-900">Airport Transfer & Private Transport</h4>
+          <Link
+            to="/car-rental"
+            className="bg-white p-4 rounded-xl border border-gray-200 space-y-2 block hover:border-[#004f44] transition-all group cursor-pointer"
+          >
+            <h4 className="text-xs font-black text-gray-900 group-hover:text-[#004f44] transition-colors">Airport Transfer & Private Transport</h4>
             <p className="text-[11px] text-gray-500">Direct pickup at Denpasar DPS airport with name sign.</p>
-            <Link to="/car-rental" className="block text-center py-2 bg-[#004f44] text-white text-xs font-bold rounded-lg">
+            <span className="block text-center py-2 bg-[#004f44] text-white text-xs font-bold rounded-lg group-hover:bg-[#003830] transition-colors">
               Book Transfer
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites */}
@@ -976,7 +988,7 @@ export default function MobileHomePresets({
           <h3 className="text-base font-black text-gray-900">Top Things to Do</h3>
           <div className="grid grid-cols-2 gap-3">
             {filteredTours.slice(0, 6).map(tour => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="rounded-2xl border border-gray-100 overflow-hidden shadow-xs block group">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="rounded-2xl border border-gray-100 overflow-hidden shadow-xs block group cursor-pointer">
                 <div className="aspect-[4/3] bg-gray-100 relative">
                   <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover" aspectRatio="auto" width={220} quality={75} />
                   <span className="absolute top-2 left-2 bg-[#00aa6c] text-white text-[8px] font-black px-1.5 py-0.5 rounded">
@@ -1002,13 +1014,16 @@ export default function MobileHomePresets({
 
         {/* 3. Car Rental Showcase */}
         <div className="px-4">
-          <div className="p-4 rounded-2xl bg-[#00aa6c]/5 border border-[#00aa6c]/20 space-y-2">
-            <h4 className="text-xs font-black text-gray-900">Bali Chauffeur & Private Day Hire</h4>
+          <Link
+            to="/car-rental"
+            className="p-4 rounded-2xl bg-[#00aa6c]/5 border border-[#00aa6c]/20 space-y-2 block hover:bg-[#00aa6c]/10 transition-all group cursor-pointer"
+          >
+            <h4 className="text-xs font-black text-gray-900 group-hover:text-[#00aa6c] transition-colors">Bali Chauffeur & Private Day Hire</h4>
             <p className="text-[11px] text-gray-600">Rated Excellent by 1,200+ international vacationers.</p>
-            <Link to="/car-rental" className="inline-block px-3 py-1.5 bg-[#00aa6c] text-white rounded-lg text-xs font-bold">
+            <span className="inline-block px-3 py-1.5 bg-[#00aa6c] text-white rounded-lg text-xs font-bold group-hover:bg-[#008f5a] transition-colors">
               Check Driver Availability
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites */}
@@ -1095,7 +1110,7 @@ export default function MobileHomePresets({
           <h3 className="text-base font-bold text-amber-300 font-serif tracking-wide">Signature Private Itineraries</h3>
           <div className="space-y-4">
             {filteredTours.slice(0, 3).map(tour => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="block rounded-2xl overflow-hidden border border-amber-500/20 bg-white/5 group">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="block rounded-2xl overflow-hidden border border-amber-500/20 bg-white/5 group cursor-pointer">
                 <div className="aspect-[16/9] bg-gray-900 relative">
                   <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90" aspectRatio="auto" width={500} quality={80} />
                   <span className="absolute top-3 left-3 bg-black/70 backdrop-blur-md border border-amber-500/30 text-amber-300 text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
@@ -1116,14 +1131,17 @@ export default function MobileHomePresets({
 
         {/* 3. Luxury Chauffeur Fleet Card */}
         <div className="px-4 font-sans">
-          <div className="p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent space-y-3">
+          <Link
+            to="/car-rental"
+            className="p-5 rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-transparent space-y-3 block hover:border-amber-500/50 transition-all group cursor-pointer"
+          >
             <span className="text-[9px] uppercase tracking-widest text-amber-400 font-black">Executive Chauffeur</span>
-            <h4 className="text-sm font-bold text-white font-serif">Toyota Alphard & Mercedes V-Class</h4>
+            <h4 className="text-sm font-bold text-white font-serif group-hover:text-amber-300 transition-colors">Toyota Alphard & Mercedes V-Class</h4>
             <p className="text-xs text-gray-300">White-glove private airport & island charter with suited concierge drivers.</p>
-            <Link to="/car-rental" className="inline-block px-4 py-2 bg-amber-500 text-black font-black text-xs rounded-xl">
+            <span className="inline-block px-4 py-2 bg-amber-500 text-black font-black text-xs rounded-xl group-hover:bg-amber-400 transition-colors">
               Reserve Executive Chauffeur
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (2-Column) */}
@@ -1209,12 +1227,12 @@ export default function MobileHomePresets({
           </div>
           <div className="space-y-4">
             {filteredTours.slice(0, 3).map((tour, idx) => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="block group">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="block group cursor-pointer">
                 <div className="aspect-[16/10] rounded-xl overflow-hidden bg-gray-50 mb-2">
                   <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" aspectRatio="auto" width={400} quality={75} />
                 </div>
                 <div className="flex justify-between items-baseline">
-                  <h4 className="text-xs font-bold text-gray-900">{tour.title}</h4>
+                  <h4 className="text-xs font-bold text-gray-900 group-hover:text-primary transition-colors">{tour.title}</h4>
                   <span className="text-xs font-mono font-bold">{getTourPrice(tour)}</span>
                 </div>
               </Link>
@@ -1224,12 +1242,15 @@ export default function MobileHomePresets({
 
         {/* 3. Car Rental */}
         <div className="px-5">
-          <div className="border border-gray-200 rounded-xl p-4 space-y-2">
+          <Link
+            to="/car-rental"
+            className="border border-gray-200 rounded-xl p-4 space-y-2 block hover:border-gray-400 transition-all group cursor-pointer"
+          >
             <span className="text-[10px] font-mono text-gray-400">02 / MOBILITY</span>
-            <h4 className="text-xs font-bold text-gray-900">Private Vehicle Charter</h4>
+            <h4 className="text-xs font-bold text-gray-900 group-hover:text-primary transition-colors">Private Vehicle Charter</h4>
             <p className="text-xs text-gray-500">Dedicated local driver for up to 10 hours.</p>
-            <Link to="/car-rental" className="inline-block text-xs font-bold underline mt-1">Book Chauffeur</Link>
-          </div>
+            <span className="inline-block text-xs font-bold underline mt-1">Book Chauffeur</span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (2-Column) */}
@@ -1304,15 +1325,15 @@ export default function MobileHomePresets({
           <h3 className="text-base font-black text-emerald-300">Active Expeditions</h3>
           <div className="grid grid-cols-2 gap-3">
             {filteredTours.slice(0, 6).map(tour => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="rounded-2xl border border-emerald-800/40 bg-[#1a3026] overflow-hidden block">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="rounded-2xl border border-emerald-800/40 bg-[#1a3026] overflow-hidden block group cursor-pointer">
                 <div className="aspect-[4/3] bg-emerald-950 relative">
-                  <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover opacity-90" aspectRatio="auto" width={220} quality={75} />
+                  <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-500" aspectRatio="auto" width={220} quality={75} />
                   <span className="absolute top-2 left-2 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded">
                     Trail Verified
                   </span>
                 </div>
                 <div className="p-2.5 space-y-1">
-                  <h4 className="text-xs font-bold text-white line-clamp-2">{tour.title}</h4>
+                  <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-emerald-300 transition-colors">{tour.title}</h4>
                   <p className="text-xs font-black text-emerald-300">{getTourPrice(tour)}</p>
                 </div>
               </Link>
@@ -1322,13 +1343,16 @@ export default function MobileHomePresets({
 
         {/* 3. 4x4 Transport */}
         <div className="px-4">
-          <div className="p-4 rounded-2xl bg-[#1d352b] border border-emerald-700/50 space-y-2">
-            <h4 className="text-xs font-black text-white">4x4 Jeep & Transport Fleet</h4>
+          <Link
+            to="/car-rental"
+            className="p-4 rounded-2xl bg-[#1d352b] border border-emerald-700/50 space-y-2 block hover:border-emerald-500 transition-all group cursor-pointer"
+          >
+            <h4 className="text-xs font-black text-white group-hover:text-emerald-300 transition-colors">4x4 Jeep & Transport Fleet</h4>
             <p className="text-xs text-emerald-200/80">Black lava caldera & mountain sunrise transfers.</p>
-            <Link to="/car-rental" className="inline-block px-3 py-1.5 bg-emerald-500 text-[#14241d] font-black text-xs rounded-lg">
+            <span className="inline-block px-3 py-1.5 bg-emerald-500 text-[#14241d] font-black text-xs rounded-lg group-hover:bg-emerald-400 transition-colors">
               Book Expedition Vehicle
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (2-Column) */}
@@ -1408,15 +1432,15 @@ export default function MobileHomePresets({
           <h3 className="text-base font-black text-cyan-400 font-mono">⚡ FEATURED EXPERIENCES</h3>
           <div className="grid grid-cols-2 gap-3">
             {filteredTours.slice(0, 6).map(tour => (
-              <Link key={tour.id} to={`/tours/${tour.slug || tour.id}`} className="rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden block">
+              <Link key={tour.id} to={`/tour/${tour.slug || tour.id}`} className="rounded-2xl border border-slate-800 bg-slate-900/90 overflow-hidden block group cursor-pointer">
                 <div className="aspect-[4/3] bg-slate-950 relative">
-                  <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover" aspectRatio="auto" width={220} quality={75} />
+                  <SmartImage src={tour.featuredImage || ''} alt={tour.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" aspectRatio="auto" width={220} quality={75} />
                   <span className="absolute top-2 left-2 bg-cyan-500 text-black text-[8px] font-mono font-black px-1.5 py-0.5 rounded">
                     INSTANT PASS
                   </span>
                 </div>
                 <div className="p-2.5 space-y-1">
-                  <h4 className="text-xs font-bold text-white line-clamp-2">{tour.title}</h4>
+                  <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-cyan-300 transition-colors">{tour.title}</h4>
                   <p className="text-xs font-mono font-black text-cyan-400">{getTourPrice(tour)}</p>
                 </div>
               </Link>
@@ -1426,13 +1450,16 @@ export default function MobileHomePresets({
 
         {/* 3. Smart Fleet */}
         <div className="px-4">
-          <div className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/30 space-y-2">
-            <h4 className="text-xs font-mono font-black text-cyan-400">SMART VAN & CHAUFFEUR</h4>
+          <Link
+            to="/car-rental"
+            className="p-4 rounded-2xl bg-slate-900 border border-cyan-500/30 space-y-2 block hover:border-cyan-400 transition-all group cursor-pointer"
+          >
+            <h4 className="text-xs font-mono font-black text-cyan-400 group-hover:text-cyan-300 transition-colors">SMART VAN & CHAUFFEUR</h4>
             <p className="text-xs text-slate-400">Real-time GPS tracking and instant WhatsApp dispatch.</p>
-            <Link to="/car-rental" className="inline-block px-3 py-1.5 bg-cyan-400 text-slate-950 font-black text-xs rounded-lg">
+            <span className="inline-block px-3 py-1.5 bg-cyan-400 text-slate-950 font-black text-xs rounded-lg group-hover:bg-cyan-300 transition-colors">
               Book Smart Transport
-            </Link>
-          </div>
+            </span>
+          </Link>
         </div>
 
         {/* 4. Guest Favorites (2-Column) */}
@@ -1529,13 +1556,16 @@ export default function MobileHomePresets({
 
       {/* 3. Car Rental */}
       <div className="px-4">
-        <div className="p-4 rounded-2xl bg-teal-600 text-white space-y-2 shadow-sm">
-          <h4 className="text-xs font-black">Bali Private Chauffeur & Island Tour</h4>
+        <Link
+          to="/car-rental"
+          className="p-4 rounded-2xl bg-teal-600 text-white space-y-2 shadow-sm block hover:bg-teal-700 transition-all group cursor-pointer"
+        >
+          <h4 className="text-xs font-black group-hover:text-amber-300 transition-colors">Bali Private Chauffeur & Island Tour</h4>
           <p className="text-[11px] text-teal-100">Cool air-conditioned vans with friendly local Balinese driver.</p>
-          <Link to="/car-rental" className="inline-block px-3 py-1.5 bg-amber-400 text-gray-900 font-black text-xs rounded-xl">
+          <span className="inline-block px-3 py-1.5 bg-amber-400 text-gray-900 font-black text-xs rounded-xl group-hover:bg-amber-300 transition-colors">
             Book Island Driver
-          </Link>
-        </div>
+          </span>
+        </Link>
       </div>
 
       {/* 4. Guest Favorites (2-Column Grid) */}

@@ -102,8 +102,9 @@ export default function RentalVehicleCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.3 }}
+      onClick={() => onBook(vehicle, effectiveMode)}
       className={cn(
-        "group bg-white rounded-3xl overflow-hidden border border-gray-200/90 hover:border-primary/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 flex flex-col justify-between relative",
+        "group bg-white rounded-3xl overflow-hidden border border-gray-200/90 hover:border-primary/40 hover:shadow-xl hover:shadow-gray-200/60 transition-all duration-300 flex flex-col justify-between relative cursor-pointer",
         className
       )}
     >
