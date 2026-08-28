@@ -581,16 +581,18 @@ export default function Home() {
 
   useEffect(() => {
     // 1. Fetch Categories
-    const catQuery = query(
-      collection(db, "categories"),
-      orderBy("name", "asc"),
-    );
-    const unsubCats = onSnapshot(catQuery, (snapshot) => {
-      const catData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Category);
-      setCategories(catData);
-      try {
-        localStorage.setItem("bali_cached_categories", JSON.stringify(catData));
-      } catch (e) {}
+    const unsubCats = onSnapshot(collection(db, "categories"), (snapshot) => {
+      const catData = snapshot.docs
+        .map((doc) => ({ id: doc.id, ...doc.data() }) as Category)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      if (catData.length > 0) {
+        setCategories(catData);
+        try {
+          localStorage.setItem("bali_cached_categories", JSON.stringify(catData));
+        } catch (e) {}
+      }
+    }, (err) => {
+      console.warn("Categories onSnapshot error:", err);
     });
 
     // 2. Fetch Reviews (approved)

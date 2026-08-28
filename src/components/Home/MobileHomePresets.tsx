@@ -122,6 +122,58 @@ export default function MobileHomePresets({
     }
   ];
 
+  // Build fast Category ID -> Name Lookup Map
+  const categoryMap = React.useMemo(() => {
+    const map = new Map<string, string>();
+    if (Array.isArray(categories)) {
+      categories.forEach(c => {
+        if (c.id && c.name) map.set(c.id, c.name);
+        if (c.slug && c.name) map.set(c.slug, c.name);
+      });
+    }
+    return map;
+  }, [categories]);
+
+  const getCategoryName = (tour: Tour): string => {
+    // 1. If explicit categoryName provided and not a raw alphanumeric hash
+    if ((tour as any).categoryName && !/^[A-Za-z0-9_-]{12,}$/.test((tour as any).categoryName)) {
+      return (tour as any).categoryName;
+    }
+
+    const catId = tour.categoryId || (tour as any).category;
+    if (!catId) return 'Activity';
+
+    // 2. Lookup in loaded categories
+    if (categoryMap.has(catId)) {
+      return categoryMap.get(catId)!;
+    }
+
+    const found = categories.find(
+      c => c.id === catId || c.slug === catId || c.name?.toLowerCase() === catId?.toLowerCase()
+    );
+    if (found && found.name) return found.name;
+
+    // 3. If raw Firestore document ID (e.g., "HQ3IIXTAXDBEVQACOID8" or "ULSAFL2RQFEMLTXFJKO2") or fallback ID
+    if (/^[A-Za-z0-9_-]{12,}$/.test(catId) || catId.includes('-fallback')) {
+      const titleLower = (tour.title || '').toLowerCase();
+      if (titleLower.includes('jeep') || titleLower.includes('atv') || titleLower.includes('quad') || titleLower.includes('trek') || titleLower.includes('hike') || titleLower.includes('sunrise') || titleLower.includes('volcano') || titleLower.includes('batur') || titleLower.includes('adventure')) {
+        return 'Adventure';
+      }
+      if (titleLower.includes('walker') || titleLower.includes('water') || titleLower.includes('sea') || titleLower.includes('rafting') || titleLower.includes('dive') || titleLower.includes('snorkel') || titleLower.includes('boat') || titleLower.includes('surf')) {
+        return 'Water Sports';
+      }
+      if (titleLower.includes('temple') || titleLower.includes('culture') || titleLower.includes('gate of heaven') || titleLower.includes('ubud') || titleLower.includes('heritage')) {
+        return 'Culture';
+      }
+      if (titleLower.includes('car') || titleLower.includes('driver') || titleLower.includes('transfer') || titleLower.includes('chauffeur')) {
+        return 'Transport';
+      }
+      return 'Day Tour';
+    }
+
+    return catId;
+  };
+
   // Helper for 2-column tour card (Klook Style)
   const renderKlookTwoColumnCard = (tour: Tour) => {
     const origPrice = getOriginalPrice(tour);
@@ -154,7 +206,7 @@ export default function MobileHomePresets({
         <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1.5 text-left">
           <div>
             <span className="text-[9px] font-black text-orange-500 uppercase tracking-wider block">
-              {(tour as any).categoryName || (tour as any).category || tour.categoryId || 'Activity'}
+              {getCategoryName(tour)}
             </span>
             <h4 className="text-xs font-bold text-gray-900 leading-snug line-clamp-2 group-hover:text-primary transition-colors">
               {tour.title}

@@ -185,7 +185,13 @@ export default function PriceSummaryModal({
                 </div>
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full inline-block mb-1">
-                    {tour.category || 'Tour Expedition'}
+                    {(() => {
+                      const cat = tour.category || (tour as any).categoryName || tour.categoryId;
+                      if (!cat || /^[A-Za-z0-9_-]{12,}$/.test(cat) || cat.includes('-fallback')) {
+                        return 'Tour Expedition';
+                      }
+                      return cat;
+                    })()}
                   </span>
                   <h4 className="font-extrabold text-sm text-slate-900 truncate leading-snug">
                     {tour.title}
