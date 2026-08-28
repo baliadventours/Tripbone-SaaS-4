@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   query,
   where,
+  limit,
   getDocs,
   runTransaction,
   onSnapshot,
@@ -665,7 +666,16 @@ export default function Checkout() {
 
         if (!tourToFetchId) return;
         const docRef = doc(db, "tours", tourToFetchId);
-        const docSnap = await getDoc(docRef);
+        let docSnap = await getDoc(docRef);
+        
+        if (!docSnap.exists()) {
+          // Fallback: try fetching by slug
+          const qSnap = await getDocs(query(collection(db, "tours"), where("slug", "==", tourToFetchId), limit(1)));
+          if (!qSnap.empty) {
+            docSnap = qSnap.docs[0];
+          }
+        }
+
         if (docSnap.exists()) {
           const tourData = { id: docSnap.id, ...docSnap.data() } as Tour;
            setTour(tourData);

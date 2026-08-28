@@ -17,10 +17,21 @@ type BookingStep = 'package' | 'addons' | 'customer' | 'payment';
 
 export default function BookingForm({ tour }: BookingFormProps) {
   const navigate = useNavigate();
-  const [date, setDate] = useState('');
+  
+  const getDefaultDateString = () => {
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
+    const year = tmr.getFullYear();
+    const month = String(tmr.getMonth() + 1).padStart(2, '0');
+    const day = String(tmr.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const [date, setDate] = useState<string>(() => getDefaultDateString());
   const [selectedTime, setSelectedTime] = useState('');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [cutOffError, setCutOffError] = useState<string | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Effective cut-off time in hours
   const cutOffHours = useMemo(() => getEffectiveCutOffHours(tour), [tour]);
@@ -37,6 +48,14 @@ export default function BookingForm({ tour }: BookingFormProps) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [step, setStep] = useState<BookingStep>('package');
   const [isBooking, setIsBooking] = useState(false);
+
+  // Auto select default time slot if available
+  useEffect(() => {
+    if (tour?.timeSlots && tour.timeSlots.length > 0 && !selectedTime) {
+      const validSlot = tour.timeSlots.find(t => !date || !isSlotCutOff(date, t, cutOffHours));
+      setSelectedTime(validSlot || tour.timeSlots[0]);
+    }
+  }, [tour, date, selectedTime, cutOffHours]);
 
   // Inventory tracking
   const [currentInventory, setCurrentInventory] = useState<{ bookedCount: number; max: number } | null>(null);
@@ -66,7 +85,9 @@ export default function BookingForm({ tour }: BookingFormProps) {
   const isLowCapacity = spotsLeft !== null && spotsLeft > 0 && spotsLeft <= 5;
 
   // Selection state
-  const [selectedPackage, setSelectedPackage] = useState<TourPackage | null>(null);
+  const [selectedPackage, setSelectedPackage] = useState<TourPackage | null>(() => {
+    return tour?.packages && tour.packages.length > 0 ? tour.packages[0] : null;
+  });
   const [selectedAddOns, setSelectedAddOns] = useState<{ id: string; name: string; price: number; quantity: number }[]>([]);
   const [customerData, setCustomerData] = useState({
     fullName: auth.currentUser?.displayName || '',
@@ -114,34 +135,46 @@ export default function BookingForm({ tour }: BookingFormProps) {
     }
   };
 
-  const handleAvailabilityCheck = (e: FormEvent) => {
-    e.preventDefault();
+  const handleAvailabilityCheck = (e?: FormEvent | React.MouseEvent) => {
+    if (e && e.preventDefault) e.preventDefault();
     setCutOffError(null);
-    if (!date) {
-      alert("Please select a date first.");
-      return;
+
+    let targetDate = date;
+    if (!targetDate) {
+      targetDate = getDefaultDateString();
+      setDate(targetDate);
+    }
+
+    let targetTime = selectedTime;
+    if (!targetTime && tour?.timeSlots && tour.timeSlots.length > 0) {
+      targetTime = tour.timeSlots[0];
+      setSelectedTime(targetTime);
     }
 
     // Validate cut-off time
-    const validation = validateBookingCutOff(tour, date, selectedTime);
+    const validation = validateBookingCutOff(tour, targetDate, targetTime);
     if (!validation.isValid) {
-      setCutOffError(validation.error || "Booking cut-off time has passed for this departure.");
+      setCutOffError(validation.error || "Booking cut-off time has passed for this departure. Please select another date or time.");
       return;
     }
 
-    // Navigate to checkout page instead of opening modal
+    setIsNavigating(true);
+
+    // Navigate to checkout page
+    const targetTourId = tour.id || (tour as any).slug || (tour as any)._id;
     const pkgToPass = selectedPackage || (tour.packages && tour.packages.length > 0 ? tour.packages[0] : null);
     const pkgParam = pkgToPass ? `&package=${encodeURIComponent(pkgToPass.name)}` : '';
-    const timeParam = selectedTime ? `&time=${selectedTime}` : '';
-    navigate(`/checkout/${tour.id}?date=${date}&adults=${adults}&children=${children}${timeParam}${pkgParam}`);
+    const timeParam = targetTime ? `&time=${encodeURIComponent(targetTime)}` : '';
+    navigate(`/checkout/${targetTourId}?date=${targetDate}&adults=${adults}&children=${children}${timeParam}${pkgParam}`);
   };
 
   // Reset selected time if the newly selected date makes that time cut-off
   useEffect(() => {
     if (date && selectedTime && isSlotCutOff(date, selectedTime, cutOffHours)) {
-      setSelectedTime('');
+      const nextValid = tour.timeSlots?.find(t => !isSlotCutOff(date, t, cutOffHours));
+      setSelectedTime(nextValid || '');
     }
-  }, [date, selectedTime, cutOffHours]);
+  }, [date, selectedTime, cutOffHours, tour.timeSlots]);
 
   if (!tour.packages || tour.packages.length === 0) {
     return (
@@ -404,12 +437,51 @@ export default function BookingForm({ tour }: BookingFormProps) {
             )}
           </div>
 
+          {cutOffError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 animate-in fade-in">
+              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="text-left text-xs font-bold leading-relaxed flex-1">
+                <p>{cutOffError}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextD = new Date();
+                    nextD.setDate(nextD.getDate() + 2);
+                    const y = nextD.getFullYear();
+                    const m = String(nextD.getMonth() + 1).padStart(2, '0');
+                    const d = String(nextD.getDate()).padStart(2, '0');
+                    setDate(`${y}-${m}-${d}`);
+                    setCutOffError(null);
+                  }}
+                  className="mt-2 text-[11px] underline text-primary font-extrabold block hover:text-orange-700 cursor-pointer"
+                >
+                  Select Next Available Date &rarr;
+                </button>
+              </div>
+            </div>
+          )}
+
           <button
-            type="submit"
-            disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft)}
-            className="flex w-full items-center justify-center gap-3 rounded-[50px] bg-primary py-5 font-black text-white hover:bg-orange-700 hover:shadow-xl transition-all shadow-lg tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            onClick={handleAvailabilityCheck}
+            disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isNavigating}
+            className="flex w-full items-center justify-center gap-3 rounded-[50px] bg-primary py-5 font-black text-white hover:bg-orange-700 hover:shadow-xl active:scale-[0.98] transition-all shadow-lg tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer relative z-10 select-none"
           >
-            {isSoldOut ? 'Sold Out' : (spotsLeft !== null && (adults + children) > spotsLeft) ? 'Not Enough Spots' : 'Check Availability'} <Rocket className="h-5 w-5" />
+            {isNavigating ? (
+              <>
+                <span>Processing Checkout...</span>
+                <Loader2 className="h-5 w-5 animate-spin" />
+              </>
+            ) : isSoldOut ? (
+              'Sold Out'
+            ) : (spotsLeft !== null && (adults + children) > spotsLeft) ? (
+              'Not Enough Spots'
+            ) : (
+              <>
+                <span>Check Availability</span>
+                <Rocket className="h-5 w-5" />
+              </>
+            )}
           </button>
         </form>
       </div>
