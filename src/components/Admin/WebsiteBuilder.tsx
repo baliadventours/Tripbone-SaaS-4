@@ -42,6 +42,8 @@ export interface WebsiteBuilderSettings {
   blocks: BlockConfig[];
   menus: CustomMenu[];
   mobilePreset?: string;
+  mobileHookTitle?: string;
+  mobileHookSubtitle?: string;
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
@@ -475,9 +477,21 @@ export default function WebsiteBuilder() {
             const existing = data.blocks?.find(b => b.id === dbk.id);
             return existing || dbk;
           });
-          setSettings({ blocks: mergedBlocks, menus: data.menus || [], mobilePreset: data.mobilePreset || 'klook-explorer' });
+          setSettings({ 
+            blocks: mergedBlocks, 
+            menus: data.menus || [], 
+            mobilePreset: data.mobilePreset || 'klook-explorer',
+            mobileHookTitle: data.mobileHookTitle || '',
+            mobileHookSubtitle: data.mobileHookSubtitle || ''
+          });
         } else {
-          setSettings({ blocks: DEFAULT_BLOCKS, menus: [], mobilePreset: 'klook-explorer' });
+          setSettings({ 
+            blocks: DEFAULT_BLOCKS, 
+            menus: [], 
+            mobilePreset: 'klook-explorer',
+            mobileHookTitle: 'Book Your Bali Tour',
+            mobileHookSubtitle: 'Verified Local Partner'
+          });
         }
       } catch (err) {
         console.error("Failed to load website builder settings:", err);
@@ -510,7 +524,9 @@ export default function WebsiteBuilder() {
         ...existingGen, 
         sectionStyles: updatedStyles, 
         themeMode: 'custom',
-        mobilePreset: settings.mobilePreset || 'klook-explorer'
+        mobilePreset: settings.mobilePreset || 'klook-explorer',
+        mobileHookTitle: settings.mobileHookTitle || '',
+        mobileHookSubtitle: settings.mobileHookSubtitle || ''
       }, { merge: true });
 
       alert('Website Builder settings saved successfully!');
@@ -2180,6 +2196,61 @@ export default function WebsiteBuilder() {
                   </p>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Mobile Header Branding & Dynamic Hook Customizer */}
+          <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center gap-2.5 border-b border-gray-100 pb-3">
+              <Smartphone className="w-5 h-5 text-orange-500" />
+              <div>
+                <h4 className="text-sm font-black text-gray-900">Mobile Header Hook & Trust Badge</h4>
+                <p className="text-xs text-gray-500">Customize the high-conversion hook title and trust badge displayed in the mobile top bar.</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700">Mobile Hook Title (Main Headline)</label>
+                <input
+                  type="text"
+                  value={settings?.mobileHookTitle || ''}
+                  onChange={(e) => setSettings(prev => prev ? ({ ...prev, mobileHookTitle: e.target.value }) : prev)}
+                  placeholder="e.g. Book Your Bali Tour"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-orange-500 focus:bg-white transition-all"
+                />
+                <span className="text-[10px] text-gray-400">Replaces generic business name in mobile header with a high-intent conversion hook.</span>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-gray-700">Mobile Hook Subtitle / Trust Badge</label>
+                <input
+                  type="text"
+                  value={settings?.mobileHookSubtitle || ''}
+                  onChange={(e) => setSettings(prev => prev ? ({ ...prev, mobileHookSubtitle: e.target.value }) : prev)}
+                  placeholder="e.g. Verified Local Partner"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-orange-500 focus:bg-white transition-all"
+                />
+                <span className="text-[10px] text-gray-400">Trust badge displayed directly under the hook header (e.g. "Verified Local Partner").</span>
+              </div>
+            </div>
+
+            {/* Live Mobile Header Preview Pill */}
+            <div className="bg-gray-50 rounded-xl p-3.5 border border-gray-200/60 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-xs shadow-sm">
+                  {(settings?.mobileHookTitle || 'B')[0]?.toUpperCase()}
+                </div>
+                <div>
+                  <span className="text-xs font-black text-gray-900 block leading-tight">
+                    {settings?.mobileHookTitle || 'Book Your Bali Tour'}
+                  </span>
+                  <span className="text-[9px] font-bold text-orange-500 uppercase tracking-wider block">
+                    {settings?.mobileHookSubtitle || 'Verified Local Partner'}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 bg-white border border-gray-200 rounded-lg text-gray-500 shadow-2xs">
+                Live Mobile Header Preview
+              </span>
             </div>
           </div>
 

@@ -768,6 +768,8 @@ export interface SiteSettings {
   carRentalModule?: CarRentalModuleSettings;
   brandingPreset?: 'default' | 'swiss-minimalist' | 'tech-dark' | 'elegant-editorial' | 'nordic-forest' | 'retro-adventure' | 'tokyo-neon' | 'mediterranean-breeze' | 'brutalist-mono' | 'royal-safari' | 'zen-oasis' | 'alpine-chalet' | 'sunset-ibiza';
   mobilePreset?: 'klook-explorer' | 'getyourguide-activity' | 'airbnb-experiences' | 'viator-classic' | 'tripadvisor-wanderer' | 'luxury-concierge' | 'boutique-minimalist' | 'nordic-adventure' | 'tokyo-cyber' | 'island-breeze' | 'default';
+  mobileHookTitle?: string; // e.g. "Book Your Bali Tour"
+  mobileHookSubtitle?: string; // e.g. "Verified Local Partner"
   sectionStyles?: {
     topNav?: string;
     mainNav?: string;

@@ -52,6 +52,8 @@ export default function MobileHomePresets({
   };
 
   const activePreset = (settings?.mobilePreset || builderSettings?.mobilePreset || preset || 'klook-explorer');
+  const hookTitle = settings?.mobileHookTitle || builderSettings?.mobileHookTitle || settings?.siteName || 'Book Your Bali Tour';
+  const hookSubtitle = settings?.mobileHookSubtitle || builderSettings?.mobileHookSubtitle || 'Verified Local Partner';
 
   // Common Tour Price Resolver
   const getTourPrice = (tour: Tour) => {
@@ -250,21 +252,21 @@ export default function MobileHomePresets({
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <span className="w-7 h-7 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-xs shadow-sm">
-                K
+                {(hookTitle || 'B')[0]?.toUpperCase()}
               </span>
               <div>
                 <span className="text-sm font-black text-gray-900 tracking-tight block leading-none">
-                  {settings?.siteName || 'Tripbone'}
+                  {hookTitle}
                 </span>
                 <span className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">
-                  Verified Local Partner
+                  {hookSubtitle}
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={onOpenCategoriesModal}
-                className="p-2 rounded-xl bg-gray-50 text-gray-600 border border-gray-100 text-xs font-bold flex items-center gap-1"
+                className="p-2 rounded-xl bg-gray-50 text-gray-600 border border-gray-100 text-xs font-bold flex items-center gap-1 hover:bg-gray-100 transition-colors"
               >
                 <LucideIcons.LayoutGrid className="w-3.5 h-3.5 text-orange-500" />
                 <span className="text-[10px]">Filter</span>
@@ -300,10 +302,10 @@ export default function MobileHomePresets({
                   Instant Confirmation
                 </span>
                 <h3 className="text-base font-black leading-tight drop-shadow-xs">
-                  Discover Best Bali Adventures
+                  {hookTitle}
                 </h3>
                 <p className="text-[10px] text-orange-100 font-medium">
-                  Free cancellation · English speaking guides · Best price
+                  {hookSubtitle} · Free cancellation · Best price
                 </p>
               </div>
               <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/20">
@@ -316,7 +318,8 @@ export default function MobileHomePresets({
         {/* Quick Category Icons Row */}
         <div className="px-4">
           <div className="flex items-center gap-3 overflow-x-auto no-scrollbar pb-1">
-            <button
+            <Link
+              to="/tours"
               onClick={() => onSelectCategory('all')}
               className={cn(
                 "flex flex-col items-center gap-1.5 shrink-0 p-2 rounded-xl transition-all",
@@ -330,7 +333,7 @@ export default function MobileHomePresets({
                 <LucideIcons.Compass className="w-5 h-5" />
               </div>
               <span className="text-[10px] whitespace-nowrap">All Tours</span>
-            </button>
+            </Link>
 
             {categories.slice(0, 6).map((cat) => {
               const Icon = getCategoryIcon(cat.name);
@@ -559,12 +562,12 @@ export default function MobileHomePresets({
         <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-gray-100">
           <div className="flex items-center gap-2">
             <span className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">
-              GYG
+              {(hookTitle || 'G')[0]?.toUpperCase()}
             </span>
-            <span className="font-extrabold text-sm text-gray-900">{settings?.siteName || 'Tripbone'}</span>
+            <span className="font-extrabold text-sm text-gray-900">{hookTitle}</span>
           </div>
           <span className="text-[10px] font-black px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">
-            {tours.length}+ Activities
+            {hookSubtitle || `${tours.length}+ Activities`}
           </span>
         </div>
 
@@ -836,8 +839,8 @@ export default function MobileHomePresets({
         {/* Header */}
         <div className="bg-[#004f44] text-white p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-base font-black tracking-tight">{settings?.siteName || 'Tripbone'}</h1>
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">Viator Standard</span>
+            <h1 className="text-base font-black tracking-tight">{hookTitle}</h1>
+            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">{hookSubtitle || 'Viator Standard'}</span>
           </div>
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -946,10 +949,10 @@ export default function MobileHomePresets({
             <span className="w-8 h-8 rounded-full bg-[#00aa6c] flex items-center justify-center text-white font-black text-sm">
               🦉
             </span>
-            <span className="font-black text-sm text-gray-900">{settings?.siteName || 'Tripbone'}</span>
+            <span className="font-black text-sm text-gray-900">{hookTitle}</span>
           </div>
           <span className="text-[10px] font-black px-2 py-0.5 bg-[#00aa6c]/10 text-[#00aa6c] rounded-full">
-            Travelers' Choice 2025
+            {hookSubtitle || "Travelers' Choice 2025"}
           </span>
         </div>
 
@@ -1064,8 +1067,8 @@ export default function MobileHomePresets({
         {/* Luxury Gold Header */}
         <div className="px-4 pt-4 pb-3 border-b border-amber-500/20 flex items-center justify-between">
           <div className="space-y-0.5">
-            <span className="text-[9px] uppercase tracking-[0.3em] text-amber-400 block font-sans font-bold">The Luxury Collection</span>
-            <h1 className="text-base font-black tracking-wider text-white font-serif">{settings?.siteName || 'Tripbone'}</h1>
+            <span className="text-[9px] uppercase tracking-[0.3em] text-amber-400 block font-sans font-bold">{hookSubtitle || 'The Luxury Collection'}</span>
+            <h1 className="text-base font-black tracking-wider text-white font-serif">{hookTitle}</h1>
           </div>
           <span className="text-[10px] font-sans font-bold px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full">
             VIP Desk
@@ -1177,8 +1180,8 @@ export default function MobileHomePresets({
       <div className="bg-white text-gray-900 pb-12 space-y-7 text-left font-sans">
         {/* Minimal Header */}
         <div className="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
-          <span className="text-xs font-black tracking-widest uppercase">{settings?.siteName || 'Tripbone'}</span>
-          <span className="text-[10px] text-gray-400 font-mono">EDITION 2025</span>
+          <span className="text-xs font-black tracking-widest uppercase">{hookTitle}</span>
+          <span className="text-[10px] text-gray-400 font-mono">{hookSubtitle || 'EDITION 2025'}</span>
         </div>
 
         {/* 1. Hero & Search */}
@@ -1274,10 +1277,10 @@ export default function MobileHomePresets({
         <div className="px-4 pt-3 pb-3 border-b border-emerald-900/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LucideIcons.Compass className="w-5 h-5 text-emerald-400" />
-            <span className="font-black text-sm text-white">{settings?.siteName || 'Tripbone'}</span>
+            <span className="font-black text-sm text-white">{hookTitle}</span>
           </div>
           <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-800 text-emerald-200 rounded">
-            Alpine & Trail
+            {hookSubtitle || 'Alpine & Trail'}
           </span>
         </div>
 
@@ -1378,10 +1381,10 @@ export default function MobileHomePresets({
         <div className="px-4 pt-3 pb-3 border-b border-cyan-500/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span className="font-mono font-black text-sm text-cyan-400">{settings?.siteName || 'Tripbone'}</span>
+            <span className="font-mono font-black text-sm text-cyan-400">{hookTitle}</span>
           </div>
           <span className="text-[10px] font-mono px-2 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded">
-            ⚡ LIVE SYNC
+            {hookSubtitle || '⚡ LIVE SYNC'}
           </span>
         </div>
 
@@ -1482,10 +1485,10 @@ export default function MobileHomePresets({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <LucideIcons.Palmtree className="w-5 h-5 text-amber-300" />
-            <h1 className="text-base font-black tracking-tight">{settings?.siteName || 'Tripbone'}</h1>
+            <h1 className="text-base font-black tracking-tight">{hookTitle}</h1>
           </div>
           <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">
-            Bali Paradise
+            {hookSubtitle || 'Bali Paradise'}
           </span>
         </div>
         <form onSubmit={handleSearch} className="relative">

@@ -44,7 +44,8 @@ import {
   Info,
   Star,
   ShieldCheck,
-  Award
+  Award,
+  Smartphone
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { updateTenantGA, extractMeasurementId } from '../../lib/googleAnalytics';
@@ -1557,6 +1558,63 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
               </div>
             </div>
           </div>
+          </div>
+        )}
+
+        {/* Mobile Experience & Header Hook Section */}
+        {(activeTab === 'all' || activeTab === 'website') && (
+          <div className="space-y-6 bg-white p-6 rounded-[24px] border border-gray-100">
+            <h3 className="text-lg font-bold text-gray-900 border-b border-gray-50 pb-4 flex items-center gap-2">
+              <Smartphone className="h-5 w-5 text-primary" />
+              Mobile Presentation & Header Hook
+            </h3>
+            <p className="text-xs text-gray-500">
+              Customize dynamic conversion hooks, trust badges, and layout presets tailored specifically for mobile smartphone visitors.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Mobile Hook Title (Headline)</label>
+                <input 
+                  type="text" 
+                  value={settings?.mobileHookTitle || ''}
+                  onChange={(e) => setSettings(s => s ? {...s, mobileHookTitle: e.target.value} : null)}
+                  className="w-full bg-gray-50 border-none rounded-[12px] px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. Book Your Bali Tour"
+                />
+                <span className="text-[10px] text-gray-400 pl-1">Replaces generic title with an actionable booking hook (e.g. "Book Your Bali Tour").</span>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Mobile Hook Subtitle / Trust Badge</label>
+                <input 
+                  type="text" 
+                  value={settings?.mobileHookSubtitle || ''}
+                  onChange={(e) => setSettings(s => s ? {...s, mobileHookSubtitle: e.target.value} : null)}
+                  className="w-full bg-gray-50 border-none rounded-[12px] px-4 py-3 text-sm focus:ring-2 focus:ring-primary"
+                  placeholder="e.g. Verified Local Partner"
+                />
+                <span className="text-[10px] text-gray-400 pl-1">Trust badge displayed directly under the header hook (e.g. "Verified Local Partner").</span>
+              </div>
+            </div>
+
+            <div className="space-y-1 pt-2 border-t border-gray-50">
+              <label className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Mobile Frontpage Layout Preset</label>
+              <select
+                value={settings?.mobilePreset || 'klook-explorer'}
+                onChange={(e) => setSettings(s => s ? {...s, mobilePreset: e.target.value as any} : null)}
+                className="w-full bg-gray-50 border-none rounded-[12px] px-4 py-3 text-sm focus:ring-2 focus:ring-primary font-bold"
+              >
+                <option value="klook-explorer">Klook Explorer (2-Column Tour Cards & Fast Filters)</option>
+                <option value="getyourguide-activity">GetYourGuide Activity (Activity List & Bestseller Badges)</option>
+                <option value="airbnb-experiences">Airbnb Experiences (Photo-First & Authentic)</option>
+                <option value="viator-classic">Viator Classic (High Trust & Scarcity Badges)</option>
+                <option value="tripadvisor-wanderer">Tripadvisor Wanderer (Bubble Ratings & Rank Badges)</option>
+                <option value="luxury-concierge">Luxury Concierge (Obsidian & Champagne Gold)</option>
+                <option value="boutique-minimalist">Boutique Minimalist (Clean Scandinavian Monochrome)</option>
+                <option value="nordic-adventure">Nordic Adventure (Forest Green & Trail Badges)</option>
+                <option value="tokyo-cyber">Tokyo Cyber (Slate & Instant Pass Sync)</option>
+                <option value="island-breeze">Island Breeze (Tropical Resort & Turquoise)</option>
+              </select>
+            </div>
           </div>
         )}
 
