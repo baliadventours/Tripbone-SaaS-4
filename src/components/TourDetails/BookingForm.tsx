@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { db, auth } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp, doc, onSnapshot } from '@/src/lib/firebase';
 import { getEffectiveCutOffHours, isSlotCutOff, isDateFullyCutOff, formatCutOffNotice, validateBookingCutOff } from '../../lib/cutOffUtils';
+import PriceSummaryModal from './PriceSummaryModal';
 
 interface BookingFormProps {
   tour: Tour;
@@ -46,6 +47,7 @@ export default function BookingForm({ tour }: BookingFormProps) {
   const [adults, setAdults] = useState(Math.max(1, minRequired));
   const [children, setChildren] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showPriceSummary, setShowPriceSummary] = useState(false);
   const [step, setStep] = useState<BookingStep>('package');
   const [isBooking, setIsBooking] = useState(false);
 
@@ -461,6 +463,27 @@ export default function BookingForm({ tour }: BookingFormProps) {
             </div>
           )}
 
+          {/* Price Summary Breakdown Trigger */}
+          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+            <div className="text-left">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Estimated Total</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-base font-black text-slate-900 font-display">
+                  <FormattedPrice amount={summary.grandTotal} />
+                </span>
+                <span className="text-[10px] text-slate-400 font-bold">({adults + children} pax)</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowPriceSummary(true)}
+              className="text-xs font-black text-primary hover:text-orange-700 underline flex items-center gap-0.5 cursor-pointer"
+            >
+              <span>Summary</span>
+              <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={handleAvailabilityCheck}
@@ -485,6 +508,28 @@ export default function BookingForm({ tour }: BookingFormProps) {
           </button>
         </form>
       </div>
+
+      {/* Price Summary & Breakdown Modal */}
+      {tour && (
+        <PriceSummaryModal
+          isOpen={showPriceSummary}
+          onClose={() => setShowPriceSummary(false)}
+          tour={tour}
+          initialDate={date}
+          initialTime={selectedTime}
+          initialAdults={adults}
+          initialChildren={children}
+          initialPackage={selectedPackage}
+          onProceed={(d, t, a, c, p) => {
+            setDate(d);
+            setSelectedTime(t);
+            setAdults(a);
+            setChildren(c);
+            if (p) setSelectedPackage(p);
+            handleAvailabilityCheck();
+          }}
+        />
+      )}
     </>
   );
 }

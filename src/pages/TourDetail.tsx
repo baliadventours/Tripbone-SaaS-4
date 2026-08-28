@@ -21,6 +21,7 @@ import { cn, formatPrice } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import TourCard from '../components/TourCard';
 import { Helmet } from 'react-helmet-async';
+import PriceSummaryModal from '../components/TourDetails/PriceSummaryModal';
 
 import { useSettings } from '../lib/SettingsContext';
 
@@ -53,6 +54,7 @@ export default function TourDetail() {
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [expandedMobileDays, setExpandedMobileDays] = useState<Record<number, boolean>>({ 0: true });
+  const [showPriceSummaryModal, setShowPriceSummaryModal] = useState(false);
   const navigate = useNavigate();
 
   const [isMobile, setIsMobile] = useState(false);
@@ -795,11 +797,9 @@ export default function TourDetail() {
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.12)] flex items-center justify-between gap-3">
         <button
           type="button"
-          onClick={() => {
-            const el = document.getElementById('package');
-            if (el) el.scrollIntoView({ behavior: 'smooth' });
-          }}
+          onClick={() => setShowPriceSummaryModal(true)}
           className="text-left cursor-pointer group"
+          aria-label="Open price summary and breakdown"
         >
           <div className="flex items-center gap-1 text-[10px] text-slate-400 font-black uppercase tracking-wider">
             <span>Starting From</span>
@@ -818,11 +818,11 @@ export default function TourDetail() {
         <button
           type="button"
           onClick={() => {
-            const el = document.getElementById('package');
+            const el = document.getElementById('booking-widget-container') || document.querySelector('form');
             if (el) {
-              el.scrollIntoView({ behavior: 'smooth' });
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
-              navigate(`/checkout/${tour.id}?mobileStep=package`);
+              setShowPriceSummaryModal(true);
             }
           }}
           className="bg-primary hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider px-6 py-3 rounded-full shadow-md active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
@@ -830,6 +830,21 @@ export default function TourDetail() {
           Book Now <ChevronRight className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Interactive Price Summary Modal / Bottom Sheet */}
+      {tour && (
+        <PriceSummaryModal
+          isOpen={showPriceSummaryModal}
+          onClose={() => setShowPriceSummaryModal(false)}
+          tour={tour}
+          onProceed={(d, t, a, c, p) => {
+            const targetTourId = tour.id || (tour as any).slug || (tour as any)._id;
+            const pkgParam = p ? `&package=${encodeURIComponent(p.name)}` : '';
+            const timeParam = t ? `&time=${encodeURIComponent(t)}` : '';
+            navigate(`/checkout/${targetTourId}?date=${d}&adults=${a}&children=${c}${timeParam}${pkgParam}`);
+          }}
+        />
+      )}
     </div>
   );
 }
