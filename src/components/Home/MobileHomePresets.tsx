@@ -247,34 +247,8 @@ export default function MobileHomePresets({
   if (activePreset === 'klook-explorer') {
     return (
       <div className="bg-[#f8f9fa] pb-12 space-y-6">
-        {/* Klook Header Bar */}
-        <div className="bg-white px-4 pt-3 pb-4 border-b border-gray-100 sticky top-0 z-30 shadow-xs">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black text-xs shadow-sm">
-                {(hookTitle || 'B')[0]?.toUpperCase()}
-              </span>
-              <div>
-                <span className="text-sm font-black text-gray-900 tracking-tight block leading-none">
-                  {hookTitle}
-                </span>
-                <span className="text-[9px] font-bold text-orange-500 uppercase tracking-widest">
-                  {hookSubtitle}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button 
-                onClick={onOpenCategoriesModal}
-                className="p-2 rounded-xl bg-gray-50 text-gray-600 border border-gray-100 text-xs font-bold flex items-center gap-1 hover:bg-gray-100 transition-colors"
-              >
-                <LucideIcons.LayoutGrid className="w-3.5 h-3.5 text-orange-500" />
-                <span className="text-[10px]">Filter</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Search Pill */}
+        {/* Klook Header Search Pill */}
+        <div className="bg-white px-4 pt-3 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-xs">
           <form onSubmit={handleSearch} className="relative">
             <LucideIcons.Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
             <input
@@ -286,7 +260,7 @@ export default function MobileHomePresets({
             />
             <button
               type="submit"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-orange-500 text-white rounded-full flex items-center justify-center shadow-xs"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 bg-orange-500 text-white rounded-full flex items-center justify-center shadow-xs cursor-pointer"
             >
               <LucideIcons.ArrowRight className="w-3.5 h-3.5" />
             </button>
@@ -537,20 +511,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer Quick Contact Bar */}
-        <div className="px-4 pt-4 border-t border-gray-200 text-center space-y-2">
-          <p className="text-[10px] text-gray-400">
-            © {new Date().getFullYear()} {settings?.siteName || 'Tripbone'}. Official Licensed Operator.
-          </p>
-          <div className="flex items-center justify-center gap-4 text-xs text-gray-500 font-medium">
-            <Link to="/about" className="hover:text-orange-500">About Us</Link>
-            <span>•</span>
-            <Link to="/contact" className="hover:text-orange-500">Support Desk</Link>
-            <span>•</span>
-            <Link to="/legal/terms" className="hover:text-orange-500">Terms</Link>
-          </div>
-        </div>
       </div>
     );
   }
@@ -560,22 +520,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'getyourguide-activity') {
     return (
-      <div className="bg-white pb-12 space-y-7">
-        {/* Header */}
-        <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-black text-xs">
-              {(hookTitle || 'G')[0]?.toUpperCase()}
-            </span>
-            <span className="font-extrabold text-sm text-gray-900">{hookTitle}</span>
-          </div>
-          <span className="text-[10px] font-black px-2.5 py-1 bg-blue-50 text-blue-700 rounded-full">
-            {hookSubtitle || `${tours.length}+ Activities`}
-          </span>
-        </div>
-
+      <div className="bg-white pb-6 space-y-7">
         {/* 1. Hero & Search */}
-        <div className="px-4 space-y-3">
+        <div className="px-4 pt-3 space-y-3">
           <h2 className="text-2xl font-black text-gray-900 tracking-tight leading-tight text-left">
             Unforgettable things to do in Bali
           </h2>
@@ -702,11 +649,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 border-t border-gray-100 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} {settings?.siteName}. Powered by Tripbone SaaS.
-        </div>
       </div>
     );
   }
@@ -716,7 +658,7 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'airbnb-experiences') {
     return (
-      <div className="bg-white pb-12 space-y-8 text-left">
+      <div className="bg-white pb-6 space-y-8 text-left">
         {/* Header Search Capsule */}
         <div className="px-4 pt-3 sticky top-0 bg-white/95 backdrop-blur-md z-30 pb-2 border-b border-gray-100">
           <form onSubmit={handleSearch} className="flex items-center gap-3 p-3 bg-white rounded-full border border-gray-200 shadow-md">
@@ -830,11 +772,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-6 border-t border-gray-100 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} {settings?.siteName || 'Tripbone'}.
-        </div>
       </div>
     );
   }
@@ -844,13 +781,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'viator-classic') {
     return (
-      <div className="bg-[#f2f4f5] pb-12 space-y-6 text-left">
-        {/* Header */}
-        <div className="bg-[#004f44] text-white p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-base font-black tracking-tight">{hookTitle}</h1>
-            <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded">{hookSubtitle || 'Viator Standard'}</span>
-          </div>
+      <div className="bg-[#f2f4f5] pb-6 space-y-6 text-left">
+        {/* Header Search */}
+        <div className="bg-[#004f44] text-white p-4">
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"
@@ -940,11 +873,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} {settings?.siteName}.
-        </div>
       </div>
     );
   }
@@ -954,22 +882,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'tripadvisor-wanderer') {
     return (
-      <div className="bg-white pb-12 space-y-6 text-left">
-        {/* Tripadvisor Green Header */}
-        <div className="px-4 pt-3 pb-3 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-full bg-[#00aa6c] flex items-center justify-center text-white font-black text-sm">
-              🦉
-            </span>
-            <span className="font-black text-sm text-gray-900">{hookTitle}</span>
-          </div>
-          <span className="text-[10px] font-black px-2 py-0.5 bg-[#00aa6c]/10 text-[#00aa6c] rounded-full">
-            {hookSubtitle || "Travelers' Choice 2025"}
-          </span>
-        </div>
-
+      <div className="bg-white pb-6 space-y-6 text-left">
         {/* 1. Hero & Search */}
-        <div className="px-4 space-y-3">
+        <div className="px-4 pt-3 space-y-3">
           <h2 className="text-xl font-black text-gray-900">Explore Bali with Top-Ranked Local Guides</h2>
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -1064,11 +979,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 text-center text-xs text-gray-400">
-          © {new Date().getFullYear()} {settings?.siteName}.
-        </div>
       </div>
     );
   }
@@ -1078,20 +988,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'luxury-concierge') {
     return (
-      <div className="bg-[#0b0f19] text-white pb-12 space-y-8 text-left font-serif">
-        {/* Luxury Gold Header */}
-        <div className="px-4 pt-4 pb-3 border-b border-amber-500/20 flex items-center justify-between">
-          <div className="space-y-0.5">
-            <span className="text-[9px] uppercase tracking-[0.3em] text-amber-400 block font-sans font-bold">{hookSubtitle || 'The Luxury Collection'}</span>
-            <h1 className="text-base font-black tracking-wider text-white font-serif">{hookTitle}</h1>
-          </div>
-          <span className="text-[10px] font-sans font-bold px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/30 rounded-full">
-            VIP Desk
-          </span>
-        </div>
-
+      <div className="bg-[#0b0f19] text-white pb-6 space-y-8 text-left font-serif">
         {/* 1. Hero & Search */}
-        <div className="px-4 space-y-3 font-sans">
+        <div className="px-4 pt-4 space-y-3 font-sans">
           <p className="text-xs text-amber-200/70 uppercase tracking-widest font-medium">Bespoke Journeys · Private Concierge</p>
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -1181,11 +1080,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 text-center text-xs text-gray-500 font-sans">
-          © {new Date().getFullYear()} {settings?.siteName}. High Luxury Division.
-        </div>
       </div>
     );
   }
@@ -1195,15 +1089,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'boutique-minimalist') {
     return (
-      <div className="bg-white text-gray-900 pb-12 space-y-7 text-left font-sans">
-        {/* Minimal Header */}
-        <div className="px-5 pt-4 pb-3 border-b border-gray-100 flex items-center justify-between">
-          <span className="text-xs font-black tracking-widest uppercase">{hookTitle}</span>
-          <span className="text-[10px] text-gray-400 font-mono">{hookSubtitle || 'EDITION 2025'}</span>
-        </div>
-
+      <div className="bg-white text-gray-900 pb-6 space-y-7 text-left font-sans">
         {/* 1. Hero & Search */}
-        <div className="px-5 space-y-3">
+        <div className="px-5 pt-4 space-y-3">
           <h2 className="text-2xl font-light tracking-tight text-gray-900 leading-tight">
             Curated Bali expeditions for discerning travelers.
           </h2>
@@ -1279,11 +1167,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-5 pt-4 text-center text-xs text-gray-400 font-mono">
-          © {new Date().getFullYear()} {settings?.siteName}.
-        </div>
       </div>
     );
   }
@@ -1293,20 +1176,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'nordic-adventure') {
     return (
-      <div className="bg-[#14241d] text-[#e8f1ec] pb-12 space-y-6 text-left">
-        {/* Header */}
-        <div className="px-4 pt-3 pb-3 border-b border-emerald-900/50 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LucideIcons.Compass className="w-5 h-5 text-emerald-400" />
-            <span className="font-black text-sm text-white">{hookTitle}</span>
-          </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-800 text-emerald-200 rounded">
-            {hookSubtitle || 'Alpine & Trail'}
-          </span>
-        </div>
-
+      <div className="bg-[#14241d] text-[#e8f1ec] pb-6 space-y-6 text-left">
         {/* 1. Hero & Search */}
-        <div className="px-4 space-y-3">
+        <div className="px-4 pt-4 space-y-3">
           <h2 className="text-xl font-black text-white">Rugged Expeditions & Mountain Treks</h2>
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -1386,11 +1258,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 text-center text-xs text-emerald-400/50">
-          © {new Date().getFullYear()} {settings?.siteName}. Nordic Expedition Engine.
-        </div>
       </div>
     );
   }
@@ -1400,20 +1267,9 @@ export default function MobileHomePresets({
      ========================================================================= */
   if (activePreset === 'tokyo-cyber') {
     return (
-      <div className="bg-[#0f172a] text-slate-100 pb-12 space-y-6 text-left">
-        {/* Header */}
-        <div className="px-4 pt-3 pb-3 border-b border-cyan-500/20 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
-            <span className="font-mono font-black text-sm text-cyan-400">{hookTitle}</span>
-          </div>
-          <span className="text-[10px] font-mono px-2 py-0.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/30 rounded">
-            {hookSubtitle || '⚡ LIVE SYNC'}
-          </span>
-        </div>
-
+      <div className="bg-[#0f172a] text-slate-100 pb-6 space-y-6 text-left">
         {/* 1. Hero & Search */}
-        <div className="px-4 space-y-3">
+        <div className="px-4 pt-4 space-y-3">
           <h2 className="text-xl font-black text-white">Instant QR Passes & Direct Bookings</h2>
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -1493,11 +1349,6 @@ export default function MobileHomePresets({
             ))}
           </div>
         </div>
-
-        {/* Footer */}
-        <div className="px-4 pt-4 text-center text-xs text-slate-500 font-mono">
-          © {new Date().getFullYear()} {settings?.siteName}.
-        </div>
       </div>
     );
   }
@@ -1506,25 +1357,16 @@ export default function MobileHomePresets({
      PRESET 10: ISLAND BREEZE (Tropical Resort & Turquoise Sunset)
      ========================================================================= */
   return (
-    <div className="bg-[#f0fdfa] pb-12 space-y-6 text-left">
-      {/* Tropical Header */}
-      <div className="bg-gradient-to-r from-teal-600 via-teal-500 to-emerald-500 text-white p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <LucideIcons.Palmtree className="w-5 h-5 text-amber-300" />
-            <h1 className="text-base font-black tracking-tight">{hookTitle}</h1>
-          </div>
-          <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full">
-            {hookSubtitle || 'Bali Paradise'}
-          </span>
-        </div>
+    <div className="bg-[#f0fdfa] pb-6 space-y-6 text-left">
+      {/* Search Bar */}
+      <div className="px-4 pt-4">
         <form onSubmit={handleSearch} className="relative">
           <input
             type="text"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search beaches, islands, secret coves..."
-            className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-white text-gray-900 text-xs font-bold focus:outline-none"
+            className="w-full pl-10 pr-3 py-2.5 rounded-2xl bg-white text-gray-900 border border-teal-200 text-xs font-bold focus:outline-none"
           />
           <LucideIcons.Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-600" />
         </form>
@@ -1601,11 +1443,6 @@ export default function MobileHomePresets({
             </Link>
           ))}
         </div>
-      </div>
-
-      {/* Footer */}
-      <div className="px-4 pt-4 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} {settings?.siteName}. Tropical Island Operator.
       </div>
     </div>
   );
