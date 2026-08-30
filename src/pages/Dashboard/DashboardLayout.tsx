@@ -8,11 +8,12 @@ import {
   LogOut,
   Sparkles,
   LifeBuoy,
-  LineChart
+  Shield,
+  ArrowRight
 } from 'lucide-react';
 import { auth, db } from '../../lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { doc, getDoc } from '@/src/lib/firebase';
+import { doc, getDoc, getDocs, query, collection, where, setDoc, deleteDoc, serverTimestamp } from '@/src/lib/firebase';
 import { UserProfile } from '../../types';
 import { cn } from '../../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -46,9 +47,36 @@ export default function DashboardLayout() {
       if (authUser) {
         setUser(authUser);
         const docRef = doc(db, 'users', authUser.uid);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setProfile(docSnap.data() as UserProfile);
+        let docSnap = await getDoc(docRef);
+        let userProfileData = docSnap.exists() ? (docSnap.data() as UserProfile) : null;
+
+        // Auto-merge staff profile if exists by email
+        if ((!userProfileData || userProfileData.role === 'customer') && authUser.email) {
+          try {
+            const q = query(collection(db, 'users'), where('email', '==', authUser.email));
+            const snap = await getDocs(q);
+            const staffDoc = snap.docs.find(d => d.id !== authUser.uid && ['admin', 'staff', 'supplier', 'agent', 'superadmin'].includes(d.data()?.role));
+            if (staffDoc) {
+              const staffData = staffDoc.data();
+              const merged = {
+                ...staffData,
+                uid: authUser.uid,
+                email: authUser.email,
+                updatedAt: serverTimestamp()
+              };
+              await setDoc(docRef, merged, { merge: true });
+              userProfileData = merged as UserProfile;
+              if (staffDoc.id.startsWith('usr_')) {
+                try { await deleteDoc(doc(db, 'users', staffDoc.id)); } catch (_) {}
+              }
+            }
+          } catch (e) {
+            console.warn("Could not sync staff profile:", e);
+          }
+        }
+
+        if (userProfileData) {
+          setProfile(userProfileData);
         }
       } else {
         navigate('/login', { state: { from: window.location } });
@@ -71,6 +99,9 @@ export default function DashboardLayout() {
     );
   }
 
+  const isStaffOrAdmin = profile && ['admin', 'staff', 'superadmin', 'supplier', 'agent'].includes(profile.role);
+  const staffConsoleUrl = profile?.role === 'supplier' ? '/supplier' : profile?.role === 'agent' ? '/agent' : profile?.role === 'superadmin' ? '/superadmin' : '/admin';
+
   const menuItems = [
     { label: 'Dashboard', icon: LayoutDashboard, path: '/customer/dashboard' },
     { label: 'My Bookings', icon: Briefcase, path: '/customer/bookings' },
@@ -85,6 +116,23 @@ export default function DashboardLayout() {
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-100 h-[calc(100vh-116px)] sticky top-[116px]">
         <div className="h-full flex flex-col p-6">
+          {isStaffOrAdmin && (
+            <div className="mb-4 p-3 bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl text-white shadow-md">
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className="h-4 w-4" />
+                <span className="text-[10px] font-black uppercase tracking-wider">{profile?.role} Access</span>
+              </div>
+              <p className="text-xs font-bold leading-tight mb-2.5">Switch to Operations Console</p>
+              <Link 
+                to={staffConsoleUrl}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-gray-900 rounded-xl text-xs font-black hover:bg-orange-50 transition-all w-full justify-center shadow-xs"
+              >
+                <span>Open Console</span>
+                <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+          )}
+
           <nav className="flex-1 space-y-1">
             {menuItems.map((item) => (
               <NavLink
@@ -117,6 +165,22 @@ export default function DashboardLayout() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Operations Switcher Banner for Mobile */}
+        {isStaffOrAdmin && (
+          <div className="lg:hidden bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-2.5 text-white flex items-center justify-between shadow-xs">
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 shrink-0" />
+              <span className="text-xs font-bold truncate">Operations Team ({profile?.role})</span>
+            </div>
+            <Link 
+              to={staffConsoleUrl}
+              className="px-3 py-1 bg-white text-gray-900 rounded-lg text-[11px] font-black uppercase tracking-wider shrink-0 flex items-center gap-1"
+            >
+              Console <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
+        )}
+
         {/* Mobile Dashboard Sub-Header & Navigation */}
         <div className="lg:hidden bg-white border-b border-gray-150 flex flex-col w-full z-20 shadow-xs">
           {/* User mini badge banner */}
@@ -136,7 +200,7 @@ export default function DashboardLayout() {
             <div className="flex items-center gap-2">
               <div className="bg-orange-50 text-[#00A651] border border-orange-100/60 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-xs">
                 <Sparkles className="h-3 w-3 text-orange-500 animate-pulse" />
-                Explorer Lvl 1
+                {profile?.role ? profile.role.toUpperCase() : 'Explorer'}
               </div>
               <button
                 onClick={handleLogout}
@@ -185,3 +249,4 @@ export default function DashboardLayout() {
     </div>
   );
 }
+

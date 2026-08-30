@@ -162,12 +162,26 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
         setUsers(prev => prev.map(u => u.uid === editingUser.uid ? { ...u, ...updates } : u));
         showNotification('success', `User ${formData.displayName} updated successfully.`);
       } else {
-        // Create new user record
-        const newUid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
-        const newUser: UserProfile & { tenantId?: string; createdAt: any } = {
-          uid: newUid,
+        // Check if a user with this email already exists in Firestore (e.g. signed up previously as customer)
+        const emailLower = formData.email.trim().toLowerCase();
+        let targetUid = 'usr_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+        let existingUserFound = false;
+
+        try {
+          const q = query(collection(db, 'users'), where('email', '==', formData.email.trim()));
+          const existingSnap = await getDocs(q);
+          if (!existingSnap.empty) {
+            targetUid = existingSnap.docs[0].id;
+            existingUserFound = true;
+          }
+        } catch (searchErr) {
+          console.warn("Could not check existing email before user create:", searchErr);
+        }
+
+        const newUser: UserProfile & { tenantId?: string; createdAt?: any; updatedAt: any } = {
+          uid: targetUid,
           displayName: formData.displayName,
-          email: formData.email,
+          email: formData.email.trim(),
           photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(formData.displayName)}`,
           phoneNumber: formData.phoneNumber,
           role: formData.role,
@@ -181,12 +195,16 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
           bio: formData.bio,
           country: formData.country,
           tenantId: activeTenantId || undefined,
-          createdAt: serverTimestamp()
+          updatedAt: serverTimestamp(),
+          ...(!existingUserFound && { createdAt: serverTimestamp() })
         };
 
-        await setDoc(doc(db, 'users', newUid), newUser);
-        setUsers(prev => [newUser as UserProfile, ...prev]);
-        showNotification('success', `New user ${formData.displayName} (${formData.role.toUpperCase()}) created successfully.`);
+        await setDoc(doc(db, 'users', targetUid), newUser, { merge: true });
+        setUsers(prev => {
+          const filtered = prev.filter(u => u.uid !== targetUid && u.email?.toLowerCase() !== emailLower);
+          return [newUser as UserProfile, ...filtered];
+        });
+        showNotification('success', `User ${formData.displayName} (${formData.role.toUpperCase()}) saved successfully.`);
       }
 
       setIsCreateModalOpen(false);

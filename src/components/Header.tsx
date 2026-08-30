@@ -676,7 +676,12 @@ export default function Header() {
   
             <div className="flex items-center gap-4">
                {user ? (
-                 <Link to="/customer/dashboard" className="px-5 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:shadow-xl transition-all">Console</Link>
+                 <Link 
+                   to={profile?.role === 'admin' || profile?.role === 'staff' ? '/admin' : profile?.role === 'supplier' ? '/supplier' : profile?.role === 'agent' ? '/agent' : profile?.role === 'superadmin' ? '/superadmin' : '/customer/dashboard'} 
+                   className="px-5 py-2 bg-gray-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:shadow-xl transition-all"
+                 >
+                   Console
+                 </Link>
                ) : (
                  <>
                    <Link to="/login" className="hidden sm:block text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-gray-900 px-4">Sign in</Link>
@@ -1038,9 +1043,13 @@ export default function Header() {
         </div>
       )}
 
-      {profile?.role === 'admin' && (
-        <Link to="/admin" className={cn("p-2 text-gray-900 hover:text-amber-600", pills && "bg-white border border-gray-200 shadow-sm rounded-full")}>
-          <Shield className="h-4 w-4" />
+      {(profile?.role === 'admin' || profile?.role === 'staff' || profile?.role === 'superadmin' || profile?.role === 'supplier' || profile?.role === 'agent') && (
+        <Link 
+          to={profile.role === 'supplier' ? '/supplier' : profile.role === 'agent' ? '/agent' : profile.role === 'superadmin' ? '/superadmin' : '/admin'} 
+          className={cn("p-2 text-gray-900 hover:text-primary transition-colors", pills && "bg-white border border-gray-200 shadow-sm rounded-full")}
+          title={profile.role === 'staff' ? 'Staff Operations Console' : 'Management Portal'}
+        >
+          <Shield className="h-4 w-4 text-primary" />
         </Link>
       )}
 
@@ -1077,16 +1086,31 @@ export default function Header() {
                 <div className="p-4 border-b border-gray-50 bg-gray-50/50">
                   <p className="text-xs font-black text-gray-900 truncate">{profile?.displayName || user?.displayName || 'User'}</p>
                   <p className="text-[10px] text-gray-500 truncate mt-0.5 font-medium">{user?.email}</p>
+                  {profile?.role && profile.role !== 'customer' && (
+                    <span className="inline-block mt-1.5 px-2 py-0.5 bg-primary/10 text-primary text-[9px] font-black uppercase rounded-full tracking-wider">
+                      {profile.role}
+                    </span>
+                  )}
                 </div>
                 
                 <div className="p-2">
+                  {(profile?.role === 'admin' || profile?.role === 'staff' || profile?.role === 'superadmin' || profile?.role === 'supplier' || profile?.role === 'agent') && (
+                    <Link 
+                      to={profile.role === 'supplier' ? '/supplier' : profile.role === 'agent' ? '/agent' : profile.role === 'superadmin' ? '/superadmin' : '/admin'} 
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-white bg-primary hover:bg-orange-600 transition-all mb-1 shadow-sm"
+                    >
+                      <Shield className="h-4 w-4" />
+                      {profile.role === 'staff' ? 'Staff Operations Console' : profile.role === 'admin' ? 'Admin Panel' : 'Management Portal'}
+                    </Link>
+                  )}
                   <Link 
                     to="/customer/dashboard" 
                     onClick={() => setShowUserMenu(false)}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:bg-orange-50 hover:text-primary transition-all"
                   >
                     <Shield className="h-4 w-4" />
-                    Dashboard
+                    Customer Dashboard
                   </Link>
                   <Link 
                     to="/customer/profile" 

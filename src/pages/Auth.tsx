@@ -193,7 +193,7 @@ export default function Auth() {
         }
 
         if (from === '/' || from === '/login') {
-          if (userRole === 'admin' || isTenantOwner) navigate('/admin', { replace: true });
+          if (userRole === 'admin' || userRole === 'staff' || isTenantOwner) navigate('/admin', { replace: true });
           else if (userRole === 'superadmin' || isSuperAdminEmail) navigate('/superadmin', { replace: true });
           else if (userRole === 'supplier') navigate('/supplier', { replace: true });
           else if (userRole === 'agent') navigate('/agent', { replace: true });
@@ -324,15 +324,34 @@ export default function Auth() {
             const isTenantOwner = !!(tenant && tenant.adminEmail && user.email && (tenant.adminEmail.trim().toLowerCase() === user.email.trim().toLowerCase()));
 
             if (!profileSnap.exists()) {
-              console.log("[Auth] Profile does not exist in Firestore for signed-in user, initializing profile.");
+              console.log("[Auth] Profile does not exist in Firestore for signed-in user, checking for placeholder or initializing profile.");
+              // Check if a staff/supplier profile exists by email
+              let existingRole: any = isTenantOwner ? 'admin' : (isSuperAdminEmail ? 'superadmin' : 'customer');
+              let existingDisplayName = user.displayName || email.split('@')[0] || 'Traveler';
+              let existingData: any = {};
+              try {
+                const q = query(collection(db, 'users'), where('email', '==', user.email));
+                const snap = await getDocs(q);
+                const matchDoc = snap.docs.find(d => d.id !== user.uid);
+                if (matchDoc) {
+                  existingData = matchDoc.data();
+                  existingRole = existingData.role || existingRole;
+                  existingDisplayName = existingData.displayName || existingDisplayName;
+                  if (matchDoc.id.startsWith('usr_')) {
+                    try { await deleteDoc(doc(db, 'users', matchDoc.id)); } catch (_) {}
+                  }
+                }
+              } catch (_) {}
+
               await setDoc(doc(db, 'users', user.uid), {
+                ...existingData,
                 uid: user.uid,
                 email: user.email,
-                displayName: user.displayName || email.split('@')[0] || 'Traveler',
-                photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || email.split('@')[0] || 'T')}&background=random`,
-                role: isTenantOwner ? 'admin' : (isSuperAdminEmail ? 'superadmin' : 'customer'),
-                tenantId: tenantId || null,
-                createdAt: serverTimestamp(),
+                displayName: existingDisplayName,
+                photoURL: user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(existingDisplayName)}&background=random`,
+                role: existingRole,
+                tenantId: existingData.tenantId || tenantId || null,
+                createdAt: existingData.createdAt || serverTimestamp(),
                 updatedAt: serverTimestamp(),
               });
             } else if (isTenantOwner) {
@@ -383,7 +402,7 @@ export default function Auth() {
         }
 
         if (from === '/' || from === '/login') {
-          if (userRole === 'admin' || isTenantOwner) navigate('/admin', { replace: true });
+          if (userRole === 'admin' || userRole === 'staff' || isTenantOwner) navigate('/admin', { replace: true });
           else if (userRole === 'superadmin' || isSuperAdminEmail) navigate('/superadmin', { replace: true });
           else if (userRole === 'supplier') navigate('/supplier', { replace: true });
           else if (userRole === 'agent') navigate('/agent', { replace: true });

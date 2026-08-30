@@ -1,25 +1,32 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Compass, Sparkles, Calendar, User, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useAuth } from '../lib/AuthContext';
 
 export default function MobileNav() {
   const location = useLocation();
   const path = location.pathname;
-  const [user, setUser] = useState<any>(null);
+  const { user, profile } = useAuth();
 
-  useEffect(() => {
-    return onAuthStateChanged(auth, setUser);
-  }, []);
+  const accountDestination = !user 
+    ? '/login' 
+    : (profile?.role === 'admin' || profile?.role === 'staff')
+      ? '/admin'
+      : profile?.role === 'supplier'
+        ? '/supplier'
+        : profile?.role === 'agent'
+          ? '/agent'
+          : profile?.role === 'superadmin'
+            ? '/superadmin'
+            : '/customer/dashboard';
 
   const navItems = [
     { label: 'Explore', path: '/', icon: Compass },
     { label: 'Inspire', path: '/blog', icon: Sparkles },
     { label: 'Plan', path: '/planner', icon: Calendar },
     { label: 'Chat', icon: MessageCircle, isAction: true },
-    { label: 'Account', path: '/customer/dashboard', icon: User },
+    { label: 'Account', path: accountDestination, icon: User },
   ];
 
   const handleAction = (item: any) => {
@@ -59,7 +66,7 @@ export default function MobileNav() {
         
         return (
           <Link
-            key={item.path}
+            key={item.label}
             to={targetPath}
             className={cn(
               "flex flex-col items-center gap-1 min-w-[64px] transition-colors",
@@ -81,3 +88,4 @@ export default function MobileNav() {
     </nav>
   );
 }
+

@@ -930,13 +930,44 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
 
       try {
         const userRef = doc(db, 'users', user.uid);
-        const snap = await getDoc(userRef);
+        let snap = await getDoc(userRef);
         
         let userData = snap.data() as UserProfile | undefined;
+        const userEmailLower = user.email ? user.email.trim().toLowerCase() : '';
+
+        // Check if there is an existing staff/admin profile by email that needs to be linked/merged
+        if ((!userData || userData.role === 'customer') && userEmailLower) {
+          try {
+            const emailQuery = query(collection(db, 'users'), where('email', '==', user.email));
+            const emailSnaps = await getDocs(emailQuery);
+            const staffDoc = emailSnaps.docs.find(d => d.id !== user.uid && ['admin', 'staff', 'supplier', 'agent', 'superadmin'].includes(d.data()?.role));
+            if (staffDoc) {
+              const staffData = staffDoc.data();
+              const merged = {
+                ...staffData,
+                uid: user.uid,
+                email: user.email,
+                displayName: userData?.displayName || staffData.displayName || user.displayName || 'Staff Member',
+                updatedAt: serverTimestamp()
+              };
+              await setDoc(userRef, merged, { merge: true });
+              userData = merged as UserProfile;
+              if (staffDoc.id.startsWith('usr_')) {
+                try {
+                  await deleteDoc(doc(db, 'users', staffDoc.id));
+                } catch (delErr) {
+                  console.warn("Could not remove placeholder staff doc:", delErr);
+                }
+              }
+            }
+          } catch (mergeErr) {
+            console.warn("Error auto-merging staff profile in Admin.tsx:", mergeErr);
+          }
+        }
+
         let userRole = userData?.role;
 
         // Auto-upgrade master admin and tenant owner
-        const userEmailLower = user.email ? user.email.trim().toLowerCase() : '';
         const adminEmailRaw = (import.meta.env.VITE_ADMIN_EMAIL || 'baliadventours@gmail.com').trim().toLowerCase();
         const isMasterAdmin = userEmailLower === adminEmailRaw || ['baliadventours@gmail.com', 'admin@tripbone.com', 'kuotabox@gmail.com'].includes(userEmailLower);
         const isTenantOwner = !!(tenant && tenant.adminEmail && userEmailLower === tenant.adminEmail.trim().toLowerCase());
@@ -955,7 +986,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           userData.uid = user.uid;
         }
 
-        if (userRole === 'admin' || userRole === 'supplier' || userRole === 'agent') {
+        if (userRole === 'admin' || userRole === 'staff' || userRole === 'supplier' || userRole === 'agent' || userRole === 'superadmin' || isMasterAdmin || isTenantOwner) {
           setCurrentUserProfile(userData || null);
           setIsAuthorized(true);
         } else {
@@ -4022,7 +4053,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                                 </button>
                               )}
 
-                              {currentUserProfile?.role === 'admin' && (
+                              {(currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'staff') && (
                                 <>
                                   {booking.status !== 'confirmed' && booking.status !== 'completed' && (
                                     <button 
@@ -4050,18 +4081,20 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                                     </button>
                                   )}
 
-                                  <button 
-                                    onClick={async () => {
-                                      setOpenMenuId(null);
-                                      if (confirm("Permanently delete this booking record? This structural mutation cannot be undone.")) {
-                                        await handleDeleteBooking(booking.id);
-                                      }
-                                    }} 
-                                    className="w-full px-4 py-2 text-xs text-red-705 hover:bg-red-55 flex items-center gap-2.5 font-black transition-colors pt-2 border-t border-gray-100"
-                                  >
-                                    <Icons.Trash2 className="h-3.5 w-3.5 text-red-600" />
-                                    Delete Permanently
-                                  </button>
+                                  {currentUserProfile?.role === 'admin' && (
+                                    <button 
+                                      onClick={async () => {
+                                        setOpenMenuId(null);
+                                        if (confirm("Permanently delete this booking record? This structural mutation cannot be undone.")) {
+                                          await handleDeleteBooking(booking.id);
+                                        }
+                                      }} 
+                                      className="w-full px-4 py-2 text-xs text-red-705 hover:bg-red-55 flex items-center gap-2.5 font-black transition-colors pt-2 border-t border-gray-100"
+                                    >
+                                      <Icons.Trash2 className="h-3.5 w-3.5 text-red-600" />
+                                      Delete Permanently
+                                    </button>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -4201,7 +4234,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                           </button>
                         )}
 
-                        {currentUserProfile?.role === 'admin' && (
+                        {(currentUserProfile?.role === 'admin' || currentUserProfile?.role === 'staff') && (
                           <>
                             {booking.status !== 'confirmed' && booking.status !== 'completed' && (
                               <button 
@@ -4229,18 +4262,20 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                               </button>
                             )}
 
-                            <button 
-                              onClick={async () => {
-                                setOpenMenuId(null);
-                                if (confirm("Permanently delete this booking record?")) {
-                                  await handleDeleteBooking(booking.id);
-                                }
-                              }} 
-                              className="w-full px-4 py-2.5 text-xs text-red-700 hover:bg-red-55 flex items-center gap-2.5 font-black transition-colors pt-2 border-t border-gray-100"
-                            >
-                              <Icons.Trash2 className="h-3.5 w-3.5 text-red-600" />
-                              Delete Permanently
-                            </button>
+                            {currentUserProfile?.role === 'admin' && (
+                              <button 
+                                onClick={async () => {
+                                  setOpenMenuId(null);
+                                  if (confirm("Permanently delete this booking record?")) {
+                                    await handleDeleteBooking(booking.id);
+                                  }
+                                }} 
+                                className="w-full px-4 py-2.5 text-xs text-red-700 hover:bg-red-55 flex items-center gap-2.5 font-black transition-colors pt-2 border-t border-gray-100"
+                              >
+                                <Icons.Trash2 className="h-3.5 w-3.5 text-red-600" />
+                                Delete Permanently
+                              </button>
+                            )}
                           </>
                         )}
                       </div>
@@ -5403,8 +5438,10 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
             {isSidebarOpen && (
               <span className="font-black text-gray-900 tracking-tight text-lg truncate uppercase">
                 {currentUserProfile?.role === 'admin' ? 'Admin Panel' : 
+                 currentUserProfile?.role === 'staff' ? 'Staff Console' :
                  currentUserProfile?.role === 'supplier' ? 'Supplier Portal' : 
-                 currentUserProfile?.role === 'agent' ? 'Agent Portal' : 'Admin'}
+                 currentUserProfile?.role === 'agent' ? 'Agent Portal' : 
+                 currentUserProfile?.role === 'superadmin' ? 'Superadmin Portal' : 'Admin'}
               </span>
             )}
           </div>
