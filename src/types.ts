@@ -626,7 +626,20 @@ export interface CommunicationSettings {
   openwaApiKey?: string; // New: OpenWA API Key
   openwaBaseUrl?: string; // New: OpenWA Dashboard URL
   openwaSessionId?: string; // New: OpenWA Session Name
-  whatsappProvider?: 'openwa' | 'waba'; // Provider select option
+  whatsappProvider?: 'openwa' | 'waba' | 'whapi'; // Provider select option
+  whapiToken?: string; // Whapi API Token
+  whapiApiUrl?: string; // Whapi API Gateway URL (defaults to https://gate.whapi.cloud)
+  whapiChannelId?: string; // Whapi Channel ID (e.g. THOROD-C4US9)
+  whapiWebhookUrl?: string; // Whapi Webhook URL
+  whapiProxyUrl?: string; // Optional SOCKS5 proxy URL
+  whapiAutoDownload?: {
+    image?: boolean;
+    audio?: boolean;
+    voice?: boolean;
+    video?: boolean;
+    document?: boolean;
+    sticker?: boolean;
+  };
   wabaAccessToken?: string; // WABA Access Token
   wabaPhoneNumberId?: string; // WABA Phone Number ID
   wabaTemplateName?: string; // Default template name for confirmations

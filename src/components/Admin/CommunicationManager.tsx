@@ -59,6 +59,14 @@ const CommunicationManager = () => {
   const [wabaTestLanguage, setWabaTestLanguage] = useState('id');
   const [wabaTestBody, setWabaTestBody] = useState('This is a custom test message sent from the Bali AdvenTours admin panel playground.');
 
+  // Whapi Custom Tester & State
+  const [showWhapiToken, setShowWhapiToken] = useState(false);
+  const [whapiTestPhone, setWhapiTestPhone] = useState('');
+  const [whapiTestMessage, setWhapiTestMessage] = useState('This is a diagnostic test message dispatched via Whapi.cloud API Gateway.');
+  const [whapiHealthStatus, setWhapiHealthStatus] = useState<any>(null);
+  const [whapiHealthLoading, setWhapiHealthLoading] = useState(false);
+  const [copiedWhapiWebhook, setCopiedWhapiWebhook] = useState(false);
+
   // WhatsApp Session Management
   const [waSessionStatus, setWaSessionStatus] = useState<any>(null);
   const [waSessionLoading, setWaSessionLoading] = useState(false);
@@ -150,6 +158,11 @@ const CommunicationManager = () => {
         bodyData.wabaPhoneNumberId = settings.wabaPhoneNumberId;
         bodyData.wabaTemplateName = settings.wabaTemplateName;
         bodyData.wabaLanguageCode = settings.wabaLanguageCode || 'en';
+      } else if (currentProvider === 'whapi') {
+        bodyData.whapiToken = settings.whapiToken;
+        bodyData.whapiApiUrl = settings.whapiApiUrl || 'https://gate.whapi.cloud';
+        bodyData.whapiChannelId = settings.whapiChannelId;
+        bodyData.whapiProxyUrl = settings.whapiProxyUrl;
       } else {
         bodyData.token = settings.openwaApiKey;
         bodyData.baseUrl = settings.openwaBaseUrl || 'https://openwa-dashboard-production-b24e.up.railway.app';
@@ -181,6 +194,98 @@ const CommunicationManager = () => {
       }
     } catch (error: any) {
       setTestWhatsAppStatus({ success: false, message: error.message || 'An unexpected error occurred.' });
+    } finally {
+      setTestWhatsAppLoading(false);
+    }
+  };
+
+  const handleCheckWhapiHealth = async () => {
+    if (!settings) return;
+    if (!settings.whapiToken) {
+      setTestWhatsAppStatus({ success: false, message: 'Please provide a Whapi API Token first in settings to check channel health.' });
+      return;
+    }
+    setWhapiHealthLoading(true);
+    try {
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      const res = await fetch('/api/whatsapp/whapi-health', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
+        body: JSON.stringify({
+          token: settings.whapiToken,
+          apiUrl: settings.whapiApiUrl || 'https://gate.whapi.cloud',
+          tenantId: getActiveTenantId()
+        })
+      });
+      const data = await res.json();
+      setWhapiHealthStatus(data);
+      if (res.ok && data.success) {
+        setTestWhatsAppStatus({
+          success: true,
+          message: `Whapi Channel is ${String(data.status).toUpperCase()}! Channel connection verified successfully.`
+        });
+      } else {
+        setTestWhatsAppStatus({
+          success: false,
+          message: data.error || 'Failed to verify Whapi channel status.'
+        });
+      }
+    } catch (err: any) {
+      setTestWhatsAppStatus({ success: false, message: err.message || 'Error checking Whapi health.' });
+    } finally {
+      setWhapiHealthLoading(false);
+    }
+  };
+
+  const handleSendWhapiPlayground = async () => {
+    if (!settings) return;
+    const phoneToUse = whapiTestPhone.trim() || settings.adminNotificationPhone;
+    if (!phoneToUse) {
+      setTestWhatsAppStatus({ success: false, message: 'Please specify a recipient phone number first.' });
+      return;
+    }
+    if (!settings.whapiToken) {
+      setTestWhatsAppStatus({ success: false, message: 'Please configure your Whapi API Token first.' });
+      return;
+    }
+    setTestWhatsAppLoading(true);
+    setTestWhatsAppStatus(null);
+    try {
+      const idToken = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+      const response = await fetch('/api/send-whatsapp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(idToken ? { 'Authorization': `Bearer ${idToken}` } : {})
+        },
+        body: JSON.stringify({
+          receiver: phoneToUse,
+          customMessage: whapiTestMessage.trim() || `*Whapi Live Test Message*\n\nDiagnostic dispatch from Bali AdvenTours admin panel.\nChannel: ${settings.whapiChannelId || 'Default'}\nTime: ${new Date().toLocaleString()}`,
+          provider: 'whapi',
+          whapiToken: settings.whapiToken,
+          whapiApiUrl: settings.whapiApiUrl || 'https://gate.whapi.cloud',
+          whapiChannelId: settings.whapiChannelId,
+          whapiProxyUrl: settings.whapiProxyUrl,
+          tenantId: getActiveTenantId()
+        })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setTestWhatsAppStatus({
+          success: true,
+          message: `Message successfully dispatched via Whapi.cloud to ${phoneToUse}! Check WhatsApp on recipient device.`
+        });
+      } else {
+        setTestWhatsAppStatus({
+          success: false,
+          message: data.error || 'Whapi message dispatch failed.'
+        });
+      }
+    } catch (err: any) {
+      setTestWhatsAppStatus({ success: false, message: err.message || 'An unexpected error occurred.' });
     } finally {
       setTestWhatsAppLoading(false);
     }
@@ -394,6 +499,19 @@ const CommunicationManager = () => {
         wabaTemplateName: '',
         wabaLanguageCode: 'id',
         wabaVerifyToken: 'baliadventours',
+        whapiToken: '',
+        whapiApiUrl: 'https://gate.whapi.cloud',
+        whapiChannelId: '',
+        whapiWebhookUrl: '',
+        whapiProxyUrl: '',
+        whapiAutoDownload: {
+          image: true,
+          audio: true,
+          voice: true,
+          video: true,
+          document: true,
+          sticker: true
+        },
         geminiApiKey: '',
         imgbbApiKey: '',
         whatsappTemplates: {
@@ -465,7 +583,8 @@ const CommunicationManager = () => {
     setIsSaving(true);
     setSaveStatus(null);
     try {
-      await setDoc(doc(db, 'communicationSettings', getActiveTenantId() || 'global'), settings);
+      const cleanSettings = JSON.parse(JSON.stringify(settings));
+      await setDoc(doc(db, 'communicationSettings', getActiveTenantId() || 'global'), cleanSettings);
       setSaveStatus({ success: true, message: "Settings saved successfully!" });
       setTimeout(() => setSaveStatus(null), 6000);
     } catch (err: any) {
@@ -539,7 +658,104 @@ const CommunicationManager = () => {
           <Icons.Phone className="h-48 w-48 rotate-12" />
         </div>
         
-        {settings.whatsappProvider === 'waba' ? (
+        {settings.whatsappProvider === 'whapi' ? (
+          <div className="relative space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Whapi.cloud Diagnostics</span>
+              <span className="h-1.5 w-1.5 bg-purple-300 rounded-full animate-pulse"></span>
+            </div>
+            
+            <div>
+              <h3 className="text-3xl font-black tracking-tight">Whapi Direct Dispatch & Health Tester</h3>
+              <p className="text-orange-50 text-sm font-medium mt-1">
+                Test Whapi.cloud API connectivity and trigger instant live test dispatches directly through your Whapi WhatsApp channel.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-black/15 p-6 rounded-2xl border border-white/10 mt-4 text-left">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-orange-200 tracking-wider">Recipient Phone Number</label>
+                <input
+                  type="text"
+                  value={whapiTestPhone}
+                  onChange={e => setWhapiTestPhone(e.target.value)}
+                  placeholder={settings.adminNotificationPhone || 'e.g. 62812345678 or +62812345678'}
+                  className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-sm focus:bg-white/15 focus:outline-none focus:border-purple-300 transition-all font-mono placeholder:text-white/30 text-white"
+                />
+                <p className="text-[10px] text-orange-200/70 font-medium">Leave blank to use default Admin Notification Phone ({settings.adminNotificationPhone || 'None'}).</p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-orange-200 tracking-wider">Channel Status / Health Check</label>
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleCheckWhapiHealth}
+                    disabled={whapiHealthLoading || !settings.whapiToken}
+                    className="bg-white/15 hover:bg-white/25 active:scale-95 border border-white/20 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider text-white transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                  >
+                    {whapiHealthLoading ? <Icons.Loader2 className="h-4 w-4 animate-spin" /> : <Icons.Activity className="h-4 w-4" />}
+                    {whapiHealthLoading ? 'Checking...' : 'Check Channel Health'}
+                  </button>
+                  {whapiHealthStatus && (
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
+                      whapiHealthStatus.status === 'authorized' || whapiHealthStatus.status === 'ok' || whapiHealthStatus.status === 'online'
+                        ? 'bg-emerald-500/30 border border-emerald-300 text-emerald-200'
+                        : 'bg-yellow-500/30 border border-yellow-300 text-yellow-200'
+                    }`}>
+                      {whapiHealthStatus.status || 'Verified'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-orange-200/70 font-medium">Verifies API Bearer token validity and channel connection state.</p>
+              </div>
+
+              <div className="col-span-full space-y-2">
+                <label className="text-[10px] font-black uppercase text-orange-200 tracking-wider">Test Message Payload</label>
+                <textarea
+                  rows={3}
+                  value={whapiTestMessage}
+                  onChange={e => setWhapiTestMessage(e.target.value)}
+                  placeholder="Enter message text to dispatch via Whapi.cloud..."
+                  className="w-full rounded-xl bg-white/10 border border-white/20 px-4 py-3 text-sm focus:bg-white/15 focus:outline-none focus:border-purple-300 transition-all placeholder:text-white/30 text-white"
+                />
+              </div>
+            </div>
+
+            {whapiHealthStatus?.user && (
+              <div className="bg-black/20 p-4 rounded-xl border border-white/15 text-xs text-left grid grid-cols-2 sm:grid-cols-4 gap-4 animate-in fade-in">
+                <div>
+                  <span className="text-[10px] text-orange-200/80 uppercase font-black block">Channel Name</span>
+                  <span className="font-bold text-white">{whapiHealthStatus.user.name || 'WhatsApp Channel'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-orange-200/80 uppercase font-black block">Channel Number</span>
+                  <span className="font-mono text-white font-bold">{whapiHealthStatus.user.id || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-orange-200/80 uppercase font-black block">Channel ID</span>
+                  <span className="font-mono text-white font-bold">{whapiHealthStatus.channel_id || settings.whapiChannelId || '-'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-orange-200/80 uppercase font-black block">Gateway</span>
+                  <span className="font-mono text-white font-bold truncate block">{settings.whapiApiUrl || 'gate.whapi.cloud'}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end mt-4">
+              <button
+                type="button"
+                onClick={handleSendWhapiPlayground}
+                disabled={testWhatsAppLoading || !settings.whatsappEnabled || !settings.whapiToken}
+                className="bg-white text-[#075E54] px-10 py-4 rounded-2xl font-black text-sm tracking-widest uppercase shadow-xl hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 cursor-pointer"
+              >
+                {testWhatsAppLoading ? <Icons.Loader2 className="h-5 w-5 animate-spin" /> : <Icons.Send className="h-5 w-5" />}
+                {testWhatsAppLoading ? 'Dispatching...' : 'Trigger Whapi Dispatch'}
+              </button>
+            </div>
+          </div>
+        ) : settings.whatsappProvider === 'waba' ? (
           <div className="relative space-y-6">
             <div className="flex items-center gap-3">
               <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">WABA Play Area</span>
@@ -665,12 +881,21 @@ const CommunicationManager = () => {
                 <div className="space-y-1">
                    <p className="text-lg font-black tracking-tight">{testWhatsAppStatus.success ? 'WhatsApp Online!' : 'Send Failed'}</p>
                    <p className="text-sm font-medium opacity-90">{testWhatsAppStatus.message}</p>
-                   {!testWhatsAppStatus.success && settings.whatsappProvider !== 'waba' && (
+                   {!testWhatsAppStatus.success && settings.whatsappProvider === 'openwa' && (
                       <div className="mt-4 bg-black/20 p-4 rounded-xl text-xs font-mono leading-relaxed border border-white/10 opacity-90 text-left">
                          <span className="font-black text-white underline mb-1 block">QUICK FIX:</span>
                          1. Ensure <strong>OpenWA Base URL</strong> and <strong>Session Name</strong> ({settings.openwaSessionId || 'baliadventours'}) are correct.<br/>
                          2. Verify your <strong>OpenWA API Key</strong>.<br/>
                          3. <strong>SESSION NOT RUNNING:</strong> Use the live controls below to start the WhatsApp session and generate your authentication QR code.
+                      </div>
+                   )}
+                   {!testWhatsAppStatus.success && settings.whatsappProvider === 'whapi' && (
+                      <div className="mt-4 bg-black/20 p-4 rounded-xl text-xs font-mono leading-relaxed border border-white/10 opacity-90 text-left">
+                         <span className="font-black text-white underline mb-1 block">QUICK FIX FOR WHAPI.CLOUD:</span>
+                         1. Ensure <strong>Whapi API Token</strong> is correctly copied from your Whapi.cloud channel settings.<br/>
+                         2. Verify recipient phone number is in international E.164 / numeric format (e.g. 62812345678 or +62812345678).<br/>
+                         3. For <strong>Trial / Sandbox</strong> channels, Whapi restricts recipients or message limits (150 msgs limit).<br/>
+                         4. Check whether your WhatsApp channel is active and connected in the <a href="https://panel.whapi.cloud" target="_blank" className="underline font-bold text-white">Whapi Panel</a>.
                       </div>
                    )}
                    {!testWhatsAppStatus.success && settings.whatsappProvider === 'waba' && (
@@ -687,8 +912,8 @@ const CommunicationManager = () => {
            </div>
         )}
 
-        {/* Real-time Session Connector */}
-        {settings.whatsappProvider !== 'waba' && (
+        {/* Real-time Session Connector (for OpenWA self-hosted only) */}
+        {settings.whatsappProvider === 'openwa' && (
           <div className="mt-8 pt-8 border-t border-white/20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="space-y-1 text-left">
@@ -1065,76 +1290,164 @@ const CommunicationManager = () => {
 
            <div className="grid md:grid-cols-2 gap-8">
                <div className="space-y-4">
-                 <div className="space-y-2">
-                   <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WhatsApp Gateway Provider</label>
-                   <select 
-                     value={settings.whatsappProvider || 'openwa'}
-                     onChange={e => setSettings({ ...settings, whatsappProvider: e.target.value as 'openwa' | 'waba' })}
-                     className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-bold cursor-pointer"
-                   >
-                     <option value="openwa">OpenWA (Self-hosted / REST Gateway)</option>
-                     <option value="waba">WABA (WhatsApp Business Platform / Cloud API)</option>
-                   </select>
-                   <p className="text-[10px] text-gray-400 font-medium">Choose between your own self-hosted OpenWA instance or official Meta Cloud API.</p>
-                 </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WhatsApp Gateway Provider</label>
+                    <select 
+                      value={settings.whatsappProvider || 'openwa'}
+                      onChange={e => setSettings({ ...settings, whatsappProvider: e.target.value as 'openwa' | 'waba' | 'whapi' })}
+                      className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-bold cursor-pointer"
+                    >
+                      <option value="openwa">OpenWA (Self-hosted / REST Gateway)</option>
+                      <option value="waba">WABA (WhatsApp Business Platform / Cloud API)</option>
+                      <option value="whapi">Whapi (Whapi.cloud API Gateway)</option>
+                    </select>
+                    <p className="text-[10px] text-gray-400 font-medium">Choose between your own self-hosted OpenWA instance, official Meta Cloud API, or Whapi.cloud gateway.</p>
+                  </div>
 
-                 <div className="space-y-2">
-                   <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Admin Notification Phone</label>
-                   <input 
-                     type="text"
-                     value={settings.adminNotificationPhone || ''}
-                     onChange={e => setSettings({ ...settings, adminNotificationPhone: e.target.value })}
-                     placeholder="+628xxx"
-                     className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-bold"
-                   />
-                   <p className="text-[10px] text-gray-400 font-medium">Phone number that will receive new booking alerts.</p>
-                 </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Admin Notification Phone</label>
+                    <input 
+                      type="text"
+                      value={settings.adminNotificationPhone || ''}
+                      onChange={e => setSettings({ ...settings, adminNotificationPhone: e.target.value })}
+                      placeholder="+628xxx"
+                      className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-bold"
+                    />
+                    <p className="text-[10px] text-gray-400 font-medium">Phone number that will receive new booking alerts.</p>
+                  </div>
 
-                 {(settings.whatsappProvider === 'waba') ? (
-                   <>
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WABA Access Token</label>
-                       <input 
-                         type="password"
-                         value={settings.wabaAccessToken || ''}
-                         onChange={e => setSettings({ ...settings, wabaAccessToken: e.target.value })}
-                         placeholder="Meta System User token"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">System User token with whatsapp_business_messaging permissions.</p>
-                     </div>
+                  {settings.whatsappProvider === 'whapi' ? (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Whapi API Token</label>
+                          <button
+                            type="button"
+                            onClick={() => setShowWhapiToken(!showWhapiToken)}
+                            className="text-[10px] text-primary font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                          >
+                            {showWhapiToken ? <Icons.EyeOff className="h-3.5 w-3.5" /> : <Icons.Eye className="h-3.5 w-3.5" />}
+                            {showWhapiToken ? 'Hide Token' : 'Show Token'}
+                          </button>
+                        </div>
+                        <input 
+                          type={showWhapiToken ? "text" : "password"}
+                          value={settings.whapiToken || ''}
+                          onChange={e => setSettings({ ...settings, whapiToken: e.target.value })}
+                          placeholder="Permanent Whapi Bearer Token"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Permanent API Token from your Whapi.cloud channel settings.</p>
+                      </div>
 
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WABA Phone Number ID</label>
-                       <input 
-                         type="text"
-                         value={settings.wabaPhoneNumberId || ''}
-                         onChange={e => setSettings({ ...settings, wabaPhoneNumberId: e.target.value })}
-                         placeholder="e.g. 104847294829"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">The Phone Number ID displayed in your Facebook App Developer console.</p>
-                     </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Whapi API Gateway URL</label>
+                        <input 
+                          type="text"
+                          value={settings.whapiApiUrl || 'https://gate.whapi.cloud'}
+                          onChange={e => setSettings({ ...settings, whapiApiUrl: e.target.value })}
+                          placeholder="https://gate.whapi.cloud"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Default gateway is <code className="text-primary font-bold">https://gate.whapi.cloud</code></p>
+                      </div>
 
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Default Template Name (Optional)</label>
-                       <input 
-                         type="text"
-                         value={settings.wabaTemplateName || ''}
-                         onChange={e => setSettings({ ...settings, wabaTemplateName: e.target.value })}
-                         placeholder="e.g. booking_confirmation"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">If empty, standard text messages are used. If specified, WABA template message is triggered.</p>
-                     </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Channel ID (Optional)</label>
+                        <input 
+                          type="text"
+                          value={settings.whapiChannelId || ''}
+                          onChange={e => setSettings({ ...settings, whapiChannelId: e.target.value })}
+                          placeholder="e.g. THOROD-C4US9"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Identifier for your Whapi channel to verify active connection.</p>
+                      </div>
 
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Template Language Code</label>
-                       <input 
-                         type="text"
-                         value={settings.wabaLanguageCode || 'id'}
-                         onChange={e => setSettings({ ...settings, wabaLanguageCode: e.target.value })}
-                         placeholder="e.g. id, en"
+                      <div className="space-y-3 pt-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest block">Auto Download Media Preferences</label>
+                        <div className="grid grid-cols-3 gap-2 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                          {(['image', 'audio', 'voice', 'video', 'document', 'sticker'] as const).map(mediaType => {
+                            const isChecked = settings.whapiAutoDownload?.[mediaType] ?? true;
+                            return (
+                              <label key={mediaType} className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 select-none capitalize">
+                                <input 
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={e => setSettings({
+                                    ...settings,
+                                    whapiAutoDownload: {
+                                      ...(settings.whapiAutoDownload || { image: true, audio: true, voice: true, video: true, document: true, sticker: true }),
+                                      [mediaType]: e.target.checked
+                                    }
+                                  })}
+                                  className="rounded text-primary focus:ring-primary h-4 w-4"
+                                />
+                                {mediaType}
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <p className="text-[10px] text-gray-400 font-medium">Automatic incoming media caching behavior for Whapi webhook payloads.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Individual Proxy URL (Optional)</label>
+                        <input 
+                          type="text"
+                          value={settings.whapiProxyUrl || ''}
+                          onChange={e => setSettings({ ...settings, whapiProxyUrl: e.target.value })}
+                          placeholder="socks5://login:password@ip:port"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono text-sm"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Custom socks5/http proxy for localized routing (if configured in Whapi).</p>
+                      </div>
+                    </>
+                  ) : (settings.whatsappProvider === 'waba') ? (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WABA Access Token</label>
+                        <input 
+                          type="password"
+                          value={settings.wabaAccessToken || ''}
+                          onChange={e => setSettings({ ...settings, wabaAccessToken: e.target.value })}
+                          placeholder="Meta System User token"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">System User token with whatsapp_business_messaging permissions.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">WABA Phone Number ID</label>
+                        <input 
+                          type="text"
+                          value={settings.wabaPhoneNumberId || ''}
+                          onChange={e => setSettings({ ...settings, wabaPhoneNumberId: e.target.value })}
+                          placeholder="e.g. 104847294829"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">The Phone Number ID displayed in your Facebook App Developer console.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Default Template Name (Optional)</label>
+                        <input 
+                          type="text"
+                          value={settings.wabaTemplateName || ''}
+                          onChange={e => setSettings({ ...settings, wabaTemplateName: e.target.value })}
+                          placeholder="e.g. booking_confirmation"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">If empty, standard text messages are used. If specified, WABA template message is triggered.</p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Template Language Code</label>
+                        <input 
+                          type="text"
+                          value={settings.wabaLanguageCode || 'id'}
+                          onChange={e => setSettings({ ...settings, wabaLanguageCode: e.target.value })}
+                          placeholder="e.g. id, en"
                           className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
                         />
                       </div>
@@ -1150,145 +1463,196 @@ const CommunicationManager = () => {
                         />
                         <p className="text-[10px] text-gray-400 font-medium">Configure this string as the Verification Token in your Meta Developer App Webhook settings.</p>
                       </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA API Key</label>
+                        <input 
+                          type="password"
+                          value={settings.openwaApiKey || ''}
+                          onChange={e => setSettings({ ...settings, openwaApiKey: e.target.value })}
+                          placeholder="Enter your OpenWA API key"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Get this from your OpenWA Dashboard.</p>
+                      </div>
 
                       <div className="space-y-2">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Template Language Code</label>
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA Session Name</label>
                         <input 
                           type="text"
-                          value={settings.wabaLanguageCode || 'id'}
-                          onChange={e => setSettings({ ...settings, wabaLanguageCode: e.target.value })}
-                          placeholder="e.g. id, en"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                     </div>
-                   </>
-                 ) : (
-                   <>
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA API Key</label>
-                       <input 
-                         type="password"
-                         value={settings.openwaApiKey || ''}
-                         onChange={e => setSettings({ ...settings, openwaApiKey: e.target.value })}
-                         placeholder="Enter your OpenWA API key"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">Get this from your OpenWA Dashboard.</p>
-                     </div>
+                          value={settings.openwaSessionId || ''}
+                          onChange={e => setSettings({ ...settings, openwaSessionId: e.target.value })}
+                          placeholder="e.g. baliadventours"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">Required for multi-session dashboards. Tip: If the name doesn't work, try using just the number (e.g. 62812...).</p>
+                      </div>
 
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA Session Name</label>
-                       <input 
-                         type="text"
-                         value={settings.openwaSessionId || ''}
-                         onChange={e => setSettings({ ...settings, openwaSessionId: e.target.value })}
-                         placeholder="e.g. baliadventours"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">Required for multi-session dashboards. Tip: If the name doesn't work, try using just the number (e.g. 62812...).</p>
-                     </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA Base URL</label>
+                        <input 
+                          type="text"
+                          value={settings.openwaBaseUrl || ''}
+                          onChange={e => setSettings({ ...settings, openwaBaseUrl: e.target.value })}
+                          placeholder="https://your-openwa-instance.railway.app"
+                          className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
+                        />
+                        <p className="text-[10px] text-gray-400 font-medium">The URL of your OpenWA instance.</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                {settings.whatsappProvider === 'whapi' ? (
+                  <div className="bg-[#FAF5FF] p-6 rounded-xl border border-purple-100 flex flex-col justify-between">
+                    <div className="flex gap-4">
+                      <div className="h-10 w-10 bg-purple-100 text-purple-700 rounded-xl flex items-center justify-center shrink-0">
+                        <Icons.Sparkles className="h-5 w-5" />
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-bold text-gray-900 text-sm">Whapi.cloud API Gateway Active</h4>
+                        <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                          System communicates with <strong>Whapi.cloud WhatsApp Gateway</strong> for instant transaction notifications, vouchers, and multimedia dispatches.
+                        </p>
+                        <div className="mt-4 p-4 bg-white/70 rounded-lg border border-purple-100/50 space-y-3">
+                          <p className="text-[10px] font-black text-purple-700 uppercase tracking-widest mb-1">Whapi.cloud Setup Guide</p>
+                          <ul className="text-[9px] text-gray-600 list-disc pl-4 space-y-1">
+                            <li>Log in to <a href="https://panel.whapi.cloud" target="_blank" rel="noreferrer" className="underline font-bold text-purple-700">Whapi Panel</a> and create or select your WhatsApp Channel.</li>
+                            <li>Copy your <strong>API Bearer Token</strong> into the field on the left.</li>
+                            <li>Scan the QR code in Whapi dashboard to link your WhatsApp account.</li>
+                          </ul>
 
-                     <div className="space-y-2">
-                       <label className="text-xs font-black text-gray-400 uppercase tracking-widest">OpenWA Base URL</label>
-                       <input 
-                         type="text"
-                         value={settings.openwaBaseUrl || ''}
-                         onChange={e => setSettings({ ...settings, openwaBaseUrl: e.target.value })}
-                         placeholder="https://your-openwa-instance.railway.app"
-                         className="w-full rounded-[12px] border-2 border-gray-50 bg-gray-50/50 p-4 focus:border-primary focus:bg-white focus:outline-none transition-all font-mono"
-                       />
-                       <p className="text-[10px] text-gray-400 font-medium">The URL of your OpenWA instance.</p>
-                     </div>
-                   </>
-                 )}
-               </div>
-               
-               {settings.whatsappProvider === 'waba' ? (
-                 <div className="bg-[#E7F3FF] p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
-                   <div className="flex gap-4">
-                     <Icons.ShieldCheck className="h-6 w-6 text-blue-600 shrink-0" />
-                     <div className="space-y-2">
-                        <h4 className="font-bold text-gray-900 text-sm">WABA Cloud API Active</h4>
-                        <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                           System uses <strong>WhatsApp Business Platform (Cloud API)</strong> from Meta to deliver transaction notifications.
-                        </p>
-                        <div className="mt-4 p-4 bg-white/50 rounded-lg border border-blue-100/20">
-                           <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-1">Configuration Guide</p>
-                           <ul className="text-[9px] text-gray-500 list-disc pl-4 space-y-1">
-                             <li>Create a Meta Developer app and set up <strong>WhatsApp</strong> product.</li>
-                             <li className="bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50 my-2 space-y-1">
-                               <p className="font-bold text-blue-800 text-[10px] uppercase">Webhook Configuration (Copy these to Meta App):</p>
-                               <div className="space-y-1 text-left">
-                                 <div>
-                                   <span className="font-semibold text-gray-700 block">Callback URL:</span>
-                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                     <code className="bg-white px-2 py-1 rounded border text-[10px] font-mono select-all flex-1 break-all text-blue-900 font-bold">
-                                       {typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/webhook` : '/api/whatsapp/webhook'}
-                                     </code>
-                                     <button
-                                       type="button"
-                                       onClick={() => {
-                                         const url = typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/webhook` : '/api/whatsapp/webhook';
-                                         navigator.clipboard.writeText(url);
-                                         alert('Callback URL copied to clipboard!');
-                                       }}
-                                       className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
-                                     >
-                                       Copy
-                                     </button>
-                                   </div>
-                                 </div>
-                                 <div className="pt-1">
-                                   <span className="font-semibold text-gray-700 block">Verify Token:</span>
-                                   <div className="flex items-center gap-1.5 mt-0.5">
-                                     <code className="bg-white px-2 py-1 rounded border text-[10px] font-mono select-all flex-1 text-blue-900 font-bold">
-                                       {settings.wabaVerifyToken || 'baliadventours'}
-                                     </code>
-                                     <button
-                                       type="button"
-                                       onClick={() => {
-                                         navigator.clipboard.writeText(settings.wabaVerifyToken || 'baliadventours');
-                                         alert('Verify Token copied to clipboard!');
-                                       }}
-                                       className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
-                                     >
-                                       Copy
-                                     </button>
-                                   </div>
-                                 </div>
-                               </div>
-                             </li>
-                             <li>Obtain a Permanent <strong>System User Access Token</strong> with <code>whatsapp_business_messaging</code> permission.</li>
-                             <li>Configure your WABA <strong>Phone Number ID</strong> (found in Meta Developer Portal).</li>
-                             <li>
-                               <strong>Pro Tip:</strong> Create a template on Meta Manager with a single body parameter <code>{"{{1}}"}</code>. The system will automatically inject the full booking details into it for 100% dynamic notifications!
-                             </li>
-                           </ul>
+                          <div className="bg-purple-50/70 p-3 rounded-lg border border-purple-200/50 space-y-2 text-left">
+                            <p className="font-bold text-purple-900 text-[10px] uppercase">Webhook Configuration (Copy to Whapi Dashboard):</p>
+                            <div>
+                              <span className="font-semibold text-gray-700 text-[10px] block">Webhook Target URL:</span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <code className="bg-white px-2 py-1 rounded border text-[10px] font-mono select-all flex-1 break-all text-purple-900 font-bold">
+                                  {typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/whapi-webhook` : '/api/whatsapp/whapi-webhook'}
+                                </code>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const url = typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/whapi-webhook` : '/api/whatsapp/whapi-webhook';
+                                    navigator.clipboard.writeText(url);
+                                    setCopiedWhapiWebhook(true);
+                                    setTimeout(() => setCopiedWhapiWebhook(false), 3000);
+                                  }}
+                                  className="bg-purple-600 hover:bg-purple-700 active:scale-95 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                                >
+                                  {copiedWhapiWebhook ? <Icons.Check className="h-3 w-3" /> : <Icons.Copy className="h-3 w-3" />}
+                                  {copiedWhapiWebhook ? 'Copied' : 'Copy'}
+                                </button>
+                              </div>
+                            </div>
+                            <div className="pt-1">
+                              <span className="font-semibold text-gray-700 text-[10px] block">Recommended Webhook Events:</span>
+                              <div className="flex flex-wrap gap-1.5 mt-1">
+                                <span className="bg-white text-purple-800 text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-purple-200">messages.post</span>
+                                <span className="bg-white text-purple-800 text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-purple-200">statuses.post</span>
+                                <span className="bg-white text-purple-800 text-[9px] font-mono font-bold px-2 py-0.5 rounded border border-purple-200">ack.post</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-1 text-[9px] text-gray-500 flex items-center justify-between border-t border-purple-100/50">
+                            <span>Official Documentation:</span>
+                            <a href="https://whapi.readme.io/reference/sendmessagetext" target="_blank" rel="noreferrer" className="text-purple-600 hover:text-purple-800 font-bold underline flex items-center gap-1">
+                              Whapi Docs <Icons.ExternalLink className="h-2.5 w-2.5" />
+                            </a>
+                          </div>
                         </div>
-                     </div>
-                   </div>
-                 </div>
-               ) : (
-                 <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 flex flex-col justify-between">
-                   <div className="flex gap-4">
-                     <Icons.ShieldCheck className="h-6 w-6 text-primary shrink-0" />
-                     <div className="space-y-2">
-                        <h4 className="font-bold text-gray-900 text-sm">OpenWA API Connected</h4>
-                        <p className="text-xs text-gray-600 font-medium leading-relaxed">
-                           System uses your custom <strong>OpenWA</strong> server to send notifications. Ideal for advanced self-hosted instance configurations.
-                        </p>
-                        <div className="mt-4 p-4 bg-white/50 rounded-lg border border-orange-100/20">
-                           <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Configuration Needed</p>
-                           <ul className="text-[9px] text-gray-500 list-disc pl-4 space-y-1">
-                             <li>Get your <strong>API Key</strong> from your <a href="https://openwa-dashboard-production-b24e.up.railway.app/message-tester" target="_blank" className="underline font-bold">OpenWA Dashboard</a>.</li>
-                             <li>Configure the Session ID and verify your server is scanning and active.</li>
-                             <li>Ensure the <strong>Base URL</strong> matches your hosted OpenWA instance.</li>
-                           </ul>
-                        </div>
-                     </div>
-                   </div>
-                 </div>
-               )}
+                      </div>
+                    </div>
+                  </div>
+                ) : settings.whatsappProvider === 'waba' ? (
+                  <div className="bg-[#E7F3FF] p-6 rounded-xl border border-blue-100 flex flex-col justify-between">
+                    <div className="flex gap-4">
+                      <Icons.ShieldCheck className="h-6 w-6 text-blue-600 shrink-0" />
+                      <div className="space-y-2">
+                         <h4 className="font-bold text-gray-900 text-sm">WABA Cloud API Active</h4>
+                         <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                            System uses <strong>WhatsApp Business Platform (Cloud API)</strong> from Meta to deliver transaction notifications.
+                         </p>
+                         <div className="mt-4 p-4 bg-white/50 rounded-lg border border-blue-100/20">
+                            <p className="text-[10px] font-black text-blue-700 uppercase tracking-widest mb-1">Configuration Guide</p>
+                            <ul className="text-[9px] text-gray-500 list-disc pl-4 space-y-1">
+                              <li>Create a Meta Developer app and set up <strong>WhatsApp</strong> product.</li>
+                              <li className="bg-blue-50/50 p-2.5 rounded-lg border border-blue-100/50 my-2 space-y-1">
+                                <p className="font-bold text-blue-800 text-[10px] uppercase">Webhook Configuration (Copy these to Meta App):</p>
+                                <div className="space-y-1 text-left">
+                                  <div>
+                                    <span className="font-semibold text-gray-700 block">Callback URL:</span>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <code className="bg-white px-2 py-1 rounded border text-[10px] font-mono select-all flex-1 break-all text-blue-900 font-bold">
+                                        {typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/webhook` : '/api/whatsapp/webhook'}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const url = typeof window !== 'undefined' ? `${window.location.origin}/api/whatsapp/webhook` : '/api/whatsapp/webhook';
+                                          navigator.clipboard.writeText(url);
+                                          alert('Callback URL copied to clipboard!');
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                                      >
+                                        Copy
+                                      </button>
+                                    </div>
+                                  </div>
+                                  <div className="pt-1">
+                                    <span className="font-semibold text-gray-700 block">Verify Token:</span>
+                                    <div className="flex items-center gap-1.5 mt-0.5">
+                                      <code className="bg-white px-2 py-1 rounded border text-[10px] font-mono select-all flex-1 text-blue-900 font-bold">
+                                        {settings.wabaVerifyToken || 'baliadventours'}
+                                      </code>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(settings.wabaVerifyToken || 'baliadventours');
+                                          alert('Verify Token copied to clipboard!');
+                                        }}
+                                        className="bg-blue-600 hover:bg-blue-700 active:scale-95 text-white px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-wider transition-all cursor-pointer"
+                                      >
+                                        Copy
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </li>
+                              <li>Obtain a Permanent <strong>System User Access Token</strong> with <code>whatsapp_business_messaging</code> permission.</li>
+                              <li>Configure your WABA <strong>Phone Number ID</strong> (found in Meta Developer Portal).</li>
+                              <li>
+                                <strong>Pro Tip:</strong> Create a template on Meta Manager with a single body parameter <code>{"{{1}}"}</code>. The system will automatically inject the full booking details into it for 100% dynamic notifications!
+                              </li>
+                            </ul>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-orange-50 p-6 rounded-xl border border-orange-100 flex flex-col justify-between">
+                    <div className="flex gap-4">
+                      <Icons.ShieldCheck className="h-6 w-6 text-primary shrink-0" />
+                      <div className="space-y-2">
+                         <h4 className="font-bold text-gray-900 text-sm">OpenWA API Connected</h4>
+                         <p className="text-xs text-gray-600 font-medium leading-relaxed">
+                            System uses your custom <strong>OpenWA</strong> server to send notifications. Ideal for advanced self-hosted instance configurations.
+                         </p>
+                         <div className="mt-4 p-4 bg-white/50 rounded-lg border border-orange-100/20">
+                            <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">Configuration Needed</p>
+                            <ul className="text-[9px] text-gray-500 list-disc pl-4 space-y-1">
+                              <li>Get your <strong>API Key</strong> from your <a href="https://openwa-dashboard-production-b24e.up.railway.app/message-tester" target="_blank" className="underline font-bold">OpenWA Dashboard</a>.</li>
+                              <li>Configure the Session ID and verify your server is scanning and active.</li>
+                              <li>Ensure the <strong>Base URL</strong> matches your hosted OpenWA instance.</li>
+                            </ul>
+                         </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
 
            <div className="space-y-6 pt-4">

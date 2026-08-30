@@ -24,7 +24,11 @@ export default async function handler(req: any, res: any) {
       wabaAccessToken,
       wabaPhoneNumberId,
       wabaTemplateName,
-      wabaLanguageCode
+      wabaLanguageCode,
+      whapiToken,
+      whapiApiUrl,
+      whapiChannelId,
+      whapiProxyUrl
     } = req.body;
     const finalMessageContent = customMessage || fallbackMessage;
 
@@ -102,12 +106,12 @@ export default async function handler(req: any, res: any) {
       return res.status(400).json({ success: false, error: 'No receiver number provided' });
     }
 
-    // Use configured OpenWA credentials, supporting inline overrides
-    const finalToken = token || settings.openwaApiKey;
-    const finalBaseUrl = baseUrl || settings.openwaBaseUrl;
-    const finalSessionId = sessionId || settings.openwaSessionId;
-
     const finalProvider = provider || settings.whatsappProvider || 'openwa';
+
+    // Use configured OpenWA or Whapi credentials, supporting inline overrides
+    const finalToken = token || (finalProvider === 'whapi' ? (whapiToken || settings.whapiToken) : settings.openwaApiKey);
+    const finalBaseUrl = baseUrl || (finalProvider === 'whapi' ? (whapiApiUrl || settings.whapiApiUrl) : settings.openwaBaseUrl);
+    const finalSessionId = sessionId || (finalProvider === 'whapi' ? (whapiChannelId || settings.whapiChannelId) : settings.openwaSessionId);
 
     const finalWabaConfig = {
       accessToken: wabaAccessToken || settings.wabaAccessToken,
@@ -118,10 +122,17 @@ export default async function handler(req: any, res: any) {
       type: type
     };
 
+    const finalWhapiConfig = {
+      token: whapiToken || settings.whapiToken,
+      apiUrl: whapiApiUrl || settings.whapiApiUrl,
+      channelId: whapiChannelId || settings.whapiChannelId,
+      proxyUrl: whapiProxyUrl || settings.whapiProxyUrl
+    };
+
     const result = await sendWhatsAppMessage({
       number: targetNumber,
       message: message
-    }, finalToken, finalBaseUrl, finalSessionId, finalProvider, finalWabaConfig);
+    }, finalToken, finalBaseUrl, finalSessionId, finalProvider, finalWabaConfig, finalWhapiConfig);
 
     return res.status(200).json(result);
   } catch (error: any) {

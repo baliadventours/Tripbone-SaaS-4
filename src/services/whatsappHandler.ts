@@ -148,7 +148,138 @@ export async function sendWabaMessage(
 }
 
 /**
- * Sends a WhatsApp message via OpenWA (wa-automate) API or WABA Cloud API
+ * Sends a WhatsApp message via Whapi.cloud API Gateway
+ * Documentation: https://whapi.readme.io/reference/sendmessagetext
+ */
+export async function sendWhapiMessage(
+  payload: WhatsAppPayload,
+  config: {
+    token?: string;
+    apiUrl?: string;
+    channelId?: string;
+    proxyUrl?: string;
+  }
+) {
+  const token = config.token || process.env.WHAPI_TOKEN;
+  const baseUrl = (config.apiUrl || process.env.WHAPI_API_URL || 'https://gate.whapi.cloud').replace(/\/+$/, '');
+
+  if (!token) {
+    console.warn("[WhatsApp Whapi] API Token is missing.");
+    return { success: false, error: 'Whapi configuration missing. API Token is required from your Whapi.cloud dashboard.' };
+  }
+
+  const cleanToken = token.replace(/^Bearer\s+/i, '').trim();
+
+  // Format phone number to E.164 digits-only format required by Whapi (without + or spaces)
+  const parts = payload.number.split('@');
+  let rawNumber = parts[0];
+  let digitsOnly = rawNumber.replace(/\D/g, '');
+  if (digitsOnly.startsWith('620')) {
+    digitsOnly = '62' + digitsOnly.slice(3);
+  } else if (digitsOnly.startsWith('0')) {
+    digitsOnly = '62' + digitsOnly.slice(1);
+  } else if (digitsOnly.startsWith('8')) {
+    digitsOnly = '62' + digitsOnly;
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${cleanToken}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
+
+  try {
+    // Determine whether sending Document / Image / Text
+    if (payload.file) {
+      const isImage = payload.file.startsWith('data:image/') || /\.(jpg|jpeg|png|webp|gif)$/i.test(payload.filename || '');
+      const endpoint = isImage ? `${baseUrl}/messages/image` : `${baseUrl}/messages/document`;
+      
+      const fileBody: any = {
+        to: digitsOnly,
+        media: payload.file,
+        caption: payload.message || ''
+      };
+
+      if (!isImage) {
+        fileBody.filename = payload.filename || 'document.pdf';
+      }
+
+      console.log(`[WhatsApp Whapi] Dispatching ${isImage ? 'image' : 'document'} to ${digitsOnly} via ${endpoint}`);
+      const response = await axios.post(endpoint, fileBody, { headers, timeout: 15000 });
+      return { success: true, provider: 'whapi', data: response.data };
+    } else {
+      // Standard Text message endpoint: https://gate.whapi.cloud/messages/text
+      const endpoint = `${baseUrl}/messages/text`;
+      const textBody = {
+        to: digitsOnly,
+        body: payload.message
+      };
+
+      console.log(`[WhatsApp Whapi] Dispatching text message to ${digitsOnly} via ${endpoint}`);
+      const response = await axios.post(endpoint, textBody, { headers, timeout: 10000 });
+      return { success: true, provider: 'whapi', data: response.data };
+    }
+  } catch (err: any) {
+    let errMsg = err.message || 'Unknown error';
+    if (err.response && err.response.data) {
+      errMsg = typeof err.response.data === 'object' 
+        ? JSON.stringify(err.response.data) 
+        : String(err.response.data);
+    }
+    console.error(`[WhatsApp Whapi Error]:`, errMsg);
+    return { success: false, error: `Whapi.cloud dispatch failed: ${errMsg}` };
+  }
+}
+
+/**
+ * Checks the status and health of the Whapi.cloud channel
+ */
+export async function checkWhapiHealth(token?: string, apiUrl?: string) {
+  const rawToken = token || process.env.WHAPI_TOKEN;
+  const baseUrl = (apiUrl || process.env.WHAPI_API_URL || 'https://gate.whapi.cloud').replace(/\/+$/, '');
+  
+  if (!rawToken) {
+    return { success: false, error: 'Whapi API Token is missing. Please provide your Whapi token from panel.whapi.cloud.' };
+  }
+
+  const cleanToken = rawToken.replace(/^Bearer\s+/i, '').trim();
+  const headers = {
+    'Authorization': `Bearer ${cleanToken}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  };
+
+  try {
+    const response = await axios.get(`${baseUrl}/health`, { headers, timeout: 7000 });
+    return {
+      success: true,
+      status: response.data?.status?.text || response.data?.status || 'authorized',
+      data: response.data
+    };
+  } catch (err: any) {
+    // Try /users/profile as fallback check
+    try {
+      const userRes = await axios.get(`${baseUrl}/users/profile`, { headers, timeout: 7000 });
+      return {
+        success: true,
+        status: 'authorized',
+        user: userRes.data,
+        data: userRes.data
+      };
+    } catch (fallbackErr: any) {
+      let errMsg = err.message || 'Unknown error';
+      if (err.response && err.response.data) {
+        errMsg = typeof err.response.data === 'object' 
+          ? JSON.stringify(err.response.data) 
+          : String(err.response.data);
+      }
+      return { success: false, error: `Whapi Health Check failed: ${errMsg}` };
+    }
+  }
+}
+
+/**
+ * Sends a WhatsApp message via OpenWA (wa-automate) API, WABA Cloud API, or Whapi.cloud
  */
 export async function sendWhatsAppMessage(
   payload: WhatsAppPayload, 
@@ -163,8 +294,23 @@ export async function sendWhatsAppMessage(
     languageCode?: string;
     booking?: any;
     type?: string;
+  },
+  whapiConfig?: {
+    token?: string;
+    apiUrl?: string;
+    channelId?: string;
+    proxyUrl?: string;
   }
 ) {
+  if (providerOverride === 'whapi') {
+    return sendWhapiMessage(payload, {
+      token: tokenOverride || whapiConfig?.token,
+      apiUrl: baseUrlOverride || whapiConfig?.apiUrl,
+      channelId: sessionId || whapiConfig?.channelId,
+      proxyUrl: whapiConfig?.proxyUrl
+    });
+  }
+
   if (providerOverride === 'waba') {
     return sendWabaMessage(payload, wabaConfig || {});
   }

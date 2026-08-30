@@ -14,7 +14,7 @@ import geminiRouter from "./src/server/routes/gemini.js";
 import { securityHeadersMiddleware, sanitizeBodyMiddleware, createRateLimiter } from "./src/server/security.js";
 import { handleSendEmail } from "./src/services/emailHandler.js";
 import { buildInvoiceEmailHtml } from "./src/services/invoiceEmailTemplate.js";
-import { sendWhatsAppMessage, formatWhatsAppMessage, sendWhatsAppTemplateMessage } from "./src/services/whatsappHandler.js";
+import { sendWhatsAppMessage, formatWhatsAppMessage, sendWhatsAppTemplateMessage, checkWhapiHealth, sendWhapiMessage } from "./src/services/whatsappHandler.js";
 import { generateVoucherPdf } from "./src/services/email/voucherGenerator.js";
 import { generateManifestPdf } from "./src/services/email/manifestGenerator.js";
 import { resolveEmailConfig } from "./src/services/email/recipientResolver.js";
@@ -3614,11 +3614,15 @@ export async function createServer() {
         wabaPhoneNumberId,
         wabaTemplateName,
         wabaLanguageCode,
+        whapiToken,
+        whapiApiUrl,
+        whapiChannelId,
+        whapiProxyUrl,
         tenantId
       } = req.body;
       const finalMessageContent = customMessage || fallbackMessage;
 
-      console.log(`[API /api/send-whatsapp] Request received. Type: ${type}, Receiver: ${receiver || booking?.customerData?.phone}, attachManifest: ${attachManifest}, attachVoucher: ${attachVoucher}`);
+      console.log(`[API /api/send-whatsapp] Request received. Type: ${type}, Receiver: ${receiver || booking?.customerData?.phone}, attachManifest: ${attachManifest}, attachVoucher: ${attachVoucher}, Provider: ${provider}`);
 
       // SECURITY: Verify user is authorized
       const authResult = await verifyAdmin(idToken);
@@ -3714,22 +3718,93 @@ export async function createServer() {
         type: type
       };
 
+      const finalWhapiConfig = {
+        token: whapiToken || settings.whapiToken,
+        apiUrl: whapiApiUrl || settings.whapiApiUrl,
+        channelId: whapiChannelId || settings.whapiChannelId,
+        proxyUrl: whapiProxyUrl || settings.whapiProxyUrl
+      };
+
       // Use configured OpenWA credentials, supporting inline overrides
-      const finalToken = token || settings.openwaApiKey;
-      const finalBaseUrl = baseUrl || settings.openwaBaseUrl;
-      const finalSessionId = sessionId || settings.openwaSessionId;
+      const finalToken = token || (finalProvider === 'whapi' ? (whapiToken || settings.whapiToken) : settings.openwaApiKey);
+      const finalBaseUrl = baseUrl || (finalProvider === 'whapi' ? (whapiApiUrl || settings.whapiApiUrl) : settings.openwaBaseUrl);
+      const finalSessionId = sessionId || (finalProvider === 'whapi' ? (whapiChannelId || settings.whapiChannelId) : settings.openwaSessionId);
       
       const result = await sendWhatsAppMessage({
         number: targetNumber,
         message: message,
         file: fileToSend,
         filename: filenameToSend
-      }, finalToken, finalBaseUrl, finalSessionId, finalProvider, finalWabaConfig);
+      }, finalToken, finalBaseUrl, finalSessionId, finalProvider, finalWabaConfig, finalWhapiConfig);
 
       res.json(result);
     } catch (error: any) {
       console.error("[WhatsApp Proxy Error]:", error);
       res.status(500).json({ error: error.message || "Internal server error" });
+    }
+  });
+
+  // API Route: Whapi Channel Health Check & Diagnostics
+  app.all(["/api/whatsapp/whapi-health", "/api/whapi/health"], async (req: any, res: any) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const idToken = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : undefined;
+      const authResult = await verifyAdmin(idToken);
+      if (!authResult.isAdmin && !authResult.uid) {
+        return res.status(403).json({ error: "Forbidden: Admin authorization required." });
+      }
+
+      const { token, apiUrl, tenantId } = { ...req.query, ...req.body };
+      let tokenToUse = token;
+      let apiUrlToUse = apiUrl;
+
+      if (!tokenToUse) {
+        const resolvedTenantId = tenantId || 'global';
+        try {
+          const settingsDoc = await db.collection('communicationSettings').doc(resolvedTenantId).get();
+          if (settingsDoc.exists) {
+            const data = settingsDoc.data();
+            tokenToUse = data?.whapiToken;
+            apiUrlToUse = apiUrlToUse || data?.whapiApiUrl;
+          }
+        } catch (dbErr) {
+          console.warn("[Whapi Health Check] Firestore lookup error:", dbErr);
+        }
+      }
+
+      const result = await checkWhapiHealth(tokenToUse, apiUrlToUse);
+      return res.status(result.success ? 200 : 400).json(result);
+    } catch (err: any) {
+      console.error("[Whapi Health API Error]:", err);
+      return res.status(500).json({ success: false, error: err.message || "Internal server error" });
+    }
+  });
+
+  // API Route: Whapi Webhook Endpoint (messages.post, statuses.post)
+  app.all(["/api/whatsapp/whapi-webhook", "/api/webhooks/whapi"], async (req: any, res: any) => {
+    try {
+      if (req.method === 'GET') {
+        // Health/verify handshake
+        return res.status(200).json({ status: 'ok', service: 'Whapi Webhook Gateway', timestamp: new Date().toISOString() });
+      }
+
+      const payload = req.body || {};
+      console.log(`[Whapi Webhook] Received webhook event:`, {
+        event: payload.event || payload.type,
+        messagesCount: payload.messages ? payload.messages.length : 0,
+        statusesCount: payload.statuses ? payload.statuses.length : 0,
+        channelId: payload.channel_id || payload.channelId
+      });
+
+      // Acknowledge webhook receipt immediately to prevent Whapi timeout
+      return res.status(200).json({ 
+        status: 'ok', 
+        received: true, 
+        timestamp: new Date().toISOString() 
+      });
+    } catch (webhookErr: any) {
+      console.error("[Whapi Webhook Error]:", webhookErr);
+      return res.status(200).json({ status: 'ok', error: webhookErr.message });
     }
   });
 
