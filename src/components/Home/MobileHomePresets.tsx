@@ -126,7 +126,7 @@ export default function MobileHomePresets({
   const categoryMap = React.useMemo(() => {
     const map = new Map<string, string>();
     if (Array.isArray(categories)) {
-      categories.forEach(c => {
+      categories.forEach((c: any) => {
         if (c.id && c.name) map.set(c.id, c.name);
         if (c.slug && c.name) map.set(c.slug, c.name);
       });
@@ -149,7 +149,7 @@ export default function MobileHomePresets({
     }
 
     const found = categories.find(
-      c => c.id === catId || c.slug === catId || c.name?.toLowerCase() === catId?.toLowerCase()
+      (c: any) => c.id === catId || c.slug === catId || c.name?.toLowerCase() === catId?.toLowerCase()
     );
     if (found && found.name) return found.name;
 

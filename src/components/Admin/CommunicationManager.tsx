@@ -17,6 +17,8 @@ import {
 import RichTextEditor from "../RichTextEditor";
 import { sendBookingEmail } from "../../lib/emailService";
 import { sendWhatsAppNotification, getWhatsAppLink, generateBookingMessage, sendCustomWhatsApp } from "../../lib/whatsappService";
+import * as LucideIcons from "lucide-react";
+const Icons = LucideIcons;
 import { 
   Plus, Edit2, Trash2, Save, X, Check,
   Layout, LayoutTemplate, Image as ImageIcon, DollarSign, Map as MapIcon, 
@@ -33,7 +35,8 @@ import {
   User, CheckCircle2, AlertCircle, FileCode, Terminal, ChevronLeft,
   Share2, Printer, XCircle, ExternalLink, UserCheck, ArrowRight,
   ArrowLeft, Clock4, Ban, Bot,
-  Zap, Send, Mail, Search, Hotel, Bed, Home, Building
+  Zap, Send, Mail, Search, Hotel, Bed, Home, Building,
+  RefreshCw, Play, MailCheck
 } from "lucide-react";
 import { cn, formatPrice } from "../../lib/utils";
 import { uploadImage } from "../../lib/imgbb";

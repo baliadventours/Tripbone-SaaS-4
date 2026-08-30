@@ -93,7 +93,7 @@ export default function PriceSummaryModal({
   const pricingBreakdown = useMemo(() => {
     const totalPax = Math.max(1, adults + children);
     let adultRate = tour.discountPrice || tour.regularPrice || 0;
-    let childRate = tour.childPrice !== undefined ? tour.childPrice : adultRate * 0.7;
+    let childRate = (tour as any).childPrice !== undefined ? (tour as any).childPrice : adultRate * 0.7;
 
     if (selectedPackage && selectedPackage.tiers && selectedPackage.tiers.length > 0) {
       const tiers = selectedPackage.tiers;
@@ -178,7 +178,7 @@ export default function PriceSummaryModal({
               <div className="flex gap-3.5 items-center p-3 bg-slate-50 rounded-2xl border border-slate-200/70">
                 <div className="h-16 w-20 rounded-xl overflow-hidden bg-slate-200 shrink-0 relative">
                   <SmartImage
-                    src={tour.featuredImage || (tour.images && tour.images[0]) || ''}
+                    src={tour.featuredImage || ((tour as any).images && (tour as any).images[0]) || ''}
                     alt={tour.title}
                     className="h-full w-full object-cover"
                   />
@@ -186,7 +186,7 @@ export default function PriceSummaryModal({
                 <div className="min-w-0 flex-1">
                   <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-primary/10 px-2 py-0.5 rounded-full inline-block mb-1">
                     {(() => {
-                      const cat = tour.category || (tour as any).categoryName || tour.categoryId;
+                      const cat = (tour as any).category || (tour as any).categoryName || tour.categoryId;
                       if (!cat || /^[A-Za-z0-9_-]{12,}$/.test(cat) || cat.includes('-fallback')) {
                         return 'Tour Expedition';
                       }
