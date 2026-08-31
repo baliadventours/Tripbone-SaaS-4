@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../lib/firebase';
 import { collection, doc, setDoc, updateDoc, deleteDoc, getDocs, query, where, serverTimestamp } from '../../lib/firebase';
-import { UserProfile } from '../../types';
+import { UserProfile, StaffPermissions, DEFAULT_STAFF_PERMISSIONS } from '../../types';
 import { 
   Users, UserPlus, Shield, UserCheck, Truck, Building2, Search, Filter, 
   Edit3, Trash2, CheckCircle2, XCircle, AlertCircle, RefreshCw, Mail, Phone,
-  Globe, Percent, Key, Save, X, Eye, BadgeCheck, MoreVertical
+  Globe, Percent, Key, Save, X, Eye, BadgeCheck, MoreVertical, Sliders, CheckSquare,
+  ShieldCheck, Lock, Unlock, Zap, HelpCircle
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getActiveTenantId } from '../../lib/firebase';
@@ -23,7 +24,7 @@ interface UserManagerProps {
   formData?: any;
 }
 
-export default function UserManager({ users, setUsers, currentUserProfile }: UserManagerProps) {
+export default function UserManager({ users = [], setUsers, currentUserProfile }: UserManagerProps) {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'staff' | 'supplier' | 'agent' | 'customer'>('all');
@@ -35,6 +36,11 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserProfile | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
+  // Dedicated Permissions Matrix Modal
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [permissionTargetUser, setPermissionTargetUser] = useState<UserProfile | null>(null);
+  const [userPermissionsState, setUserPermissionsState] = useState<StaffPermissions>(DEFAULT_STAFF_PERMISSIONS);
+
   // Form State for Add / Edit
   const [formData, setFormData] = useState({
     displayName: '',
@@ -42,6 +48,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
     phoneNumber: '',
     role: 'staff' as 'superadmin' | 'admin' | 'staff' | 'supplier' | 'agent' | 'customer',
     status: 'active' as 'active' | 'pending' | 'suspended',
+    permissions: DEFAULT_STAFF_PERMISSIONS as StaffPermissions,
     companyName: '',
     publicEmail: '',
     taxId: '',
@@ -93,6 +100,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
       phoneNumber: '',
       role: 'staff',
       status: 'active',
+      permissions: { ...DEFAULT_STAFF_PERMISSIONS },
       companyName: '',
       publicEmail: '',
       taxId: '',
@@ -115,6 +123,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
       phoneNumber: user.phoneNumber || '',
       role: user.role || 'staff',
       status: user.status || 'active',
+      permissions: { ...DEFAULT_STAFF_PERMISSIONS, ...(user.permissions || {}) },
       companyName: user.companyName || '',
       publicEmail: user.publicEmail || user.email || '',
       taxId: user.taxId || '',
@@ -126,6 +135,137 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
       initialPassword: ''
     });
     setIsCreateModalOpen(true);
+  };
+
+  const handleOpenPermissionsModal = (user: UserProfile) => {
+    setPermissionTargetUser(user);
+    const existing = { ...DEFAULT_STAFF_PERMISSIONS, ...(user.permissions || {}) };
+    setUserPermissionsState(existing);
+    setIsPermissionsModalOpen(true);
+  };
+
+  const handleSavePermissions = async () => {
+    if (!permissionTargetUser) return;
+    setLoading(true);
+    try {
+      const userRef = doc(db, 'users', permissionTargetUser.uid);
+      await updateDoc(userRef, {
+        permissions: userPermissionsState,
+        updatedAt: serverTimestamp()
+      });
+
+      setUsers((prev: UserProfile[]) => prev.map(u => 
+        u.uid === permissionTargetUser.uid 
+          ? { ...u, permissions: userPermissionsState }
+          : u
+      ));
+
+      showNotification('success', `Permissions updated for ${permissionTargetUser.displayName || permissionTargetUser.email}.`);
+      setIsPermissionsModalOpen(false);
+      setPermissionTargetUser(null);
+    } catch (err: any) {
+      console.error("Save permissions error:", err);
+      showNotification('error', err.message || 'Failed to update user permissions.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyPermissionPreset = (preset: 'operations' | 'coordinator' | 'support' | 'full') => {
+    switch (preset) {
+      case 'operations':
+        setUserPermissionsState({
+          bookings: true,
+          canCreateBookings: true,
+          canEditBookings: true,
+          canAssignGuides: true,
+          canDeleteBookings: false,
+          tours: true,
+          canEditTours: false,
+          carRental: true,
+          inquiries: true,
+          tickets: true,
+          guides: true,
+          reviews: true,
+          analytics: false,
+          coupons: false,
+          marketing: false,
+          websiteBuilder: false,
+          finance: false,
+          settings: false,
+          userManagement: false
+        });
+        break;
+      case 'coordinator':
+        setUserPermissionsState({
+          bookings: true,
+          canCreateBookings: true,
+          canEditBookings: true,
+          canAssignGuides: true,
+          canDeleteBookings: false,
+          tours: true,
+          canEditTours: true,
+          carRental: true,
+          inquiries: false,
+          tickets: false,
+          guides: true,
+          reviews: true,
+          analytics: false,
+          coupons: false,
+          marketing: false,
+          websiteBuilder: false,
+          finance: false,
+          settings: false,
+          userManagement: false
+        });
+        break;
+      case 'support':
+        setUserPermissionsState({
+          bookings: true,
+          canCreateBookings: false,
+          canEditBookings: false,
+          canAssignGuides: false,
+          canDeleteBookings: false,
+          tours: true,
+          canEditTours: false,
+          carRental: false,
+          inquiries: true,
+          tickets: true,
+          guides: false,
+          reviews: true,
+          analytics: false,
+          coupons: false,
+          marketing: false,
+          websiteBuilder: false,
+          finance: false,
+          settings: false,
+          userManagement: false
+        });
+        break;
+      case 'full':
+        setUserPermissionsState({
+          bookings: true,
+          canCreateBookings: true,
+          canEditBookings: true,
+          canAssignGuides: true,
+          canDeleteBookings: true,
+          tours: true,
+          canEditTours: true,
+          carRental: true,
+          inquiries: true,
+          tickets: true,
+          guides: true,
+          reviews: true,
+          analytics: true,
+          coupons: true,
+          marketing: true,
+          websiteBuilder: true,
+          finance: true,
+          settings: false,
+          userManagement: false
+        });
+        break;
+    }
   };
 
   const handleSaveUser = async (e: React.FormEvent) => {
@@ -146,6 +286,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
           phoneNumber: formData.phoneNumber,
           role: formData.role,
           status: formData.status,
+          ...(formData.role === 'staff' && { permissions: formData.permissions }),
           companyName: formData.companyName,
           publicEmail: formData.publicEmail,
           taxId: formData.taxId,
@@ -159,7 +300,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
 
         await updateDoc(userRef, updates);
 
-        setUsers(prev => prev.map(u => u.uid === editingUser.uid ? { ...u, ...updates } : u));
+        setUsers((prev: UserProfile[]) => prev.map(u => u.uid === editingUser.uid ? { ...u, ...updates } : u));
         showNotification('success', `User ${formData.displayName} updated successfully.`);
       } else {
         // Check if a user with this email already exists in Firestore (e.g. signed up previously as customer)
@@ -186,6 +327,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
           phoneNumber: formData.phoneNumber,
           role: formData.role,
           status: formData.status,
+          ...(formData.role === 'staff' && { permissions: formData.permissions }),
           companyName: formData.companyName,
           publicEmail: formData.publicEmail,
           taxId: formData.taxId,
@@ -200,7 +342,7 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
         };
 
         await setDoc(doc(db, 'users', targetUid), newUser, { merge: true });
-        setUsers(prev => {
+        setUsers((prev: UserProfile[]) => {
           const filtered = prev.filter(u => u.uid !== targetUid && u.email?.toLowerCase() !== emailLower);
           return [newUser as UserProfile, ...filtered];
         });
@@ -478,7 +620,31 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
                         </div>
                       )}
                       {user.role === 'staff' && (
-                        <span className="text-[11px] font-medium text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded">Operations Team</span>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-bold text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100/60">
+                              Operations Staff
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPermissionsModal(user)}
+                              className="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 hover:underline flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Sliders className="w-3 h-3" />
+                              Permissions
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-gray-500 font-medium">
+                            {[
+                              user.permissions?.bookings !== false && 'Bookings',
+                              user.permissions?.tours !== false && 'Tours',
+                              user.permissions?.carRental !== false && 'Cars',
+                              user.permissions?.inquiries !== false && 'Inquiries',
+                              user.permissions?.tickets !== false && 'Tickets',
+                              user.permissions?.guides !== false && 'Guides'
+                            ].filter(Boolean).slice(0, 4).join(', ')}
+                          </p>
+                        </div>
                       )}
                       {user.role === 'admin' && (
                         <span className="text-[11px] font-bold text-rose-900 bg-rose-50 px-2 py-0.5 rounded">Full Admin Privileges</span>
@@ -496,18 +662,28 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
 
                     {/* Actions */}
                     <td className="p-4 pr-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
                         <button
+                          type="button"
+                          onClick={() => handleOpenPermissionsModal(user)}
+                          className="p-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                          title="Configure User Permissions"
+                        >
+                          <ShieldCheck className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => handleOpenEditModal(user)}
-                          className="p-2 text-gray-500 hover:text-primary hover:bg-orange-50 rounded-lg transition-colors"
+                          className="p-2 text-gray-500 hover:text-primary hover:bg-orange-50 rounded-lg transition-colors cursor-pointer"
                           title="Edit User"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         {currentUserProfile?.uid !== user.uid && (
                           <button
+                            type="button"
                             onClick={() => setDeleteConfirmUser(user)}
-                            className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                             title="Delete User"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -602,6 +778,65 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
               </div>
 
               {/* Role Specific Fields */}
+              {formData.role === 'staff' && (
+                <div className="p-4 bg-indigo-50/70 border border-indigo-200 rounded-2xl space-y-4 animate-in fade-in">
+                  <div>
+                    <h4 className="text-xs font-black text-indigo-900 uppercase tracking-wider flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-indigo-600" /> Staff Module Permissions
+                    </h4>
+                    <p className="text-[10px] text-indigo-700 mt-0.5">
+                      Check which modules and operational tasks this staff member can access.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    {[
+                      { key: 'bookings', label: 'View Bookings' },
+                      { key: 'canEditBookings', label: 'Change/Edit Booking' },
+                      { key: 'canAssignGuides', label: 'Assign Guides & Drivers' },
+                      { key: 'tours', label: 'View Tours & Prices' },
+                      { key: 'carRental', label: 'Car Rental Bookings' },
+                      { key: 'inquiries', label: 'Customer Inquiries' },
+                      { key: 'tickets', label: 'Support Tickets' },
+                      { key: 'guides', label: 'Guide Roster' },
+                      { key: 'reviews', label: 'Customer Reviews' },
+                      { key: 'canEditTours', label: 'Edit Tour Details' },
+                      { key: 'analytics', label: 'Analytics Reports' },
+                      { key: 'settings', label: 'System Settings' },
+                    ].map(({ key, label }) => {
+                      const isChecked = (formData.permissions as any)?.[key] ?? false;
+                      return (
+                        <label
+                          key={key}
+                          className={cn(
+                            "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-all",
+                            isChecked 
+                              ? "bg-white border-indigo-300 text-indigo-950 shadow-xs" 
+                              : "bg-indigo-50/40 border-indigo-100 text-gray-500"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              setFormData({
+                                ...formData,
+                                permissions: {
+                                  ...formData.permissions,
+                                  [key]: e.target.checked
+                                }
+                              });
+                            }}
+                            className="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5"
+                          />
+                          <span className="text-[11px] leading-tight select-none">{label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {formData.role === 'supplier' && (
                 <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl space-y-4 animate-in fade-in">
                   <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider flex items-center gap-2">
@@ -696,20 +931,236 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="px-5 py-3 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                  className="px-5 py-3 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 disabled:opacity-50"
+                  className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-orange-600 transition-all shadow-lg shadow-orange-100 disabled:opacity-50 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   {editingUser ? 'Update User' : 'Create User'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Granular Permissions Adjustment Modal */}
+      {isPermissionsModalOpen && permissionTargetUser && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+          <div className="bg-white rounded-3xl max-w-3xl w-full p-6 sm:p-8 space-y-6 shadow-2xl relative my-8 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsPermissionsModalOpen(false)}
+              className="absolute top-6 right-6 text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <ShieldCheck className="w-8 h-8" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-gray-900">
+                  User Permissions & Access Control
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Adjust allowed modules for <strong>{permissionTargetUser.displayName || permissionTargetUser.email}</strong> ({permissionTargetUser.role.toUpperCase()}).
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="space-y-2">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">
+                Quick Role Presets
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => applyPermissionPreset('operations')}
+                  className="p-2.5 text-left rounded-xl border border-indigo-100 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-900 transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black">Staff Default</p>
+                  <p className="text-[10px] text-indigo-700 leading-tight mt-0.5">Bookings, Tours, Cars, Inquiries, Support</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPermissionPreset('coordinator')}
+                  className="p-2.5 text-left rounded-xl border border-teal-100 bg-teal-50/50 hover:bg-teal-100 text-teal-900 transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black">Tour Coordinator</p>
+                  <p className="text-[10px] text-teal-700 leading-tight mt-0.5">Bookings, Guides, Tour pricing & edits</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPermissionPreset('support')}
+                  className="p-2.5 text-left rounded-xl border border-amber-100 bg-amber-50/50 hover:bg-amber-100 text-amber-900 transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black">Helpdesk / Support</p>
+                  <p className="text-[10px] text-amber-700 leading-tight mt-0.5">Tickets, Inquiries & booking reviews</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => applyPermissionPreset('full')}
+                  className="p-2.5 text-left rounded-xl border border-purple-100 bg-purple-50/50 hover:bg-purple-100 text-purple-900 transition-all cursor-pointer"
+                >
+                  <p className="text-xs font-black">Operations Lead</p>
+                  <p className="text-[10px] text-purple-700 leading-tight mt-0.5">Full operations without admin settings</p>
+                </button>
+              </div>
+            </div>
+
+            {/* Granular Matrix */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider mb-2">
+                  Operations & Bookings Module
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { key: 'bookings', label: 'Access Bookings Dashboard', desc: 'Can view customer bookings list and itinerary status' },
+                    { key: 'canCreateBookings', label: 'Create New Bookings', desc: 'Can book on behalf of guests or walk-in customers' },
+                    { key: 'canEditBookings', label: 'Modify Bookings & Dates', desc: 'Can edit booking details, prices, and dates' },
+                    { key: 'canAssignGuides', label: 'Assign Guides & Drivers', desc: 'Can dispatch drivers and guides to reservations' },
+                    { key: 'canDeleteBookings', label: 'Cancel / Void Bookings', desc: 'Can cancel reservations and mark void' },
+                  ].map(({ key, label, desc }) => {
+                    const isChecked = (userPermissionsState as any)[key] ?? false;
+                    return (
+                      <label
+                        key={key}
+                        className={cn(
+                          "flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer",
+                          isChecked 
+                            ? "bg-indigo-50/40 border-indigo-200 text-gray-900" 
+                            : "bg-gray-50 border-gray-200 text-gray-500"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setUserPermissionsState({ ...userPermissionsState, [key]: e.target.checked })}
+                          className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4"
+                        />
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-900">{label}</p>
+                          <p className="text-[10.5px] text-gray-500 leading-snug mt-0.5">{desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider mb-2">
+                  Catalog, Support & Customer Communications
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { key: 'tours', label: 'Tours & Pricing Directory', desc: 'Can check tour prices, packages, and seasonal rates' },
+                    { key: 'canEditTours', label: 'Edit & Create Tours', desc: 'Can add or modify tours and pricing tiers' },
+                    { key: 'carRental', label: 'Car Rental Management', desc: 'Can view and coordinate vehicle rentals' },
+                    { key: 'inquiries', label: 'Customer Inquiries & Quotes', desc: 'Can read, reply to, and quote traveler inquiries' },
+                    { key: 'tickets', label: 'Support & Dispute Tickets', desc: 'Can resolve customer help requests and live issues' },
+                    { key: 'guides', label: 'Guides & Drivers Roster', desc: 'Can view guide contact info and license status' },
+                    { key: 'reviews', label: 'Customer Reviews Moderation', desc: 'Can view and reply to guest ratings' },
+                  ].map(({ key, label, desc }) => {
+                    const isChecked = (userPermissionsState as any)[key] ?? false;
+                    return (
+                      <label
+                        key={key}
+                        className={cn(
+                          "flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer",
+                          isChecked 
+                            ? "bg-teal-50/40 border-teal-200 text-gray-900" 
+                            : "bg-gray-50 border-gray-200 text-gray-500"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setUserPermissionsState({ ...userPermissionsState, [key]: e.target.checked })}
+                          className="mt-0.5 rounded text-teal-600 focus:ring-teal-500 w-4 h-4"
+                        />
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-900">{label}</p>
+                          <p className="text-[10.5px] text-gray-500 leading-snug mt-0.5">{desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider mb-2">
+                  Administrative & System Access
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {[
+                    { key: 'analytics', label: 'Business Analytics & Revenue Reports', desc: 'Financial turnover, channel performance, and booking stats' },
+                    { key: 'coupons', label: 'Promotions & Promo Codes', desc: 'Create and manage discount codes' },
+                    { key: 'marketing', label: 'Marketing Campaigns & SEO', desc: 'Email broadcasts, meta tags, and blog publishing' },
+                    { key: 'websiteBuilder', label: 'Visual Website Builder', desc: 'Edit homepage sections, banners, and layout' },
+                    { key: 'finance', label: 'Supplier Payouts & Invoicing', desc: 'Approve vendor payouts and view company bank ledger' },
+                    { key: 'settings', label: 'Global Platform Settings', desc: 'Payment gateways, domain setup, tenant configuration' },
+                    { key: 'userManagement', label: 'User & Role Administration', desc: 'Create users and adjust security permissions' },
+                  ].map(({ key, label, desc }) => {
+                    const isChecked = (userPermissionsState as any)[key] ?? false;
+                    return (
+                      <label
+                        key={key}
+                        className={cn(
+                          "flex items-start gap-3 p-3.5 rounded-2xl border transition-all cursor-pointer",
+                          isChecked 
+                            ? "bg-rose-50/40 border-rose-200 text-gray-900" 
+                            : "bg-gray-50 border-gray-200 text-gray-500"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => setUserPermissionsState({ ...userPermissionsState, [key]: e.target.checked })}
+                          className="mt-0.5 rounded text-rose-600 focus:ring-rose-500 w-4 h-4"
+                        />
+                        <div>
+                          <p className="text-xs font-extrabold text-gray-900">{label}</p>
+                          <p className="text-[10.5px] text-gray-500 leading-snug mt-0.5">{desc}</p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={() => setIsPermissionsModalOpen(false)}
+                className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSavePermissions}
+                disabled={loading}
+                className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all shadow-lg shadow-indigo-100 disabled:opacity-50 cursor-pointer"
+              >
+                <Save className="w-4 h-4" />
+                Save Permissions
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -730,14 +1181,14 @@ export default function UserManager({ users, setUsers, currentUserProfile }: Use
             <div className="flex items-center justify-center gap-3 pt-2">
               <button
                 onClick={() => setDeleteConfirmUser(null)}
-                className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all"
+                className="px-5 py-2.5 text-xs font-bold text-gray-600 hover:bg-gray-100 rounded-xl transition-all cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteUser}
                 disabled={loading}
-                className="bg-rose-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-rose-700 transition-all shadow-lg shadow-rose-100"
+                className="bg-rose-600 text-white px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider hover:bg-rose-700 transition-all shadow-lg shadow-rose-100 cursor-pointer"
               >
                 Confirm Delete
               </button>

@@ -38,10 +38,23 @@ export const AccessRolesManager: React.FC<AccessRolesManagerProps> = ({ currentU
                                 color: 'bg-red-50 text-red-600 border-red-100',
                                 permissions: [
                                   'Full system access & settings',
-                                  'Manage all users & partners',
-                                  'Inventory & pricing control',
-                                  'Financial reporting & analytics',
-                                  'Communication & email settings'
+                                  'Manage all users, staff & partners',
+                                  'Configure payment gateways & tenant',
+                                  'Financial reporting & revenue analytics',
+                                  'Fine-tune granular staff permissions'
+                                ]
+                              },
+                              { 
+                                role: 'Operations Staff', 
+                                id: 'users-staff',
+                                icon: Icons.Headset,
+                                color: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+                                permissions: [
+                                  'View & change customer bookings',
+                                  'Assign guides & dispatch drivers',
+                                  'Check tour prices & seasonal tiers',
+                                  'Manage car rentals & inquiries',
+                                  'Handle support & dispute tickets'
                                 ]
                               },
                               { 
@@ -50,7 +63,7 @@ export const AccessRolesManager: React.FC<AccessRolesManagerProps> = ({ currentU
                                 icon: Icons.Briefcase,
                                 color: 'bg-purple-50 text-purple-600 border-purple-100',
                                 permissions: [
-                                  'Manage company tours & packets',
+                                  'Manage company tours & packages',
                                   'View & update booking status',
                                   'Manage assigned guides',
                                   'Payout & earnings tracking',
@@ -78,20 +91,20 @@ export const AccessRolesManager: React.FC<AccessRolesManagerProps> = ({ currentU
                                 permissions: [
                                   'Book any public tour/package',
                                   'View personal booking history',
-                                  'Leave review & ratings',
+                                  'Leave reviews & ratings',
                                   'Manage personal profile',
                                   'Favorite tours wishlist'
                                 ]
                               }
                           ].map((r, i) => (
-                              <div className="flex flex-col p-8 bg-white rounded-[10px] border border-gray-100 hover:border-primary hover:shadow-xl hover:shadow-orange-50 transition-all group">
+                              <div key={r.id} className="flex flex-col p-8 bg-white rounded-[10px] border border-gray-100 hover:border-primary hover:shadow-xl hover:shadow-orange-50 transition-all group">
                                   <div className="flex items-center justify-between mb-6">
                                     <div className={cn("h-14 w-14 rounded-2xl flex items-center justify-center shadow-inner", r.color)}>
                                         <r.icon className="h-7 w-7" />
                                     </div>
                                     <button 
                                       onClick={() => setActiveMenu(r.id)}
-                                      className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors flex items-center gap-2"
+                                      className="text-xs font-black uppercase tracking-widest text-gray-400 hover:text-primary transition-colors flex items-center gap-2 cursor-pointer"
                                     >
                                       Manage Users <Icons.ArrowRight className="h-4 w-4" />
                                     </button>
@@ -110,11 +123,16 @@ export const AccessRolesManager: React.FC<AccessRolesManagerProps> = ({ currentU
                           ))}
                       </div>
 
-                      <div className="mt-12 p-6 bg-gray-50 rounded-[10px] border border-gray-100 flex items-center gap-4">
-                        <Icons.Info className="h-5 w-5 text-gray-400 shrink-0" />
-                        <p className="text-xs text-gray-400 font-bold leading-relaxed">
-                          Note: System roles are currently fixed. Manual permission overrides can be requested by contacting the technical support team.
-                        </p>
+                      <div className="mt-12 p-6 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center gap-4">
+                        <Icons.ShieldCheck className="h-6 w-6 text-indigo-600 shrink-0" />
+                        <div>
+                          <p className="text-xs text-indigo-950 font-black">
+                            Customizable Staff Access Matrix
+                          </p>
+                          <p className="text-xs text-indigo-800 font-medium mt-0.5">
+                            Admins can dynamically adjust individual staff privileges in the <strong>Users &gt; Staff &gt; Permissions</strong> matrix to restrict or grant access to bookings, guide dispatch, tour pricing, inquiries, and tickets.
+                          </p>
+                        </div>
                       </div>
                     </div>
                 </div>

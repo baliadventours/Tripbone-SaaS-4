@@ -43,13 +43,19 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 tracking-tight">
             {currentUserProfile?.role === "admin"
               ? "Executive Dashboard"
+              : currentUserProfile?.role === "staff"
+              ? "Staff Operations Console"
               : currentUserProfile?.role === "supplier"
               ? "Supplier Dashboard"
               : currentUserProfile?.role === "agent"
               ? "Agent Portal"
               : "Admin Dashboard"}
           </h1>
-          <p className="text-sm text-gray-500 font-medium">Daily performance & operations briefing.</p>
+          <p className="text-sm text-gray-500 font-medium">
+            {currentUserProfile?.role === "staff"
+              ? "Operational dispatch, guest reservations & guide assignments."
+              : "Daily performance & operations briefing."}
+          </p>
         </div>
         <div className="flex sm:justify-end shrink-0">
           <div className="bg-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl border border-gray-100 flex items-center gap-2 sm:gap-3 shadow-xs">
@@ -59,15 +65,15 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
         </div>
       </div>
 
-      <StatsDashboard bookings={bookings} tours={tours} users={users} inquiries={inquiries} role={currentUserProfile?.role} />
+      <StatsDashboard bookings={bookings} tours={tours} users={users} inquiries={inquiries} role={currentUserProfile?.role} setActiveMenu={setActiveMenu} />
 
       {/* Quick Actions and Profile Preview */}
-      {(currentUserProfile?.role === "supplier" || currentUserProfile?.role === "agent" || currentUserProfile?.role === "admin") && (
+      {(currentUserProfile?.role === "supplier" || currentUserProfile?.role === "agent" || currentUserProfile?.role === "admin" || currentUserProfile?.role === "staff") && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
           <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-4 sm:p-6 md:p-8 shadow-xs">
             <h3 className="font-extrabold tracking-tight text-gray-900 mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
               <Zap className="h-5 w-5 text-amber-500" />
-              Quick Actions
+              {currentUserProfile?.role === "staff" ? "Staff Operations Shortcuts" : "Quick Actions"}
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
               {isInstallable && (
@@ -90,6 +96,64 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
                     Install Web App
                   </button>
                 </div>
+              )}
+              {currentUserProfile?.role === "staff" && (
+                <>
+                  <button
+                    onClick={() => setActiveMenu("bookings")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-blue-100 bg-blue-50/70 text-blue-700 flex flex-col items-center justify-center gap-2 hover:bg-blue-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <Briefcase className="h-5 w-5 text-blue-600" />
+                    </div>
+                    Manage Bookings
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu("all-tours")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-teal-100 bg-teal-50/70 text-teal-700 flex flex-col items-center justify-center gap-2 hover:bg-teal-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <MapPin className="h-5 w-5 text-teal-600" />
+                    </div>
+                    Tours & Pricing
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu("guides")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-purple-100 bg-purple-50/70 text-purple-700 flex flex-col items-center justify-center gap-2 hover:bg-purple-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <Users className="h-5 w-5 text-purple-600" />
+                    </div>
+                    Assign Guides
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu("inquiries")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-orange-100 bg-orange-50/70 text-primary flex flex-col items-center justify-center gap-2 hover:bg-orange-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                    </div>
+                    Guest Inquiries
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu("tickets")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-indigo-100 bg-indigo-50/70 text-indigo-700 flex flex-col items-center justify-center gap-2 hover:bg-indigo-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <ShieldCheck className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    Support Tickets
+                  </button>
+                  <button
+                    onClick={() => setActiveMenu("car-rental-bookings")}
+                    className="p-4 sm:p-5 rounded-xl sm:rounded-2xl border border-emerald-100 bg-emerald-50/70 text-emerald-700 flex flex-col items-center justify-center gap-2 hover:bg-emerald-100 transition-all font-black text-[11px] group cursor-pointer"
+                  >
+                    <div className="p-2.5 bg-white rounded-xl shadow-xs group-hover:scale-110 transition-transform">
+                      <CreditCard className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    Car Rentals
+                  </button>
+                </>
               )}
               {currentUserProfile?.role === "admin" && (
                 <>

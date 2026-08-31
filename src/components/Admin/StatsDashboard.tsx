@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { 
   TrendingUp, Users, DollarSign, Calendar, ArrowUpRight, ArrowDownRight, 
-  Map, MapPin, Globe, ShoppingBag, Clock, CheckCircle2, ChevronRight, PieChart as PieIcon
+  Map, MapPin, Globe, ShoppingBag, Clock, CheckCircle2, ChevronRight, PieChart as PieIcon, MessageSquare
 } from 'lucide-react';
 import { 
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
@@ -18,10 +18,11 @@ interface StatsDashboardProps {
   role?: string;
 }
 
-const StatsDashboard = ({ bookings, tours, users, inquiries = [], role }: StatsDashboardProps) => {
+const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiveMenu }: StatsDashboardProps & { setActiveMenu?: (menu: string) => void }) => {
   const isSupplier = role === 'supplier';
   const isAgent = role === 'agent';
-  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff';
+  const isAdmin = role === 'admin' || role === 'superadmin';
   
   // 1. Core aggregates
   const totalRevenue = bookings
@@ -35,10 +36,55 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role }: StatsD
   const confirmedCount = bookings.filter(b => b.status === 'confirmed').length;
   const pendingCount = bookings.filter(b => b.status === 'pending').length;
   const newInquiriesCount = inquiries.filter(i => i.status === 'new').length;
+  const unassignedGuidesCount = bookings.filter(b => b.status === 'confirmed' && !b.assignedGuideName).length;
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayDeparturesCount = bookings.filter(b => b.date === todayStr && b.status !== 'cancelled').length;
 
   const activeToursCount = tours.filter(t => t.status === 'active' || t.status === 'published').length;
 
-  const stats = [
+  const stats = isStaff ? [
+    { 
+      label: "Today's Departures", 
+      value: todayDeparturesCount.toString(), 
+      icon: MapPin, 
+      color: 'text-primary', 
+      bg: 'bg-orange-50', 
+      trend: todayDeparturesCount > 0 ? `${todayDeparturesCount} Tours` : 'Clear', 
+      isUp: true,
+      description: 'Scheduled passenger pickups today'
+    },
+    { 
+      label: 'Confirmed Bookings', 
+      value: confirmedCount.toString(), 
+      icon: Calendar, 
+      color: 'text-blue-600', 
+      bg: 'bg-blue-50', 
+      trend: `${confirmedCount} Active`, 
+      isUp: true,
+      description: 'Total active confirmed reservations'
+    },
+    { 
+      label: 'Guide Dispatch Needed', 
+      value: unassignedGuidesCount.toString(), 
+      icon: Users, 
+      color: unassignedGuidesCount > 0 ? 'text-amber-600' : 'text-emerald-600', 
+      bg: unassignedGuidesCount > 0 ? 'bg-amber-50' : 'bg-emerald-50', 
+      trend: unassignedGuidesCount > 0 ? 'Action Required' : 'All Assigned', 
+      isUp: unassignedGuidesCount === 0,
+      description: 'Confirmed trips needing driver/guide'
+    },
+    { 
+      label: 'Open Inquiries', 
+      value: newInquiriesCount.toString(), 
+      icon: MessageSquare, 
+      color: 'text-indigo-600', 
+      bg: 'bg-indigo-50', 
+      trend: newInquiriesCount > 0 ? 'New Requests' : '0 Pending', 
+      isUp: newInquiriesCount > 0,
+      description: 'Travelers awaiting custom proposal'
+    },
+  ] : [
     { 
       label: isSupplier ? 'Your Revenue' : isAgent ? 'Your Earnings' : 'Total Revenue', 
       value: formatPrice(isAgent ? totalAgentEarnings : totalRevenue), 

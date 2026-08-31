@@ -526,6 +526,52 @@ export interface Booking {
   updatedAt?: any;
 }
 
+export interface StaffPermissions {
+  // Operational Core Modules
+  bookings: boolean;          // Can view and access bookings
+  canCreateBookings: boolean; // Can create manual bookings
+  canEditBookings: boolean;   // Can edit booking dates, guests, status
+  canAssignGuides: boolean;   // Can assign and change drivers/guides
+  canDeleteBookings: boolean; // Can delete bookings (normally admin only)
+  tours: boolean;             // Can view tours and check tour package pricing/tiers
+  canEditTours: boolean;      // Can create or edit tour packages and descriptions
+  carRental: boolean;         // Can view and manage car rental bookings and fleet
+  inquiries: boolean;         // Can manage incoming inquiries and proposal generator
+  tickets: boolean;           // Can manage customer support tickets
+  guides: boolean;            // Can manage drivers & guides directory
+  reviews: boolean;           // Can view and moderate reviews
+  // Extended & Administrative Modules (Default false for staff)
+  analytics: boolean;         // Can view traffic analytics and conversion funnels
+  coupons: boolean;           // Can manage discount coupons and promotions
+  marketing: boolean;         // Can manage blog posts, custom pages, and popups
+  websiteBuilder: boolean;    // Can access visual website builder
+  finance: boolean;           // Can view financial reports, payouts, and turnover
+  settings: boolean;          // Can manage system, gateway, and communication settings
+  userManagement: boolean;    // Can manage user accounts and assign roles
+}
+
+export const DEFAULT_STAFF_PERMISSIONS: StaffPermissions = {
+  bookings: true,
+  canCreateBookings: true,
+  canEditBookings: true,
+  canAssignGuides: true,
+  canDeleteBookings: false,
+  tours: true,
+  canEditTours: true,
+  carRental: true,
+  inquiries: true,
+  tickets: true,
+  guides: true,
+  reviews: true,
+  analytics: false,
+  coupons: false,
+  marketing: false,
+  websiteBuilder: false,
+  finance: false,
+  settings: false,
+  userManagement: false
+};
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -533,6 +579,7 @@ export interface UserProfile {
   photoURL: string;
   role: 'superadmin' | 'admin' | 'staff' | 'customer' | 'supplier' | 'agent';
   status: 'active' | 'pending' | 'suspended';
+  permissions?: Partial<StaffPermissions>;
   commissionRate?: number; // For suppliers (percentage 0-100)
   discountRate?: number; // For agents (percentage 0-100)
   companyName?: string;
