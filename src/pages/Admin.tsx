@@ -541,21 +541,50 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
     return 'dashboard';
   });
   const [settingsActiveTab, setSettingsActiveTab] = useState<string>('all');
+  const [websiteBuilderTab, setWebsiteBuilderTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets'>('blocks');
+  const [autoOpenCreateUser, setAutoOpenCreateUser] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const menu = params.get('menu');
-      if (menu === 'tours' || menu === 'categories' || menu === 'tour-types' || menu === 'locations' || menu === 'addons' || menu === 'transports' || menu === 'labels') {
-        return 'tours';
+      if (menu === 'tours' || menu === 'all-tours' || menu === 'categories' || menu === 'tour-types' || menu === 'locations' || menu === 'addons' || menu === 'transports' || menu === 'labels' || menu === 'urgency-points') {
+        return 'tours-group';
       }
-      if (menu === 'bookings' || menu === 'channel-manager' || menu === 'schedule' || menu === 'operation' || menu === 'inventory' || menu === 'import-bookings' || menu === 'timeslots') {
-        return 'bookings';
+      if (menu === 'bookings' || menu === 'schedule' || menu === 'reports' || menu === 'import-bookings' || menu === 'add-manual-booking') {
+        return 'booking-group';
       }
-      if (menu === 'settings' || menu === 'payments' || menu === 'general-settings' || menu === 'payment-settings' || menu === 'communication') {
+      if (menu === 'car-rental-bookings' || menu === 'car-fleet' || menu === 'car-rental-automations' || menu === 'car-rental-settings') {
+        return 'car-rental-group';
+      }
+      if (menu === 'waivers' || menu === 'channel-manager' || menu === 'invoices' || menu === 'ai-hub' || menu === 'inquiries' || menu === 'guides') {
+        return 'operations-group';
+      }
+      if (menu === 'analytics' || menu === 'analytics-overview' || menu === 'conversion-funnel' || menu === 'google-analytics') {
+        return 'analytics-group';
+      }
+      if (menu === 'coupons' || menu === 'popups-manager') {
+        return 'marketing-group';
+      }
+      if (menu === 'blog' || menu === 'blog-categories') {
+        return 'blog-group';
+      }
+      if (menu === 'pages' || menu === 'landing-page-generator') {
+        return 'pages-group';
+      }
+      if (menu === 'payouts') {
+        return 'finance-group';
+      }
+      if (menu === 'website-builder' || menu?.startsWith('wb-')) {
+        return 'website-builder-group';
+      }
+      if (menu === 'users' || menu === 'access-roles' || menu?.startsWith('users-')) {
+        return 'users-group';
+      }
+      if (menu === 'settings' || menu === 'payments' || menu === 'general-settings' || menu === 'payment-settings' || menu === 'communication' || menu === 'backup' || menu === 'company-info' || menu === 'seo' || menu === 'domain') {
         return 'settings-group';
       }
     }
-    return 'tours';
+    return 'tours-group';
   });
   const [tourSupplierFilter, setTourSupplierFilter] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -578,28 +607,57 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       setActiveMenu(overrideMenu as MenuId);
       // Expand parents
       const parentMap: Record<string, string> = {
-        'tours': 'tours',
-        'categories': 'tours',
-        'tour-types': 'tours',
-        'locations': 'tours',
-        'addons': 'tours',
-        'transports': 'tours',
-        'coupons': 'tours',
-        'urgency-points': 'tours',
-        'timeslots': 'tours',
-        'labels': 'tours',
-        'blog': 'blog',
-        'pages': 'pages',
-        'content': 'pages',
-        'users-admins': 'partners',
-        'users-suppliers': 'partners',
-        'users-agents': 'partners',
-        'users-customers': 'partners',
-        'guides': 'partners',
+        'bookings': 'booking-group',
+        'add-manual-booking': 'booking-group',
+        'import-bookings': 'booking-group',
+        'schedule': 'booking-group',
+        'reports': 'booking-group',
+        'all-tours': 'tours-group',
+        'tours': 'tours-group',
+        'categories': 'tours-group',
+        'locations': 'tours-group',
+        'labels': 'tours-group',
+        'addons': 'tours-group',
+        'transports': 'tours-group',
+        'urgency-points': 'tours-group',
+        'car-rental-bookings': 'car-rental-group',
+        'car-rental-automations': 'car-rental-group',
+        'car-rental-settings': 'car-rental-group',
+        'waivers': 'operations-group',
+        'channel-manager': 'operations-group',
+        'invoices': 'operations-group',
+        'ai-hub': 'operations-group',
+        'inquiries': 'operations-group',
+        'guides': 'operations-group',
+        'analytics-overview': 'analytics-group',
+        'conversion-funnel': 'analytics-group',
+        'google-analytics': 'analytics-group',
+        'coupons': 'marketing-group',
+        'popups-manager': 'marketing-group',
+        'blog': 'blog-group',
+        'blog-categories': 'blog-group',
+        'pages': 'pages-group',
+        'landing-page-generator': 'pages-group',
+        'payouts': 'finance-group',
+        'wb-site-settings': 'website-builder-group',
+        'wb-blocks': 'website-builder-group',
+        'wb-tours': 'website-builder-group',
+        'wb-menus': 'website-builder-group',
+        'wb-pages': 'website-builder-group',
+        'wb-presets': 'website-builder-group',
+        'website-builder': 'website-builder-group',
+        'users': 'users-group',
+        'access-roles': 'users-group',
+        'users-admins': 'users-group',
+        'users-suppliers': 'users-group',
+        'users-agents': 'users-group',
+        'users-customers': 'users-group',
+        'payment-settings': 'settings-group',
+        'company-info': 'settings-group',
         'communication': 'settings-group',
-        'payments': 'settings-group',
-        'settings': 'settings-group',
-        'payment-settings': 'settings-group'
+        'seo': 'settings-group',
+        'domain': 'settings-group',
+        'backup': 'settings-group'
       };
       const parent = parentMap[overrideMenu];
       if (parent) {
@@ -1345,6 +1403,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
   const menuItems = useMemo(() => {
     const isSupplier = currentUserProfile?.role === 'supplier';
     const isAgent = currentUserProfile?.role === 'agent';
+    const isStaff = currentUserProfile?.role === 'staff';
+    const staffPerms = currentUserProfile?.permissions || {};
     
     interface MenuItem {
       id: string;
@@ -1364,44 +1424,28 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         id: 'booking-group', 
         label: 'Booking', 
         icon: Briefcase,
+        hidden: isSupplier ? false : isAgent ? false : (isStaff ? !(staffPerms.bookings ?? true) : false),
         children: [
           { id: 'bookings', label: 'Booking List' },
-          { id: 'add-manual-booking', label: '+ Create Booking' },
-          { id: 'waivers', label: 'Digital Waivers & Safety' },
-          { id: 'invoices', label: 'Invoices & Billing' },
-          { id: 'conversion-funnel', label: 'Conversion Funnel & Drop-off', hidden: isAgent },
-          { id: 'guides', label: 'Drivers & Guides' },
-          { id: 'channel-manager', label: 'Channel Manager (OTAs)', hidden: isAgent || isSupplier },
+          { id: 'add-manual-booking', label: 'Create Booking' },
           { id: 'import-bookings', label: 'Import Booking', hidden: isAgent || isSupplier },
-          { id: 'schedule', label: 'Calendar', hidden: isAgent },
+          { id: 'schedule', label: 'Calendar Schedule', hidden: isAgent },
           { id: 'reports', label: 'Booking Reports', hidden: isAgent || isSupplier }
-        ].filter(c => !c.hidden)
-      },
-      { 
-        id: 'analytics-group', 
-        label: 'Analytics', 
-        icon: BarChart3,
-        hidden: isAgent,
-        children: [
-          { id: 'analytics-overview', label: 'Traffic & Visitors', hidden: false },
-          { id: 'conversion-funnel', label: 'Conversion Funnel', hidden: false },
-          { id: 'google-analytics', label: 'GA4 & GTM Tracking', hidden: false },
         ].filter(c => !c.hidden)
       },
       { 
         id: 'tours-group', 
         label: 'Tours', 
         icon: MapIcon,
-        hidden: isAgent,
+        hidden: isAgent ? true : (isStaff ? !(staffPerms.tours ?? true) : false),
         children: [
-          { id: 'tours', label: 'Add Tour' },
           { id: 'all-tours', label: 'All Tours' },
+          { id: 'tours', label: 'Add Tours' },
           { id: 'categories', label: 'Categories', hidden: isSupplier },
-          { id: 'locations', label: 'Destination', hidden: isSupplier },
+          { id: 'locations', label: 'Destinations', hidden: isSupplier },
           { id: 'labels', label: 'Labels', hidden: isSupplier },
           { id: 'addons', label: 'Add Ons', hidden: isSupplier },
           { id: 'transports', label: 'Transport', hidden: isSupplier },
-          { id: 'guides', label: 'Drivers & Guides' },
           { id: 'urgency-points', label: 'Urgency Features', hidden: isSupplier }
         ].filter(c => !c.hidden)
       },
@@ -1409,117 +1453,129 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         id: 'car-rental-group', 
         label: 'Car Rental', 
         icon: Car,
-        hidden: isSupplier || isAgent,
+        hidden: isSupplier || isAgent || (isStaff && !(staffPerms.carRental ?? true)),
         children: [
-          { id: 'car-rental-bookings', label: 'Rental Bookings' },
-          { id: 'car-fleet', label: 'Fleet & Pricing' },
-          { id: 'car-rental-automations', label: 'Booking Automations' },
-          { id: 'car-rental-settings', label: 'Module Settings & Zones' },
+          { id: 'car-rental-bookings', label: 'Rental Booking' },
+          { id: 'car-rental-automations', label: 'Booking Automation' },
+          { id: 'car-rental-settings', label: 'Setting & Zones' },
         ]
       },
       { 
-        id: 'inquiry-group', 
-        label: 'Inquiry', 
-        icon: MessageSquare,
-        hidden: isAgent || isSupplier,
-        children: [
-          { id: 'inquiries', label: 'Incoming Inquiry' },
-          { id: 'ai-hub', label: 'Proposal Generator' }
-        ]
-      },
-      { 
-        id: 'coupons-group', 
-        label: 'Coupons', 
-        icon: Tag,
-        hidden: isSupplier || isAgent,
-        children: [
-          { id: 'add-coupon-trigger', label: 'Add Coupon' },
-          { id: 'coupons', label: 'All Coupons' }
-        ]
-      },
-      {
-        id: 'tickets',
-        label: 'Support & Tickets',
-        icon: LifeBuoy,
-        hidden: isSupplier || isAgent
-      },
-      { 
-        id: 'blog-group', 
-        label: 'Blog', 
-        icon: FileText,
-        hidden: isSupplier || isAgent,
-        children: [
-          { id: 'add-blog-trigger', label: 'Add Blog' },
-          { id: 'blog', label: 'All Blog' },
-          { id: 'blog-categories', label: 'Categories' }
-        ]
-      },
-      { 
-        id: 'pages-group', 
-        label: 'Pages', 
+        id: 'operations-group', 
+        label: 'Operations', 
         icon: Layers,
         hidden: isSupplier || isAgent,
         children: [
-          { id: 'add-page-trigger', label: 'Add Page' },
-          { id: 'pages', label: 'All Pages' }
+          { id: 'waivers', label: 'Digital Waivers' },
+          { id: 'channel-manager', label: 'Channel Manager (OTAs)' },
+          { id: 'invoices', label: 'Invoice & Billing' },
+          { id: 'ai-hub', label: 'Proposal Generator' },
+          { id: 'inquiries', label: 'Inquiry' },
+          { id: 'guides', label: 'Drivers & Guide' },
         ]
       },
       { 
-        id: 'popups-group', 
-        label: 'Pop Ups', 
-        icon: Sparkles,
-        hidden: isSupplier || isAgent,
+        id: 'analytics-group', 
+        label: 'Analytics', 
+        icon: BarChart3,
+        hidden: isAgent || isSupplier || (isStaff && !staffPerms.analytics),
         children: [
-          { id: 'add-popup-trigger', label: 'Add Pop up' },
-          { id: 'popups-manager', label: 'All Pop Ups' }
+          { id: 'analytics-overview', label: 'Traffic & Visitor' },
+          { id: 'conversion-funnel', label: 'Conversion Funnel' },
+          { id: 'google-analytics', label: 'GA4 & GTM Tracking' },
+        ]
+      },
+      { 
+        id: 'marketing-group', 
+        label: 'Marketing', 
+        icon: Tag,
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.marketing && !staffPerms.coupons),
+        children: [
+          { id: 'coupons', label: 'Coupons' },
+          { id: 'popups-manager', label: 'Pop Ups' }
         ]
       },
       {
         id: 'reviews',
         label: 'Reviews',
         icon: Star,
-        hidden: isSupplier || isAgent
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.reviews)
       },
       {
-        id: 'guides',
-        label: 'Drivers & Guides',
-        icon: UserCheck,
-        hidden: isAgent
+        id: 'tickets',
+        label: 'Support & Tickets',
+        icon: LifeBuoy,
+        hidden: isSupplier || isAgent || (isStaff && !(staffPerms.tickets ?? true))
       },
-      {
-        id: 'users',
-        label: 'User Management',
-        icon: Users,
-        hidden: isSupplier || isAgent
+      { 
+        id: 'blog-group', 
+        label: 'Blog', 
+        icon: FileText,
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.websiteBuilder),
+        children: [
+          { id: 'blog', label: 'All Blog' },
+          { id: 'add-blog-trigger', label: 'Add Blog' },
+          { id: 'blog-categories', label: 'Categories' }
+        ]
       },
-      {
-        id: 'website-builder',
-        label: 'Website Builder',
+      { 
+        id: 'pages-group', 
+        label: 'Pages', 
         icon: LayoutTemplate,
-        hidden: isSupplier || isAgent
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.websiteBuilder),
+        children: [
+          { id: 'pages', label: 'All Pages' },
+          { id: 'add-page-trigger', label: 'Add Pages' },
+          { id: 'landing-page-generator', label: 'Landing Page Generator' }
+        ]
       },
-      {
-        id: 'payouts',
-        label: 'Finance Report',
+      { 
+        id: 'finance-group', 
+        label: 'Finance', 
         icon: Wallet,
-        hidden: isSupplier || isAgent
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.finance),
+        children: [
+          { id: 'payouts', label: 'Financial Report' }
+        ]
+      },
+      { 
+        id: 'website-builder-group', 
+        label: 'Website Builder', 
+        icon: LayoutGrid,
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.websiteBuilder),
+        children: [
+          { id: 'wb-site-settings', label: 'Site Setting (Branding & Style)' },
+          { id: 'wb-blocks', label: 'Page Builder' },
+          { id: 'wb-tours', label: 'Feature & Favorite Tours' },
+          { id: 'wb-menus', label: 'Custom menu' },
+          { id: 'wb-pages', label: 'System Page Design' },
+          { id: 'wb-presets', label: 'Design Preset (Mobile & Desktop)' }
+        ]
+      },
+      { 
+        id: 'users-group', 
+        label: 'User Management', 
+        icon: Users,
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.userManagement),
+        children: [
+          { id: 'users', label: 'All Users' },
+          { id: 'add-user-trigger', label: 'Add Users' },
+          { id: 'access-roles', label: 'Roles & Permissions' }
+        ]
       },
       { 
         id: 'settings-group', 
         label: 'Setting', 
         icon: Settings,
+        hidden: isSupplier || isAgent || (isStaff && !staffPerms.settings),
         children: [
-          { id: 'analytics-integration', label: 'Analytics Integration' },
-          { id: 'backup', label: 'Disaster Recovery & Backup', hidden: isSupplier || isAgent },
-          { id: 'company-info', label: 'Company Info', hidden: isSupplier || isAgent },
-          { id: 'seo', label: 'SEO Setting', hidden: isSupplier || isAgent },
-          { id: 'payment-settings', label: 'Payment Setting', hidden: isSupplier || isAgent },
-          { id: 'communication', label: 'Communication Setting', hidden: isSupplier || isAgent },
-          { id: 'website', label: 'Website Setting', hidden: isSupplier || isAgent },
-          { id: 'domain', label: 'Custom Domain', hidden: isSupplier || isAgent },
-          { id: 'docs-system', label: 'Docs System (docs.tripbone.com)' },
-          { id: 'guide-pdf', label: 'Panduan Website (PDF)' },
-          { id: 'company-profile', label: 'My Company Profile', hidden: !isSupplier && !isAgent },
+          { id: 'payment-settings', label: 'Payment Setting' },
+          { id: 'company-info', label: 'Company Info' },
+          { id: 'communication', label: 'Communication Setting' },
+          { id: 'seo', label: 'SEO Setting' },
+          { id: 'domain', label: 'Custom Domain' },
+          { id: 'backup', label: 'Disaster Recovery & Backup' },
+          { id: 'company-profile', label: 'My Company Profile', hidden: !isSupplier && !isAgent }
         ].filter(c => !c.hidden)
       }
     ];
@@ -1529,23 +1585,66 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
 
   const activeMenuItemLabel = useMemo(() => {
     const labelsMap: Record<string, string> = {
-      'billing': 'Billing & Plans',
-      'custom-domain': 'Custom Domain Configuration',
-      'tickets': 'Support & Tickets',
-      'developer-hub': 'Developer Hub',
-      'user-settings': 'User Profile Setting',
-      'backup': 'Disaster Recovery & 1-Click Backup',
+      'dashboard': 'Dashboard Overview',
+      'bookings': 'Booking List',
+      'add-manual-booking': 'Create Booking',
+      'import-bookings': 'Import Booking',
+      'schedule': 'Calendar Schedule',
+      'reports': 'Booking Reports',
+      'all-tours': 'All Tours',
+      'tours': 'Add Tours',
+      'categories': 'Tour Categories',
+      'locations': 'Destinations',
+      'labels': 'Tour Labels',
+      'addons': 'Tour Add-ons',
+      'transports': 'Transport Options',
+      'urgency-points': 'Urgency Features',
+      'car-rental-bookings': 'Rental Booking',
+      'car-rental-automations': 'Booking Automation',
+      'car-rental-settings': 'Setting & Zones',
+      'car-fleet': 'Rental Fleet & Pricing',
+      'waivers': 'Digital Waivers',
+      'channel-manager': 'Channel Manager (OTAs)',
+      'invoices': 'Invoice & Billing',
+      'ai-hub': 'Proposal Generator',
+      'inquiries': 'Customer Inquiries',
+      'guides': 'Drivers & Guide',
       'analytics': 'Analytics & Growth Hub',
-      'analytics-overview': 'Traffic & Visitor Insights',
-      'conversion-funnel': 'Checkout Conversion Funnel & Drop-off Tracker',
-      'invoices': 'Invoice Generator & Billing',
-      'waivers': 'Digital Liability Waivers & Safety Kiosk',
-      'google-analytics': 'Google Analytics 4 & GTM Tracking',
-      'analytics-integration': 'Google Analytics 4 & GTM Tracking',
-      'car-rental-bookings': 'Car Rental & Charter Bookings',
-      'car-fleet': 'Car Rental Fleet & Pricing Management',
-      'car-rental-automations': 'Car Rental Customer Booking Automations',
-      'car-rental-settings': 'Car Rental Module Settings & Pricing Zones',
+      'analytics-overview': 'Traffic & Visitor',
+      'conversion-funnel': 'Conversion Funnel',
+      'google-analytics': 'GA4 & GTM Tracking',
+      'analytics-integration': 'GA4 & GTM Tracking',
+      'coupons': 'Coupons',
+      'popups-manager': 'Pop Ups',
+      'reviews': 'Customer Reviews',
+      'tickets': 'Support & Tickets',
+      'blog': 'All Blog Articles',
+      'add-blog-trigger': 'Add Blog',
+      'blog-categories': 'Blog Categories',
+      'pages': 'All Pages',
+      'add-page-trigger': 'Add Pages',
+      'landing-page-generator': 'Landing Page Generator',
+      'payouts': 'Financial Report',
+      'website-builder': 'Website Builder',
+      'wb-site-settings': 'Site Setting (Branding & Style)',
+      'wb-blocks': 'Page Builder',
+      'wb-tours': 'Feature & Favorite Tours',
+      'wb-menus': 'Custom menu',
+      'wb-pages': 'System Page Design',
+      'wb-presets': 'Design Preset (Mobile & Desktop)',
+      'users': 'All Users',
+      'add-user-trigger': 'Add Users',
+      'access-roles': 'Roles & Permissions',
+      'payment-settings': 'Payment Setting',
+      'company-info': 'Company Info',
+      'communication': 'Communication Setting',
+      'seo': 'SEO Setting',
+      'domain': 'Custom Domain',
+      'backup': 'Disaster Recovery & Backup',
+      'billing': 'Billing & Plans',
+      'custom-domain': 'Custom Domain',
+      'developer-hub': 'Developer Hub',
+      'user-settings': 'User Setting',
     };
     if (labelsMap[activeMenu]) return labelsMap[activeMenu];
 
@@ -5450,11 +5549,18 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
             {menuItems.map((item) => {
               const isActive = activeMenu === item.id;
               const isChildActive = item.children?.some(c => {
-                if (item.id === 'settings-group' && activeMenu === 'general-settings') return true;
-                if (item.id === 'coupons-group' && activeMenu === 'coupons') return true;
+                if (item.id === 'website-builder-group' && (activeMenu === 'website-builder' || activeMenu.startsWith('wb-'))) return true;
+                if (item.id === 'settings-group' && (activeMenu === 'general-settings' || activeMenu === 'payment-settings' || activeMenu === 'communication' || activeMenu === 'backup' || activeMenu === 'domain' || activeMenu === 'company-info' || activeMenu === 'seo')) return true;
+                if (item.id === 'booking-group' && (activeMenu === 'bookings' || activeMenu === 'schedule' || activeMenu === 'reports' || activeMenu === 'import-bookings')) return true;
+                if (item.id === 'tours-group' && (activeMenu === 'all-tours' || activeMenu === 'tours' || activeMenu === 'categories' || activeMenu === 'locations' || activeMenu === 'labels' || activeMenu === 'addons' || activeMenu === 'transports' || activeMenu === 'urgency-points')) return true;
+                if (item.id === 'car-rental-group' && (activeMenu === 'car-rental-bookings' || activeMenu === 'car-fleet' || activeMenu === 'car-rental-automations' || activeMenu === 'car-rental-settings')) return true;
+                if (item.id === 'operations-group' && (activeMenu === 'waivers' || activeMenu === 'channel-manager' || activeMenu === 'invoices' || activeMenu === 'ai-hub' || activeMenu === 'inquiries' || activeMenu === 'guides')) return true;
+                if (item.id === 'analytics-group' && (activeMenu === 'analytics' || activeMenu === 'analytics-overview' || activeMenu === 'conversion-funnel' || activeMenu === 'google-analytics' || activeMenu === 'analytics-integration')) return true;
+                if (item.id === 'marketing-group' && (activeMenu === 'coupons' || activeMenu === 'popups-manager')) return true;
                 if (item.id === 'blog-group' && activeMenu === 'blog') return true;
                 if (item.id === 'pages-group' && activeMenu === 'pages') return true;
-                if (item.id === 'popups-group' && activeMenu === 'popups-manager') return true;
+                if (item.id === 'finance-group' && activeMenu === 'payouts') return true;
+                if (item.id === 'users-group' && (activeMenu === 'users' || activeMenu === 'access-roles' || activeMenu.startsWith('users-'))) return true;
                 return activeMenu === c.id;
               });
               const isExpanded = expandedMenu === item.id;
@@ -5496,18 +5602,46 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                         const isChildHighlighted = 
                           activeMenu === child.id || 
                           (activeMenu === 'general-settings' && settingsActiveTab === child.id) ||
+                          (activeMenu === 'website-builder' && (
+                            (child.id === 'wb-site-settings' && websiteBuilderTab === 'siteSettings') ||
+                            (child.id === 'wb-blocks' && websiteBuilderTab === 'blocks') ||
+                            (child.id === 'wb-tours' && websiteBuilderTab === 'tours') ||
+                            (child.id === 'wb-menus' && websiteBuilderTab === 'menus') ||
+                            (child.id === 'wb-pages' && websiteBuilderTab === 'pages') ||
+                            (child.id === 'wb-presets' && websiteBuilderTab === 'designPresets')
+                          )) ||
                           (activeMenu === 'coupons' && child.id === 'coupons') ||
+                          (activeMenu === 'popups-manager' && child.id === 'popups-manager') ||
                           (activeMenu === 'blog' && child.id === 'blog') ||
                           (activeMenu === 'pages' && child.id === 'pages') ||
-                          (activeMenu === 'popups-manager' && child.id === 'popups-manager');
+                          (activeMenu === 'payouts' && child.id === 'payouts') ||
+                          (activeMenu === 'users' && child.id === 'users') ||
+                          (activeMenu === 'access-roles' && child.id === 'access-roles');
 
                         return (
                           <button
                             key={child.id}
                             onClick={() => {
                               setSelectedPartner(null);
-                              const settingTabs = ['company-info', 'seo', 'website', 'domain', 'builder'];
-                              if (settingTabs.includes(child.id)) {
+                              if (child.id === 'wb-site-settings') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('siteSettings');
+                              } else if (child.id === 'wb-blocks') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('blocks');
+                              } else if (child.id === 'wb-tours') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('tours');
+                              } else if (child.id === 'wb-menus') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('menus');
+                              } else if (child.id === 'wb-pages') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('pages');
+                              } else if (child.id === 'wb-presets') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('designPresets');
+                              } else if (child.id === 'company-info' || child.id === 'seo' || child.id === 'domain') {
                                   setActiveMenu('general-settings');
                                   setSettingsActiveTab(child.id);
                               } else if (child.id === 'add-manual-booking') {
@@ -5516,15 +5650,16 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                               } else if (child.id === 'tours') {
                                   resetForm();
                                   setActiveMenu('tours');
-                              } else if (child.id === 'add-coupon-trigger') {
-                                  setActiveMenu('coupons');
                               } else if (child.id === 'add-blog-trigger') {
                                   setActiveMenu('blog');
                                   setAutoOpenBlogModal(true);
                               } else if (child.id === 'add-page-trigger') {
                                   setActiveMenu('pages');
-                              } else if (child.id === 'add-popup-trigger') {
-                                  setActiveMenu('popups-manager');
+                              } else if (child.id === 'landing-page-generator') {
+                                  setActiveMenu('pages');
+                              } else if (child.id === 'add-user-trigger') {
+                                  setActiveMenu('users');
+                                  setAutoOpenCreateUser(true);
                               } else if (child.id === 'blog-categories') {
                                   setActiveMenu('blog');
                               } else if (child.id === 'guide-pdf') {
@@ -5980,6 +6115,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                  setFormData={setFormData}
                  formData={formData}
                  setActiveMenu={setActiveMenu}
+                 initialOpenCreate={autoOpenCreateUser}
                  roleFilter={
                    activeMenu === 'users-admins' ? 'admin' :
                    activeMenu === 'users-suppliers' ? 'supplier' :
@@ -6020,7 +6156,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           )}
           {activeMenu === 'website-builder' && (
              <div className="space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
-                <WebsiteBuilder />
+                <WebsiteBuilder initialTab={websiteBuilderTab} key={websiteBuilderTab} />
              </div>
           )}
           {activeMenu === 'general-settings' && (

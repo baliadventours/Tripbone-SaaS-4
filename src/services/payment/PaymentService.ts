@@ -26,6 +26,7 @@ export interface TenantPaymentSettings {
   depositPercentage: number;
   fixedDepositAmount?: number;
   depositCurrency?: string;
+  defaultCurrency?: string;
   autoConfirmOnPayment: boolean;
   currencyConversionEnabled: boolean;
   customExchangeRates?: Record<string, number>;
@@ -75,6 +76,8 @@ export class PaymentService {
           providerConfigs: defaultConfigs,
           depositType: 'percentage',
           depositPercentage: 100,
+          defaultCurrency: 'USD',
+          depositCurrency: 'USD',
           autoConfirmOnPayment: true,
           currencyConversionEnabled: false,
           updatedAt: new Date().toISOString(),
@@ -179,6 +182,7 @@ export class PaymentService {
         depositPercentage: data.depositPercentage !== undefined ? data.depositPercentage : 100,
         fixedDepositAmount: data.fixedDepositAmount !== undefined ? data.fixedDepositAmount : 50,
         depositCurrency: data.depositCurrency || 'USD',
+        defaultCurrency: data.defaultCurrency || data.currency || 'USD',
         autoConfirmOnPayment: data.autoConfirmOnPayment !== undefined ? data.autoConfirmOnPayment : true,
         currencyConversionEnabled: !!data.currencyConversionEnabled,
         customExchangeRates: data.customExchangeRates || {},
@@ -203,6 +207,8 @@ export class PaymentService {
         providerConfigs: defaultConfigs,
         depositType: 'percentage',
         depositPercentage: 100,
+        defaultCurrency: 'USD',
+        depositCurrency: 'USD',
         autoConfirmOnPayment: true,
         currencyConversionEnabled: false,
         updatedAt: new Date().toISOString(),
@@ -268,7 +274,9 @@ export class PaymentService {
       depositType: updatedSettings.depositType,
       depositPercentage: updatedSettings.depositPercentage,
       fixedDepositAmount: updatedSettings.fixedDepositAmount,
-      depositCurrency: updatedSettings.depositCurrency,
+      depositCurrency: updatedSettings.depositCurrency || updatedSettings.defaultCurrency || 'USD',
+      defaultCurrency: updatedSettings.defaultCurrency || 'USD',
+      currency: updatedSettings.defaultCurrency || 'USD',
       autoConfirmOnPayment: updatedSettings.autoConfirmOnPayment,
       currencyConversionEnabled: updatedSettings.currencyConversionEnabled,
       customExchangeRates: updatedSettings.customExchangeRates,
@@ -316,6 +324,23 @@ export class PaymentService {
     // Sync to legacy document path as well
     const legacyDocRef = doc(db, 'settings', 'payment_' + tenantId);
     await setDoc(legacyDocRef, sanitizedFields, { merge: true });
+
+    // Sync default currency to main site settings so storefront, tours, and checkout match immediately
+    if (updatedSettings.defaultCurrency) {
+      try {
+        const siteSettingsRef = doc(db, 'settings', tenantId || 'general');
+        await setDoc(siteSettingsRef, { currency: updatedSettings.defaultCurrency }, { merge: true });
+        if (tenantId && tenantId !== 'general') {
+          const generalRef = doc(db, 'settings', 'general');
+          await setDoc(generalRef, { currency: updatedSettings.defaultCurrency }, { merge: true });
+        }
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('preferred_currency', updatedSettings.defaultCurrency);
+        }
+      } catch (err) {
+        console.warn('Could not sync currency to site settings document:', err);
+      }
+    }
 
     PaymentLogger.logInfo('system', 'saveTenantSettings', { activeProviderId: updatedSettings.activeProviderId });
   }

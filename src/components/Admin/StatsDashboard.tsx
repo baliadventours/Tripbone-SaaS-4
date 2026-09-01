@@ -1,145 +1,72 @@
 import React, { useMemo } from 'react';
-import { motion } from 'motion/react';
 import { 
-  TrendingUp, Users, DollarSign, Calendar, ArrowUpRight, ArrowDownRight, 
-  Map, MapPin, Globe, ShoppingBag, Clock, CheckCircle2, ChevronRight, PieChart as PieIcon, MessageSquare
+  DollarSign, TrendingUp, Users, Calendar, 
+  ArrowUpRight, ArrowDownRight, Globe, ShoppingBag, 
+  Clock, CheckCircle2, MapPin
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, 
-  BarChart, Bar, Cell, PieChart, Pie
-} from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatPrice } from '../../lib/utils';
+import { Booking, Tour, UserProfile, Inquiry } from '../../types';
 
 interface StatsDashboardProps {
-  bookings: any[];
-  tours: any[];
-  users: any[];
-  inquiries?: any[];
+  bookings: Booking[];
+  tours: Tour[];
+  users: UserProfile[];
+  inquiries?: Inquiry[];
   role?: string;
+  setActiveMenu?: (m: string) => void;
 }
 
-const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiveMenu }: StatsDashboardProps & { setActiveMenu?: (menu: string) => void }) => {
+export const StatsDashboard: React.FC<StatsDashboardProps> = ({ 
+  bookings, 
+  tours, 
+  users, 
+  inquiries = [],
+  role = 'admin',
+  setActiveMenu
+}) => {
   const isSupplier = role === 'supplier';
   const isAgent = role === 'agent';
   const isStaff = role === 'staff';
-  const isAdmin = role === 'admin' || role === 'superadmin';
-  
-  // 1. Core aggregates
-  const totalRevenue = bookings
-    .filter(b => (b.paymentStatus === 'paid' || b.status === 'confirmed') && b.status !== 'cancelled')
-    .reduce((acc, curr) => acc + (isSupplier ? (curr.supplierEarnings || 0) : (curr.totalAmount || 0)), 0);
-  
-  const totalAgentEarnings = isAgent ? bookings
-    .filter(b => (b.paymentStatus === 'paid' || b.status === 'confirmed') && b.status !== 'cancelled')
-    .reduce((acc, curr) => acc + (curr.agentDiscount || 0), 0) : 0;
 
-  const confirmedCount = bookings.filter(b => b.status === 'confirmed').length;
-  const pendingCount = bookings.filter(b => b.status === 'pending').length;
-  const newInquiriesCount = inquiries.filter(i => i.status === 'new').length;
-  const unassignedGuidesCount = bookings.filter(b => b.status === 'confirmed' && !b.assignedGuideName).length;
+  // 1. Metric Calculations
+  const metrics = useMemo(() => {
+    let totalRevenue = 0;
+    let successfulBookings = 0;
+    let pendingBookings = 0;
+    let completedBookings = 0;
 
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayDeparturesCount = bookings.filter(b => b.date === todayStr && b.status !== 'cancelled').length;
+    bookings.forEach(b => {
+      const isConfirmedOrPaid = (b.paymentStatus === 'paid' || b.status === 'confirmed') && b.status !== 'cancelled';
+      if (isConfirmedOrPaid) {
+        const amount = isSupplier ? (b.supplierEarnings || 0) : isAgent ? (b.agentDiscount || 0) : (b.totalAmount || 0);
+        totalRevenue += amount;
+        successfulBookings += 1;
+      }
+      if (b.status === 'pending') pendingBookings += 1;
+      if (b.status === 'completed') completedBookings += 1;
+    });
 
-  const activeToursCount = tours.filter(t => t.status === 'active' || t.status === 'published').length;
+    const activeTours = tours.filter(t => t.status === 'published').length;
 
-  const stats = isStaff ? [
-    { 
-      label: "Today's Departures", 
-      value: todayDeparturesCount.toString(), 
-      icon: MapPin, 
-      color: 'text-primary', 
-      bg: 'bg-orange-50', 
-      trend: todayDeparturesCount > 0 ? `${todayDeparturesCount} Tours` : 'Clear', 
-      isUp: true,
-      description: 'Scheduled passenger pickups today'
-    },
-    { 
-      label: 'Confirmed Bookings', 
-      value: confirmedCount.toString(), 
-      icon: Calendar, 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50', 
-      trend: `${confirmedCount} Active`, 
-      isUp: true,
-      description: 'Total active confirmed reservations'
-    },
-    { 
-      label: 'Guide Dispatch Needed', 
-      value: unassignedGuidesCount.toString(), 
-      icon: Users, 
-      color: unassignedGuidesCount > 0 ? 'text-amber-600' : 'text-emerald-600', 
-      bg: unassignedGuidesCount > 0 ? 'bg-amber-50' : 'bg-emerald-50', 
-      trend: unassignedGuidesCount > 0 ? 'Action Required' : 'All Assigned', 
-      isUp: unassignedGuidesCount === 0,
-      description: 'Confirmed trips needing driver/guide'
-    },
-    { 
-      label: 'Open Inquiries', 
-      value: newInquiriesCount.toString(), 
-      icon: MessageSquare, 
-      color: 'text-indigo-600', 
-      bg: 'bg-indigo-50', 
-      trend: newInquiriesCount > 0 ? 'New Requests' : '0 Pending', 
-      isUp: newInquiriesCount > 0,
-      description: 'Travelers awaiting custom proposal'
-    },
-  ] : [
-    { 
-      label: isSupplier ? 'Your Revenue' : isAgent ? 'Your Earnings' : 'Total Revenue', 
-      value: formatPrice(isAgent ? totalAgentEarnings : totalRevenue), 
-      icon: DollarSign, 
-      color: 'text-primary', 
-      bg: 'bg-orange-50', 
-      trend: '+12.5%', 
-      isUp: true,
-      description: 'Based on processed/confirmed sales'
-    },
-    { 
-      label: isAgent ? 'Your Bookings' : 'Confirmed Bookings', 
-      value: isAgent ? bookings.length.toString() : confirmedCount.toString(), 
-      icon: Calendar, 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50', 
-      trend: '+8.2%', 
-      isUp: true,
-      description: 'Legally locked passenger slots'
-    },
-    { 
-      label: isAdmin ? 'Trip Inquiries' : 'Pending Requests', 
-      value: isAdmin ? newInquiriesCount.toString() : pendingCount.toString(), 
-      icon: isAdmin ? MapPin : Clock, 
-      color: isAdmin ? 'text-indigo-600' : 'text-amber-600', 
-      bg: isAdmin ? 'bg-indigo-50' : 'bg-amber-50', 
-      trend: isAdmin ? (newInquiriesCount > 0 ? 'New' : 'Zero') : '-2.4%', 
-      isUp: isAdmin ? (newInquiriesCount > 0) : false,
-      description: 'Customers awaiting itinerary reply'
-    },
-    { 
-      label: isSupplier ? 'Your Active Tours' : isAgent ? 'Conversion Base' : 'Total Customers', 
-      value: isSupplier 
-        ? activeToursCount.toString() 
-        : isAgent 
-          ? formatPrice(totalRevenue)
-          : users.length.toString(), 
-      icon: isSupplier ? Map : isAgent ? TrendingUp : Users, 
-      color: 'text-purple-600', 
-      bg: 'bg-purple-50', 
-      trend: '+5.1%', 
-      isUp: true,
-      description: isSupplier ? 'Tours active in search directory' : isAgent ? 'Direct client passenger value' : 'Registered user profiles'
-    },
-  ];
+    return {
+      totalRevenue,
+      successfulBookings,
+      pendingBookings,
+      completedBookings,
+      activeTours
+    };
+  }, [bookings, tours, isSupplier, isAgent]);
 
-  // 2. Parse and normalize booking dates
+  // 2. Parsed Bookings with standard dates
   const parsedBookings = useMemo(() => {
     return bookings.map(b => {
       let bookingDate = new Date();
       if (b.createdAt) {
-        if (typeof b.createdAt.toDate === 'function') {
-          bookingDate = b.createdAt.toDate();
-        } else if (b.createdAt.seconds) {
-          bookingDate = new Date(b.createdAt.seconds * 1000);
+        if (typeof (b.createdAt as any).toDate === 'function') {
+          bookingDate = (b.createdAt as any).toDate();
+        } else if ((b.createdAt as any).seconds) {
+          bookingDate = new Date((b.createdAt as any).seconds * 1000);
         } else if (typeof b.createdAt === 'string') {
           bookingDate = new Date(b.createdAt);
         } else if (b.createdAt instanceof Date) {
@@ -148,18 +75,14 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
       } else if (b.date) {
         bookingDate = new Date(b.date);
       }
-      return {
-        ...b,
-        parsedDate: bookingDate
-      };
+      return { ...b, parsedDate: bookingDate };
     });
   }, [bookings]);
 
-  // 3. Last 7 Days aggregated trend chart data
+  // 3. Last 7 Days trend chart data
   const chartData = useMemo(() => {
     const data: Record<string, { revenue: number; bookingsCount: number }> = {};
     
-    // Initialize past 7 days chronologically
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -211,17 +134,17 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
       .slice(0, 4);
   }, [parsedBookings, isSupplier, isAgent]);
 
-  // 5. Booking Channel Distribution (B2B Travel Agencies, Klook, Viator, etc.)
+  // 5. Booking Channel Distribution
   const channelData = useMemo(() => {
     const channels: Record<string, number> = {};
     parsedBookings.forEach(b => {
       if (b.status === 'cancelled') return;
-      const source = b.bookingSource || 'Direct';
+      const source = b.bookingSource || 'Direct Website';
       channels[source] = (channels[source] || 0) + 1;
     });
 
     const total = Object.values(channels).reduce((a, b) => a + b, 0) || 1;
-    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
+    const colors = ['#0f172a', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
 
     return Object.entries(channels)
       .map(([name, value], index) => ({
@@ -234,83 +157,117 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
       .slice(0, 4);
   }, [parsedBookings]);
 
-  // 6. Recent activity stream
-  const recentBookings = useMemo(() => {
-    return [...parsedBookings]
-      .sort((a, b) => b.parsedDate.getTime() - a.parsedDate.getTime())
-      .slice(0, 5);
-  }, [parsedBookings]);
+  // Cards definitions
+  const statCards = [
+    {
+      label: isSupplier ? 'Supplier Net Revenue' : isAgent ? 'Total Commissions' : 'Total Revenue',
+      value: formatPrice(metrics.totalRevenue),
+      trend: '+12.4%',
+      isUp: true,
+      description: 'Confirmed and settled sales',
+      icon: DollarSign,
+      actionMenu: 'bookings'
+    },
+    {
+      label: 'Total Bookings',
+      value: bookings.length.toString(),
+      trend: `${metrics.successfulBookings} confirmed`,
+      isUp: true,
+      description: `${metrics.pendingBookings} pending review`,
+      icon: Calendar,
+      actionMenu: 'bookings'
+    },
+    {
+      label: 'Published Tours',
+      value: metrics.activeTours.toString(),
+      trend: `${tours.length} total`,
+      isUp: true,
+      description: 'Live in public marketplace',
+      icon: ShoppingBag,
+      actionMenu: 'all-tours'
+    },
+    {
+      label: isStaff ? 'Open Inquiries' : 'Registered Users',
+      value: isStaff ? inquiries.length.toString() : users.length.toString(),
+      trend: isStaff ? 'Live feed' : '+4 this week',
+      isUp: true,
+      description: isStaff ? 'Customer questions' : 'Staff, agents & customers',
+      icon: Users,
+      actionMenu: isStaff ? 'inquiries' : 'users'
+    }
+  ];
 
   return (
     <div className="space-y-6 text-left">
-      {/* 1. Header Grid Metrics - grid-cols-2 on mobile for dynamic look */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
-        {stats.map((stat, i) => (
-          <motion.div
+      {/* 1. Stat Cards Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {statCards.map((stat) => (
+          <div
             key={stat.label}
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08 }}
-            className="p-4 sm:p-5 bg-white rounded-[16px] md:rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-all group relative overflow-hidden flex flex-col justify-between"
+            onClick={() => setActiveMenu && setActiveMenu(stat.actionMenu)}
+            className="p-4 bg-white rounded-xl border border-slate-200/80 shadow-xs hover:border-slate-300 transition cursor-pointer flex flex-col justify-between"
           >
             <div>
               <div className="flex items-center justify-between mb-2">
-                <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl ${stat.bg} ${stat.color} group-hover:scale-105 transition-all duration-300`}>
-                  <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
-                </div>
-                <div className={`flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[10px] font-black px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full ${stat.isUp ? 'bg-orange-50 text-primary border border-orange-100/30' : 'bg-red-50 text-red-600 border border-red-100/30'}`}>
-                  {stat.isUp ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  <span>{stat.trend}</span>
+                <span className="text-[11px] font-medium text-slate-500 tracking-normal">
+                  {stat.label}
+                </span>
+                <div className="h-7 w-7 rounded-lg bg-slate-50 text-slate-600 flex items-center justify-center">
+                  <stat.icon className="h-3.5 w-3.5" />
                 </div>
               </div>
-              
-              <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5 sm:mb-1">{stat.label}</p>
-              <p className="text-base sm:text-2xl md:text-3xl font-black text-gray-900 tracking-tight leading-none mb-1 sm:mb-2">{stat.value}</p>
+
+              <div className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
+                {stat.value}
+              </div>
             </div>
-            <p className="text-[9.5px] sm:text-[10.5px] font-semibold text-gray-400 line-clamp-1 border-t border-gray-50 pt-1.5 sm:pt-2 mt-1 sm:mt-2">{stat.description}</p>
-          </motion.div>
+
+            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <span className="text-slate-500 font-normal truncate">{stat.description}</span>
+              <span className="font-medium text-emerald-600 shrink-0 ml-1">{stat.trend}</span>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* 2. Main Performance Analytics charts with side breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        
-        {/* Left: Operational Trend Timeline (2 Cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl md:rounded-[24px] border border-gray-100 p-4 sm:p-6 md:p-8 shadow-xs flex flex-col justify-between">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 md:mb-6">
+      {/* 2. Main Analytics Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left 2 Cols: 7-Day Performance Timeline */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-100">
             <div>
-              <h3 className="font-extrabold text-gray-900 text-sm sm:text-base md:text-lg flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-orange-500" />
-                Performance Metrics Overview
+              <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-slate-500" />
+                Revenue & Booking Velocity
               </h3>
-              <p className="text-[10.5px] sm:text-xs font-semibold text-gray-400">Weekly analysis of generated turnover and booked trips</p>
+              <p className="text-[11px] text-slate-400 font-normal">Past 7 days aggregated operational output</p>
             </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-gray-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-slate-900" />
                 Revenue
               </span>
-              <span className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-gray-500">
-                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                Bookings Count
+              <span className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                Bookings
               </span>
             </div>
           </div>
 
-          <div className="h-48 sm:h-64 md:h-72 w-full mt-1 sm:mt-2">
+          <div className="h-56 sm:h-64 w-full">
             {bookings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-300 gap-2">
-                <TrendingUp className="h-10 w-10 stroke-1" />
-                <span className="text-xs font-black uppercase tracking-widest text-center">No Real-time Bookings Recorded This Week</span>
-                <span className="text-[10px] text-gray-400 text-center">Deploy and start booking tours to generate live stats graphs.</span>
+              <div className="flex flex-col items-center justify-center h-full text-slate-300 gap-1">
+                <TrendingUp className="h-8 w-8 stroke-1" />
+                <span className="text-xs font-medium text-slate-500">No bookings recorded this week</span>
+                <span className="text-[11px] text-slate-400">Charts will populate once reservations are logged.</span>
               </div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -22, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#0f172a" stopOpacity={0.12}/>
+                      <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.15}/>
@@ -321,13 +278,13 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
                     dataKey="name" 
                     tickLine={false} 
                     axisLine={false} 
-                    tick={{ fontSize: 9, fontWeight: '700', fill: '#9ca3af' }} 
+                    tick={{ fontSize: 10, fill: '#94a3b8' }} 
                   />
                   <YAxis 
                     tickLine={false} 
                     axisLine={false} 
                     allowDecimals={false}
-                    tick={{ fontSize: 9, fontWeight: '700', fill: '#9ca3af' }} 
+                    tick={{ fontSize: 10, fill: '#94a3b8' }} 
                   />
                   <Tooltip
                     formatter={(value: any, name: string) => {
@@ -335,53 +292,57 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
                       return [value, 'Bookings'];
                     }}
                     contentStyle={{ 
-                      backgroundColor: 'white', 
-                      borderRadius: '16px', 
-                      border: '1px solid #f3f4f6', 
-                      boxShadow: '0 10px 25px rgba(0,0,0,0.05)',
+                      backgroundColor: '#ffffff', 
+                      borderRadius: '8px', 
+                      border: '1px solid #e2e8f0', 
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
                       fontSize: '11px',
-                      fontWeight: '700',
+                      fontWeight: '500',
                       textAlign: 'left'
                     }} 
                   />
-                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRevenue)" />
-                  <Area type="monotone" dataKey="bookings" name="Bookings" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorCount)" />
+                  <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#0f172a" strokeWidth={2} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area type="monotone" dataKey="bookings" name="Bookings" stroke="#3b82f6" strokeWidth={1.5} fillOpacity={1} fill="url(#colorCount)" />
                 </AreaChart>
               </ResponsiveContainer>
             )}
           </div>
         </div>
 
-        {/* Right: Booking Channels Distribution */}
-        <div className="bg-white rounded-2xl md:rounded-[24px] border border-gray-100 p-4 sm:p-6 md:p-8 shadow-xs flex flex-col justify-between">
+        {/* Right Col: Booking Channel Segmentation */}
+        <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-xs flex flex-col justify-between">
           <div>
-            <h3 className="font-extrabold text-gray-900 text-sm sm:text-base md:text-lg flex items-center gap-2 mb-0.5 sm:mb-1">
-              <PieIcon className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-500" />
-              Booking Channels
-            </h3>
-            <p className="text-[10.5px] sm:text-xs font-semibold text-gray-400 mb-4 sm:mb-6">Traffic segmentation and referral distribution</p>
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-slate-500" />
+                  Booking Channels
+                </h3>
+                <p className="text-[11px] text-slate-400 font-normal">Source & OTA channel attribution</p>
+              </div>
+              <span className="text-[10px] font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                Real-time
+              </span>
+            </div>
 
             {channelData.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-6 text-gray-300 h-40">
-                <Globe className="h-6 w-6 stroke-1.5 mb-2 animate-pulse" />
-                <span className="text-[10px] font-black uppercase">Awaiting Client Logins</span>
+              <div className="flex flex-col items-center justify-center py-12 text-slate-300">
+                <Globe className="h-7 w-7 stroke-1 mb-2 text-slate-300" />
+                <span className="text-xs font-medium text-slate-500">No channel data available</span>
               </div>
             ) : (
-              <div className="space-y-4 sm:space-y-5">
+              <div className="space-y-3.5">
                 {channelData.map(ch => (
-                  <div key={ch.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 max-w-[70%]">
-                      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: ch.color }} />
-                      <div className="min-w-0">
-                        <span className="font-bold text-xs sm:text-sm text-gray-800 block truncate">{ch.name}</span>
-                        <span className="text-[9.5px] sm:text-[10px] font-bold text-gray-400 leading-none block mt-0.5">{ch.value} unique items</span>
-                      </div>
+                  <div key={ch.name} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium text-slate-700 truncate">{ch.name}</span>
+                      <span className="font-medium text-slate-900 font-mono text-[11px]">{ch.value} ({ch.percentage}%)</span>
                     </div>
-                    <div className="text-right shrink-0">
-                      <span className="font-black text-gray-900 text-sm sm:text-md font-mono">{ch.percentage}%</span>
-                      <div className="w-12 sm:w-16 h-1 bg-gray-50 rounded-full overflow-hidden mt-0.5 sm:mt-1">
-                        <div className="h-full rounded-full" style={{ width: `${ch.percentage}%`, backgroundColor: ch.color }} />
-                      </div>
+                    <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full transition-all" 
+                        style={{ width: `${ch.percentage}%`, backgroundColor: ch.color }} 
+                      />
                     </div>
                   </div>
                 ))}
@@ -389,126 +350,61 @@ const StatsDashboard = ({ bookings, tours, users, inquiries = [], role, setActiv
             )}
           </div>
 
-          <div className="pt-3 border-t border-gray-50 flex items-center justify-between mt-4 sm:mt-6">
-            <span className="text-[9.5px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider">Dynamic Segmentation</span>
-            <span className="text-[9.5px] sm:text-xs font-bold text-primary bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100/30 flex items-center gap-1">
-              <span className="w-1 h-1 rounded-full bg-orange-500 animate-ping" />
-              Realtime
-            </span>
+          <div className="pt-3 mt-4 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+            <span>Direct vs OTAs Distribution</span>
+            <span className="font-medium text-slate-700">{bookings.length} Total</span>
           </div>
         </div>
-
       </div>
 
-      {/* 3. Leaders & Timeline Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-        
-        {/* Top Tours Leaderboard */}
-        <div className="bg-white rounded-2xl md:rounded-[24px] border border-gray-100 p-4 sm:p-6 md:p-8 shadow-xs flex flex-col justify-between">
+      {/* 3. Top Performing Tours */}
+      <div className="bg-white rounded-xl border border-slate-200/80 p-4 sm:p-5 shadow-xs">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
           <div>
-            <h3 className="font-extrabold text-gray-900 text-sm sm:text-base md:text-lg flex items-center gap-2 mb-0.5 sm:mb-1">
-              <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
-              Top Booking Driver Trips
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <ShoppingBag className="h-4 w-4 text-slate-500" />
+              Top Demand Tours & Packages
             </h3>
-            <p className="text-[10.5px] sm:text-xs font-semibold text-gray-400 mb-4 sm:mb-6">Tours with highest conversion rates & passenger volumes</p>
-
-            {leaderBoardTours.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-300">
-                <Map className="h-8 w-8 stroke-1 mb-2" />
-                <p className="text-[10px] font-bold uppercase">No Tour Reservations Logged Yet</p>
-              </div>
-            ) : (
-              <div className="space-y-4 sm:space-y-5">
-                {leaderBoardTours.map((t, idx) => {
-                  const maxCount = leaderBoardTours[0]?.count || 1;
-                  const ratio = Math.round((t.count / maxCount) * 100);
-                  
-                  return (
-                    <div key={idx} className="space-y-1.5 sm:space-y-2">
-                       <div className="flex justify-between items-center text-xs">
-                        <div className="flex items-center gap-2 max-w-[65%] min-w-0">
-                          <span className="w-4 h-4 rounded bg-purple-50 text-purple-600 font-extrabold flex items-center justify-center text-[9px] shrink-0">
-                            {idx + 1}
-                          </span>
-                          <span className="text-gray-800 font-black truncate text-xs sm:text-sm">{t.title}</span>
-                        </div>
-                        <span className="font-black text-gray-900 font-mono text-[10px] sm:text-xs text-right shrink-0">{t.count} bookings ({formatPrice(t.revenue)})</span>
-                      </div>
-                      <div className="w-full h-1.5 bg-gray-50 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full" style={{ width: `${ratio}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <p className="text-[11px] text-slate-400 font-normal">Ranked by passenger booking volume and generated GMV</p>
           </div>
+          {setActiveMenu && (
+            <button
+              onClick={() => setActiveMenu('all-tours')}
+              className="text-xs font-medium text-slate-600 hover:text-slate-900 transition"
+            >
+              View catalog ({tours.length})
+            </button>
+          )}
         </div>
 
-        {/* Recent Transactions & Stream Timeline */}
-        <div className="bg-white rounded-2xl md:rounded-[24px] border border-gray-100 p-4 sm:p-6 md:p-8 shadow-xs flex flex-col justify-between">
-          <div>
-            <h3 className="font-extrabold text-gray-900 text-sm sm:text-base md:text-lg flex items-center gap-2 mb-0.5 sm:mb-1">
-              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
-              Live Operations Stream
-            </h3>
-            <p className="text-[10.5px] sm:text-xs font-semibold text-gray-400 mb-4 sm:mb-6">Chronological tracking feed of incoming system activities</p>
-
-            {recentBookings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-gray-300">
-                <CheckCircle2 className="h-8 w-8 stroke-1 mb-2 animate-pulse" />
-                <p className="text-[10px] font-bold uppercase">No Recent Transactions Detected</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {recentBookings.map((b, idx) => {
-                  const isConfirmed = b.status === 'confirmed';
-                  const isPending = b.status === 'pending';
-                  const isCancelled = b.status === 'cancelled';
-                  
-                  return (
-                    <div key={b.id || idx} className="flex items-start justify-between p-3 bg-gray-50/50 hover:bg-gray-50 border border-gray-100 rounded-xl transition-all gap-2">
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <div className="mt-1.5 h-2 w-2 rounded-full flex items-center justify-center relative shrink-0">
-                          <span className={`h-2 w-2 rounded-full ${
-                            isConfirmed ? 'bg-orange-500 animate-pulse' : 
-                            isPending ? 'bg-amber-500 animate-pulse' : 
-                            isCancelled ? 'bg-red-500' : 'bg-gray-400'
-                          }`} />
-                        </div>
-                        <div className="text-left min-w-0">
-                          <p className="text-xs font-bold text-gray-800 line-clamp-1 truncate">
-                            {b.customerData?.fullName || 'Anonymous Traveler'}
-                          </p>
-                          <p className="text-[10px] font-semibold text-gray-400 line-clamp-1 mt-0.5 truncate">
-                            {b.tourTitle || b.packageName || 'Private Tour'}
-                          </p>
-                          <p className="text-[9px] font-semibold text-gray-400 font-mono mt-0.5">
-                            {b.parsedDate.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })} • {b.bookingSource || 'Direct'}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="text-right flex flex-col justify-between items-end gap-1 shrink-0">
-                        <span className="text-[11px] sm:text-xs font-black text-gray-900 font-mono">
-                          {formatPrice(isSupplier ? (b.supplierEarnings || 0) : isAgent ? (b.agentDiscount || 0) : (b.totalAmount || 0))}
-                        </span>
-                        <span className={`text-[8.5px] uppercase font-bold px-1.5 py-0.5 rounded-full border leading-none ${
-                          isConfirmed ? 'text-orange-700 bg-orange-50 border-orange-100' :
-                          isPending ? 'text-amber-700 bg-amber-50 border-amber-100' :
-                          isCancelled ? 'text-red-700 bg-red-50 border-red-100' : 'text-gray-700 bg-gray-50 border-gray-100'
-                        }`}>
-                          {b.status === 'review_required' ? 'Review Needed' : b.status || 'Received'}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+        {leaderBoardTours.length === 0 ? (
+          <div className="py-8 text-center text-slate-400">
+            <ShoppingBag className="h-8 w-8 mx-auto stroke-1 text-slate-300 mb-2" />
+            <p className="text-xs font-medium text-slate-600">No tour bookings recorded yet</p>
           </div>
-        </div>
-
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            {leaderBoardTours.map((t, idx) => (
+              <div 
+                key={idx}
+                className="p-3 rounded-lg border border-slate-100 bg-slate-50/40 hover:bg-slate-50 transition"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="h-5 w-5 rounded bg-slate-200/70 text-slate-700 font-semibold text-[10px] flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <p className="text-xs font-semibold text-slate-900 truncate">
+                    {t.title}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between text-[11px] pt-2 border-t border-slate-100">
+                  <span className="text-slate-500">{t.count} bookings</span>
+                  <span className="font-semibold text-slate-900 font-mono">{formatPrice(t.revenue)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

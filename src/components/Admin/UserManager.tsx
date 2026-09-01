@@ -22,16 +22,23 @@ interface UserManagerProps {
   resetForm?: () => void;
   setFormData?: (f: any) => void;
   formData?: any;
+  initialOpenCreate?: boolean;
 }
 
-export default function UserManager({ users = [], setUsers, currentUserProfile }: UserManagerProps) {
+export default function UserManager({ users = [], setUsers, currentUserProfile, initialOpenCreate = false }: UserManagerProps) {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'staff' | 'supplier' | 'agent' | 'customer'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'pending' | 'suspended'>('all');
   
   // Modal states
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(initialOpenCreate);
+
+  useEffect(() => {
+    if (initialOpenCreate) {
+      handleOpenCreateModal();
+    }
+  }, [initialOpenCreate]);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [deleteConfirmUser, setDeleteConfirmUser] = useState<UserProfile | null>(null);
   const [actionMessage, setActionMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);

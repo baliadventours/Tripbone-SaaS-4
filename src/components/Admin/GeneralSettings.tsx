@@ -1305,176 +1305,28 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
               Visual Identity & Design Presets
             </h3>
 
-            {/* Visual Branding & Layout Presets Selector */}
+            {/* Visual Branding & Layout Presets Reference */}
             <div className="space-y-3 pb-6 border-b border-gray-50">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">
-                  Layout & Design Preset
+                  Layout & Design Presets (Mobile & Desktop)
                 </label>
                 <span className="text-[10px] font-bold bg-primary/10 text-primary px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  Tenant Customization Engine
+                  Moved to Website Builder
                 </span>
               </div>
-              <p className="text-xs text-gray-400 pl-1 mb-2">
-                Instantly launch a world-class digital brand layout with curated fonts, spacings, and styles, or select Custom to define your own style guidelines.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                {[
-                  {
-                    id: 'default',
-                    name: 'Custom / Classic',
-                    desc: 'Your custom primary/secondary colors and custom Google Fonts selections.',
-                    badge: 'Fully Custom',
-                    colorClass: 'from-[#FF7A00] to-[#1F3B1F]',
-                    fontLabel: 'Plus Jakarta Sans'
-                  },
-                  {
-                    id: 'swiss-minimalist',
-                    name: 'Sleek Monochrome',
-                    desc: 'Pure crisp white canvas, obsidian accents, floating cards, and pill buttons.',
-                    badge: 'Airbnb Modern',
-                    colorClass: 'from-[#0f172a] to-[#ffffff]',
-                    fontLabel: 'Inter + Inter'
-                  },
-                  {
-                    id: 'tech-dark',
-                    name: 'Midnight Slate',
-                    desc: 'Deep slate charcoal dark mode with clean borders, emerald accents, and high legibility.',
-                    badge: 'Sleek Dark Mode',
-                    colorClass: 'from-[#10b981] to-[#0f172a]',
-                    fontLabel: 'Jakarta + Inter'
-                  },
-                  {
-                    id: 'elegant-editorial',
-                    name: 'Boutique Luxe',
-                    desc: 'Warm off-white background, terracotta accents, subtle card borders, and editorial serifs.',
-                    badge: 'Luxury Editorial',
-                    colorClass: 'from-[#c2410c] to-[#faf9f5]',
-                    fontLabel: 'Playfair + Jakarta'
-                  },
-                  {
-                    id: 'nordic-forest',
-                    name: 'Nordic Sanctuary',
-                    desc: 'Deep forest sage green, crisp slate background, and smooth 16px card silhouettes.',
-                    badge: 'Clean Eco',
-                    colorClass: 'from-[#065f46] to-[#f8fafc]',
-                    fontLabel: 'Outfit + Jakarta'
-                  },
-                  {
-                    id: 'retro-adventure',
-                    name: 'Urban Wanderlust',
-                    desc: 'Warm golden amber, oat neutral background, minimalist line borders, and pill controls.',
-                    badge: 'Modern Oat',
-                    colorClass: 'from-[#d97706] to-[#fafaf9]',
-                    fontLabel: 'Jakarta + Jakarta'
-                  },
-                  {
-                    id: 'tokyo-neon',
-                    name: 'Tokyo Minimal Dark',
-                    desc: 'Sleek obsidian dark canvas with rose accent lines, clean dark cards, and modern layout.',
-                    badge: 'Shinjuku Minimal',
-                    colorClass: 'from-[#f43f5e] to-[#09090b]',
-                    fontLabel: 'Jakarta + Inter'
-                  },
-                  {
-                    id: 'mediterranean-breeze',
-                    name: 'Mediterranean Azure',
-                    desc: 'Marine azure blue, ice sea foam background, floating white cards, and pill buttons.',
-                    badge: 'Coastal Minimal',
-                    colorClass: 'from-[#0284c7] to-[#f0f9ff]',
-                    fontLabel: 'Outfit + Jakarta'
-                  },
-                  {
-                    id: 'brutalist-mono',
-                    name: 'Monochrome Studio',
-                    desc: 'Architectural precision with stark black and white geometry, clean lines, and minimal elevation.',
-                    badge: 'Studio Linear',
-                    colorClass: 'from-[#000000] to-[#ffffff]',
-                    fontLabel: 'Jakarta + Inter'
-                  },
-                  {
-                    id: 'royal-safari',
-                    name: 'Regal Wilderness',
-                    desc: 'Warm bronze gold details over a sleek dark charcoal canvas with refined serif headings.',
-                    badge: 'Regal Dark',
-                    colorClass: 'from-[#d97706] to-[#0b0f19]',
-                    fontLabel: 'Cormorant + Jakarta'
-                  },
-                  {
-                    id: 'zen-oasis',
-                    name: 'Zen Botanical',
-                    desc: 'Serene soft emerald, light botanical green borders, spacious canvas, and pill buttons.',
-                    badge: 'Botanical Peace',
-                    colorClass: 'from-[#059669] to-[#fafcfa]',
-                    fontLabel: 'Outfit + Inter'
-                  },
-                  {
-                    id: 'alpine-chalet',
-                    name: 'Alpine Resort',
-                    desc: 'Copper chestnut accents, warm stone canvas, sleek card borders, and modern rounded controls.',
-                    badge: 'Warm Stone',
-                    colorClass: 'from-[#9a3412] to-[#faf8f5]',
-                    fontLabel: 'Outfit + Jakarta'
-                  },
-                  {
-                    id: 'sunset-ibiza',
-                    name: 'Ibiza Riviera Coral',
-                    desc: 'Airbnb Coral `#FF385C`, warm off-white canvas, soft pill buttons, and subtle rounded cards.',
-                    badge: 'Airbnb Coral',
-                    colorClass: 'from-[#ff385c] to-[#fffdfb]',
-                    fontLabel: 'Jakarta + Jakarta'
-                  }
-                ].map((preset) => {
-                  const isSelected = (settings?.brandingPreset || 'default') === preset.id;
-                  return (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => setSettings(s => s ? { ...s, brandingPreset: preset.id as any } : null)}
-                      className={cn(
-                        "flex flex-col text-left p-4 rounded-2xl border transition-all duration-200 relative overflow-hidden group min-h-[190px]",
-                        isSelected 
-                          ? "border-emerald-500 bg-emerald-50/30 ring-2 ring-emerald-500/20 shadow-md" 
-                          : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-                      )}
-                    >
-                      {/* Gradient Accent Pill */}
-                      <div className="flex items-center justify-between w-full mb-3 gap-2">
-                        <span className={cn(
-                          "text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-md truncate max-w-[110px]",
-                          isSelected ? "bg-emerald-600 text-white" : "bg-gray-100 text-gray-600"
-                        )}>
-                          {preset.badge}
-                        </span>
-                        
-                        {/* Circle Theme Color Preview */}
-                        <div className={cn(
-                          "h-4 w-4 rounded-full bg-gradient-to-br shadow-inner shrink-0",
-                          preset.colorClass
-                        )} />
-                      </div>
-
-                      <h4 className="text-sm font-bold text-gray-900 mb-1 group-hover:text-emerald-700 transition-colors line-clamp-1">
-                        {preset.name}
-                      </h4>
-                      <p className="text-xs text-gray-500 leading-snug flex-1 mb-3 line-clamp-3">
-                        {preset.desc}
-                      </p>
-
-                      <div className="text-[10px] text-gray-400 border-t border-gray-100 pt-2 w-full flex items-center justify-between gap-1 mt-auto shrink-0">
-                        <span className="shrink-0 font-medium">Typography:</span>
-                        <span className="font-bold text-gray-700 truncate">{preset.fontLabel}</span>
-                      </div>
-
-                      {/* Selected Indicator Checkmark */}
-                      {isSelected && (
-                        <div className="absolute right-2 top-2 bg-emerald-600 text-white p-0.5 rounded-full z-10 shadow-sm">
-                          <Check className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50/50 border border-orange-100 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">Desktop & Mobile Design Presets are now in Website Builder</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Browse all 10 Desktop themes and 10 Mobile app layouts directly inside the Website Builder menu.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-gray-700 bg-white px-3 py-1.5 rounded-xl border border-gray-200">
+                    Active: <span className="text-primary font-black uppercase">{settings?.brandingPreset || 'default'}</span>
+                  </span>
+                </div>
               </div>
             </div>
 

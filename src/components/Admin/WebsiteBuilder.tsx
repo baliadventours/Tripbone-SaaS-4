@@ -2,7 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc, setDoc, collection, onSnapshot, addDoc, updateDoc, serverTimestamp } from '../../lib/firebase';
 import { db } from '../../lib/firebase';
 import { useTenant } from '../../lib/TenantContext';
-import { LayoutTemplate, Menu, Save, Loader2, Image as ImageIcon, Plus, Trash2, X, AlertCircle, Upload, LayoutGrid, Star, Heart, ArrowUp, ArrowDown, Search, Check, Sparkles, Mail, CheckCircle, Smartphone, Compass, Eye } from 'lucide-react';
+import { 
+  LayoutTemplate, Menu, Save, Loader2, Image as ImageIcon, Plus, Trash2, X, 
+  AlertCircle, Upload, LayoutGrid, Star, Heart, ArrowUp, ArrowDown, Search, 
+  Check, Sparkles, Mail, CheckCircle, Smartphone, Compass, Eye, Monitor, 
+  Palette, Sliders, Layers
+} from 'lucide-react';
 import { uploadImage } from '../../lib/imgbb';
 import { cn } from '../../lib/utils';
 
@@ -10,7 +15,6 @@ export interface BlockConfig {
   id: string;
   active: boolean;
   design: string;
-  // Generic fields for flexibility
   headline?: string;
   subheadline?: string;
   description?: string;
@@ -44,6 +48,10 @@ export interface WebsiteBuilderSettings {
   mobilePreset?: string;
   mobileHookTitle?: string;
   mobileHookSubtitle?: string;
+}
+
+interface WebsiteBuilderProps {
+  initialTab?: 'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets';
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
@@ -272,13 +280,39 @@ function TourPickerManager({
   );
 }
 
-export default function WebsiteBuilder() {
+export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilderProps = {}) {
   const { tenantId } = useTenant();
-  const [activeTab, setActiveTab] = useState<'blocks' | 'tours' | 'menus' | 'pages' | 'mobilePresets'>('blocks');
+  const [activeTab, setActiveTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets'>(
+    initialTab === 'mobilePresets' ? 'designPresets' : (initialTab || 'blocks')
+  );
+  const [presetDeviceTab, setPresetDeviceTab] = useState<'desktop' | 'mobile'>(
+    initialTab === 'mobilePresets' ? 'mobile' : 'desktop'
+  );
   const [settings, setSettings] = useState<WebsiteBuilderSettings | null>(null);
+  const [brandingSettings, setBrandingSettings] = useState<any>({
+    primaryColor: '#c2410c',
+    secondaryColor: '#ea580c',
+    brandingPreset: 'default',
+    fontHeading: 'Plus Jakarta Sans',
+    fontBody: 'Plus Jakarta Sans',
+    businessName: '',
+    logoUrl: '',
+    topNavStyle: 'default',
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialTab) {
+      if (initialTab === 'mobilePresets') {
+        setActiveTab('designPresets');
+        setPresetDeviceTab('mobile');
+      } else {
+        setActiveTab(initialTab);
+      }
+    }
+  }, [initialTab]);
 
   const [pagesList, setPagesList] = useState<any[]>([]);
   const [toursList, setToursList] = useState<any[]>([]);
@@ -671,22 +705,28 @@ export default function WebsiteBuilder() {
 
       <div className="flex border-b border-gray-200 overflow-x-auto">
         <button
+          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'siteSettings' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
+          onClick={() => setActiveTab('siteSettings')}
+        >
+          <div className="flex items-center gap-2"><Palette className="w-4 h-4" /> Site Setting (Branding & Style)</div>
+        </button>
+        <button
           className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'blocks' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
           onClick={() => setActiveTab('blocks')}
         >
-          <div className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Page Builder (Blocks)</div>
+          <div className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Page Builder</div>
         </button>
         <button
           className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'tours' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
           onClick={() => setActiveTab('tours')}
         >
-          <div className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500 fill-amber-400" /> Featured & Favorite Tours</div>
+          <div className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500 fill-amber-400" /> Feature & Favorite Tours</div>
         </button>
         <button
           className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'menus' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
           onClick={() => setActiveTab('menus')}
         >
-          <div className="flex items-center gap-2"><Menu className="w-4 h-4" /> Custom Menus</div>
+          <div className="flex items-center gap-2"><Menu className="w-4 h-4" /> Custom menu</div>
         </button>
         <button
           className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'pages' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
@@ -695,16 +735,109 @@ export default function WebsiteBuilder() {
           <div className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> System Page Design</div>
         </button>
         <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", activeTab === 'mobilePresets' ? "border-orange-500 text-orange-600 bg-orange-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
-          onClick={() => setActiveTab('mobilePresets')}
+          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", (activeTab === 'designPresets' || activeTab === 'mobilePresets') ? "border-orange-500 text-orange-600 bg-orange-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
+          onClick={() => setActiveTab('designPresets')}
         >
           <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-orange-500" />
-            <span>Mobile Presets (10 Designs)</span>
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 rounded-full">Klook 2-Col + 9 More</span>
+            <Sliders className="w-4 h-4 text-orange-500" />
+            <span>Design Preset (Mobile & Desktop)</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 rounded-full">10 Desktop + 10 Mobile</span>
           </div>
         </button>
       </div>
+
+      {activeTab === 'siteSettings' && (
+        <div className="space-y-6 max-w-4xl">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+            <div>
+              <h3 className="text-lg font-black text-gray-900">Site Branding & Visual Style</h3>
+              <p className="text-xs text-gray-500">Configure global brand identity, primary accent palette, and storefront typography.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700">Business / Brand Name</label>
+                <input
+                  type="text"
+                  value={brandingSettings.businessName}
+                  onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, businessName: e.target.value }))}
+                  placeholder="e.g. Bali Adventours"
+                  className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-primary focus:bg-white"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700">Brand Logo URL</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={brandingSettings.logoUrl}
+                    onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, logoUrl: e.target.value }))}
+                    placeholder="https://..."
+                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-900 focus:outline-none focus:border-primary focus:bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700">Primary Brand Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={brandingSettings.primaryColor || '#c2410c'}
+                    onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, primaryColor: e.target.value }))}
+                    className="w-10 h-10 rounded-xl cursor-pointer border border-gray-200 p-1"
+                  />
+                  <input
+                    type="text"
+                    value={brandingSettings.primaryColor || '#c2410c'}
+                    onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, primaryColor: e.target.value }))}
+                    className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700">Secondary Accent Color</label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={brandingSettings.secondaryColor || '#ea580c'}
+                    onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, secondaryColor: e.target.value }))}
+                    className="w-10 h-10 rounded-xl cursor-pointer border border-gray-200 p-1"
+                  />
+                  <input
+                    type="text"
+                    value={brandingSettings.secondaryColor || '#ea580c'}
+                    onChange={(e) => setBrandingSettings((prev: any) => ({ ...prev, secondaryColor: e.target.value }))}
+                    className="w-32 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500">Changes will be saved on clicking Save Changes.</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!tenantId) return;
+                  try {
+                    await setDoc(doc(db, 'settings', tenantId), brandingSettings, { merge: true });
+                    alert('Site Branding Settings updated successfully!');
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to update settings.');
+                  }
+                }}
+                className="px-4 py-2 bg-primary text-white text-xs font-bold rounded-xl hover:bg-orange-700 transition"
+              >
+                Apply Site Style
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'blocks' && (
         <div className="space-y-4 max-w-4xl">
@@ -2172,32 +2305,250 @@ export default function WebsiteBuilder() {
         </div>
       )}
 
-      {activeTab === 'mobilePresets' && (
+      {(activeTab === 'designPresets' || activeTab === 'mobilePresets') && (
         <div className="space-y-6">
-          <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-200/80 rounded-2xl p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 bg-orange-600 text-white rounded-full text-[10px] font-black uppercase tracking-wider">
-                    Mobile Experience Engine
-                  </span>
-                  <span className="text-xs font-bold text-gray-500">10 Presets Available</span>
-                </div>
-                <h3 className="text-lg font-black text-gray-900 mt-1">Select Active Mobile Frontpage Layout</h3>
-                <p className="text-xs text-gray-600 max-w-2xl mt-0.5">
-                  Choose how your storefront renders on mobile devices (smartphones and small screens). Each preset adapts Hero, Featured Tours, Car Rental, Guest Favorites, Reviews, Blog & Footer to specific marketplace styles.
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Currently Active</p>
-                  <p className="text-sm font-black text-orange-600">
-                    {settings?.mobilePreset || 'klook-explorer'}
-                  </p>
-                </div>
-              </div>
+          {/* Sub-tab Switcher for Desktop vs Mobile Presets */}
+          <div className="flex items-center justify-between bg-white p-2 rounded-2xl border border-gray-200 shadow-xs">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPresetDeviceTab('desktop')}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all",
+                  presetDeviceTab === 'desktop'
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                )}
+              >
+                <Monitor className="w-4 h-4" />
+                <span>Desktop Design Presets</span>
+                <span className={cn("px-1.5 py-0.5 text-[9px] rounded-full font-black", presetDeviceTab === 'desktop' ? "bg-white/20 text-white" : "bg-gray-200 text-gray-700")}>10 Styles</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setPresetDeviceTab('mobile')}
+                className={cn(
+                  "flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs transition-all",
+                  presetDeviceTab === 'mobile'
+                    ? "bg-orange-600 text-white shadow-sm"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                )}
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Mobile Design Presets</span>
+                <span className={cn("px-1.5 py-0.5 text-[9px] rounded-full font-black", presetDeviceTab === 'mobile' ? "bg-white/20 text-white" : "bg-orange-100 text-orange-700")}>10 Layouts</span>
+              </button>
+            </div>
+            <div className="hidden sm:flex items-center gap-2 px-3 text-xs text-gray-500 font-medium">
+              <span>Active Preset:</span>
+              <span className="font-bold text-gray-900">
+                {presetDeviceTab === 'desktop' ? (brandingSettings?.brandingPreset || 'default') : (settings?.mobilePreset || 'klook-explorer')}
+              </span>
             </div>
           </div>
+
+          {presetDeviceTab === 'desktop' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-primary/10 via-amber-500/5 to-transparent border border-orange-200/80 rounded-2xl p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 bg-primary text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Desktop Design System
+                      </span>
+                      <span className="text-xs font-bold text-gray-500">10 Curated Themes</span>
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 mt-1">Select Storefront Desktop Theme Preset</h3>
+                    <p className="text-xs text-gray-600 max-w-2xl mt-0.5">
+                      Instantly transform your desktop marketplace with handcrafted typography, color palettes, hero headers, and card stylings.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {[
+                  {
+                    id: 'default',
+                    name: 'Emerald Modern',
+                    desc: 'Crisp emerald accents, clean white cards, high-contrast typography, and refined button radius.',
+                    badge: 'Classic Default',
+                    colorClass: 'from-[#c2410c] to-[#faf9f5]',
+                    fontLabel: 'Playfair + Jakarta'
+                  },
+                  {
+                    id: 'nordic-forest',
+                    name: 'Nordic Sanctuary',
+                    desc: 'Deep forest sage green, crisp slate background, and smooth 16px card silhouettes.',
+                    badge: 'Clean Eco',
+                    colorClass: 'from-[#065f46] to-[#f8fafc]',
+                    fontLabel: 'Outfit + Jakarta'
+                  },
+                  {
+                    id: 'retro-adventure',
+                    name: 'Urban Wanderlust',
+                    desc: 'Warm golden amber, oat neutral background, minimalist line borders, and pill controls.',
+                    badge: 'Modern Oat',
+                    colorClass: 'from-[#d97706] to-[#fafaf9]',
+                    fontLabel: 'Jakarta + Jakarta'
+                  },
+                  {
+                    id: 'tokyo-neon',
+                    name: 'Tokyo Minimal Dark',
+                    desc: 'Sleek obsidian dark canvas with rose accent lines, clean dark cards, and modern layout.',
+                    badge: 'Shinjuku Minimal',
+                    colorClass: 'from-[#f43f5e] to-[#09090b]',
+                    fontLabel: 'Jakarta + Inter'
+                  },
+                  {
+                    id: 'mediterranean-breeze',
+                    name: 'Mediterranean Azure',
+                    desc: 'Marine azure blue, ice sea foam background, floating white cards, and pill buttons.',
+                    badge: 'Coastal Minimal',
+                    colorClass: 'from-[#0284c7] to-[#f0f9ff]',
+                    fontLabel: 'Outfit + Jakarta'
+                  },
+                  {
+                    id: 'brutalist-mono',
+                    name: 'Monochrome Studio',
+                    desc: 'Architectural precision with stark black and white geometry, clean lines, and minimal elevation.',
+                    badge: 'Studio Linear',
+                    colorClass: 'from-[#000000] to-[#ffffff]',
+                    fontLabel: 'Jakarta + Inter'
+                  },
+                  {
+                    id: 'royal-safari',
+                    name: 'Regal Wilderness',
+                    desc: 'Warm bronze gold details over a sleek dark charcoal canvas with refined serif headings.',
+                    badge: 'Regal Dark',
+                    colorClass: 'from-[#d97706] to-[#0b0f19]',
+                    fontLabel: 'Cormorant + Jakarta'
+                  },
+                  {
+                    id: 'zen-oasis',
+                    name: 'Zen Botanical',
+                    desc: 'Serene soft emerald, light botanical green borders, spacious canvas, and pill buttons.',
+                    badge: 'Botanical Peace',
+                    colorClass: 'from-[#059669] to-[#fafcfa]',
+                    fontLabel: 'Outfit + Inter'
+                  },
+                  {
+                    id: 'alpine-chalet',
+                    name: 'Alpine Resort',
+                    desc: 'Copper chestnut accents, warm stone canvas, sleek card borders, and modern rounded controls.',
+                    badge: 'Warm Stone',
+                    colorClass: 'from-[#9a3412] to-[#faf8f5]',
+                    fontLabel: 'Outfit + Jakarta'
+                  },
+                  {
+                    id: 'sunset-ibiza',
+                    name: 'Ibiza Riviera Coral',
+                    desc: 'Airbnb Coral `#FF385C`, warm off-white canvas, soft pill buttons, and subtle rounded cards.',
+                    badge: 'Airbnb Coral',
+                    colorClass: 'from-[#ff385c] to-[#fffdfb]',
+                    fontLabel: 'Jakarta + Jakarta'
+                  }
+                ].map((preset) => {
+                  const isSelected = (brandingSettings?.brandingPreset || 'default') === preset.id;
+                  return (
+                    <div
+                      key={preset.id}
+                      className={cn(
+                        "flex flex-col justify-between p-5 rounded-2xl border transition-all duration-200 relative bg-white",
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/20 shadow-md"
+                          : "border-gray-200 hover:border-gray-300 shadow-xs"
+                      )}
+                    >
+                      {isSelected && (
+                        <div className="absolute top-0 right-0 bg-primary text-white px-3 py-1 rounded-bl-xl text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                          <Check className="w-3 h-3" /> Active Preset
+                        </div>
+                      )}
+
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("w-4 h-4 rounded-full bg-gradient-to-br shadow-inner", preset.colorClass)} />
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
+                            {preset.badge}
+                          </span>
+                        </div>
+
+                        <div>
+                          <h4 className="text-base font-black text-gray-900 leading-snug">{preset.name}</h4>
+                          <p className="text-xs text-gray-500 mt-1 leading-relaxed">{preset.desc}</p>
+                        </div>
+
+                        <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] font-medium text-gray-500">
+                          <span>Typography Pairing:</span>
+                          <span className="font-bold text-gray-800">{preset.fontLabel}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 mt-3 border-t border-gray-100">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            setBrandingSettings((s: any) => ({ ...s, brandingPreset: preset.id }));
+                            if (tenantId) {
+                              try {
+                                await setDoc(doc(db, 'settings', tenantId), { brandingPreset: preset.id }, { merge: true });
+                              } catch (err) {
+                                console.error(err);
+                              }
+                            }
+                          }}
+                          className={cn(
+                            "w-full py-2.5 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2",
+                            isSelected
+                              ? "bg-primary text-white shadow-sm cursor-default"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          )}
+                        >
+                          {isSelected ? (
+                            <>
+                              <Check className="w-4 h-4" /> Selected Preset
+                            </>
+                          ) : (
+                            <>
+                              <Monitor className="w-4 h-4 text-gray-500" /> Apply Desktop Preset
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {presetDeviceTab === 'mobile' && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/5 to-transparent border border-orange-200/80 rounded-2xl p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 bg-orange-600 text-white rounded-full text-[10px] font-black uppercase tracking-wider">
+                        Mobile Experience Engine
+                      </span>
+                      <span className="text-xs font-bold text-gray-500">10 Presets Available</span>
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 mt-1">Select Active Mobile Frontpage Layout</h3>
+                    <p className="text-xs text-gray-600 max-w-2xl mt-0.5">
+                      Choose how your storefront renders on mobile devices (smartphones and small screens). Each preset adapts Hero, Featured Tours, Car Rental, Guest Favorites, Reviews, Blog & Footer to specific marketplace styles.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Currently Active</p>
+                      <p className="text-sm font-black text-orange-600">
+                        {settings?.mobilePreset || 'klook-explorer'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
           {/* Mobile Header Branding & Dynamic Hook Customizer */}
           <div className="bg-white border border-gray-200/80 rounded-2xl p-5 shadow-xs space-y-4">
@@ -2477,6 +2828,8 @@ export default function WebsiteBuilder() {
               );
             })}
           </div>
+        </div>
+      )}
         </div>
       )}
     </div>

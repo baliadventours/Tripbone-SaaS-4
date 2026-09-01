@@ -2,7 +2,7 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import { 
   CreditCard, Wallet, Database, DollarSign, Save, Loader2, Info, Check, 
   ShieldCheck, ExternalLink, Zap, AlertCircle, Copy, Key, QrCode, Building, CheckCircle2,
-  Activity, RefreshCw, AlertTriangle, ShieldAlert, FileText, ChevronRight
+  Activity, RefreshCw, AlertTriangle, ShieldAlert, FileText, ChevronRight, Globe
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { getActiveTenantId } from '../../lib/firebase';
@@ -11,6 +11,26 @@ import { PaymentGatewayRegistry } from '../../services/payment/PaymentGatewayReg
 import { GatewayConfig, PaymentProviderId, TestConnectionResult } from '../../services/payment/types';
 import { PaymentHealthDashboard } from './Payment/PaymentHealthDashboard';
 import { WebhookMonitor } from './Payment/WebhookMonitor';
+
+const SUPPORTED_CURRENCIES_LIST = [
+  { code: 'USD', symbol: '$', name: 'US Dollar', flag: '🇺🇸', region: 'Global Default' },
+  { code: 'EUR', symbol: '€', name: 'Euro', flag: '🇪🇺', region: 'European Union' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', flag: '🇬🇧', region: 'United Kingdom' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', flag: '🇦🇺', region: 'Australia' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar', flag: '🇨🇦', region: 'Canada' },
+  { code: 'IDR', symbol: 'Rp', name: 'Indonesian Rupiah', flag: '🇮🇩', region: 'Indonesia' },
+  { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬', region: 'Singapore' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', flag: '🇯🇵', region: 'Japan' },
+  { code: 'CNY', symbol: '¥', name: 'Chinese Yuan', flag: '🇨🇳', region: 'China' },
+  { code: 'CHF', symbol: 'Fr', name: 'Swiss Franc', flag: '🇨🇭', region: 'Switzerland' },
+  { code: 'NZD', symbol: 'NZ$', name: 'New Zealand Dollar', flag: '🇳🇿', region: 'New Zealand' },
+  { code: 'THB', symbol: '฿', name: 'Thai Baht', flag: '🇹🇭', region: 'Thailand' },
+  { code: 'MYR', symbol: 'RM', name: 'Malaysian Ringgit', flag: '🇲🇾', region: 'Malaysia' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham', flag: '🇦🇪', region: 'United Arab Emirates' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee', flag: '🇮🇳', region: 'India' },
+  { code: 'PHP', symbol: '₱', name: 'Philippine Peso', flag: '🇵🇭', region: 'Philippines' },
+  { code: 'VND', symbol: '₫', name: 'Vietnamese Dong', flag: '🇻🇳', region: 'Vietnam' },
+];
 
 export default function PaymentManager() {
   const activeTenantId = getActiveTenantId() || 'global';
@@ -22,7 +42,7 @@ export default function PaymentManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'gateways' | 'health' | 'webhooks' | 'deposit'>('gateways');
+  const [activeTab, setActiveTab] = useState<'gateways' | 'currency' | 'deposit' | 'health' | 'webhooks'>('gateways');
   const [verificationResult, setVerificationResult] = useState<TestConnectionResult | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -196,10 +216,10 @@ export default function PaymentManager() {
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex items-center gap-2 border-b border-gray-200 pb-1">
+      <div className="flex items-center gap-2 border-b border-gray-200 pb-1 overflow-x-auto">
         <button
           onClick={() => setActiveTab('gateways')}
-          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'gateways' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
           }`}
         >
@@ -208,8 +228,28 @@ export default function PaymentManager() {
         </button>
 
         <button
+          onClick={() => setActiveTab('currency')}
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'currency' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <Globe className="h-4 w-4" />
+          Default Currency ({tenantSettings.defaultCurrency || 'USD'})
+        </button>
+
+        <button
+          onClick={() => setActiveTab('deposit')}
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'deposit' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+          }`}
+        >
+          <DollarSign className="h-4 w-4" />
+          Deposit & Policy Rules
+        </button>
+
+        <button
           onClick={() => setActiveTab('health')}
-          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'health' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
           }`}
         >
@@ -219,22 +259,12 @@ export default function PaymentManager() {
 
         <button
           onClick={() => setActiveTab('webhooks')}
-          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 ${
+          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 whitespace-nowrap ${
             activeTab === 'webhooks' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
           }`}
         >
           <RefreshCw className="h-4 w-4" />
           Webhook Monitor
-        </button>
-
-        <button
-          onClick={() => setActiveTab('deposit')}
-          className={`px-4 py-2.5 rounded-xl font-extrabold text-xs transition flex items-center gap-2 ${
-            activeTab === 'deposit' ? 'bg-sky-600 text-white shadow-md shadow-sky-200' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-          }`}
-        >
-          <DollarSign className="h-4 w-4" />
-          Deposit & Policy Rules
         </button>
       </div>
 
@@ -897,6 +927,23 @@ export default function PaymentManager() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider block mb-1">
+                Default Storefront Currency
+              </label>
+              <select
+                value={tenantSettings.defaultCurrency || 'USD'}
+                onChange={(e) => setTenantSettings({ ...tenantSettings, defaultCurrency: e.target.value, depositCurrency: e.target.value })}
+                className="w-full bg-slate-50 border border-gray-200 rounded-xl p-2.5 text-xs font-bold text-gray-800 outline-none"
+              >
+                {SUPPORTED_CURRENCIES_LIST.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.code} - {c.name} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider block mb-1">
                 Deposit Requirement Type
               </label>
               <select
@@ -929,7 +976,7 @@ export default function PaymentManager() {
             {tenantSettings.depositType === 'fixed' && (
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-wider block mb-1">
-                  Fixed Deposit Amount
+                  Fixed Deposit Amount ({tenantSettings.defaultCurrency || 'USD'})
                 </label>
                 <input
                   type="number"
@@ -966,6 +1013,99 @@ export default function PaymentManager() {
             >
               <Save className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
               {saving ? 'Saving...' : 'Save Deposit Rules'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: DEFAULT CURRENCY & RATES */}
+      {activeTab === 'currency' && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm space-y-6">
+          <div className="pb-4 border-b border-gray-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-black text-gray-900 flex items-center gap-2">
+                <Globe className="h-5 w-5 text-sky-600" />
+                Default Displayed Currency & Multi-Currency Settings
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Set the default display currency shown across your website, tour packages, car rentals, invoices, and checkout.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-800 rounded-xl border border-sky-200 text-xs font-black">
+              <span>Active Default:</span>
+              <span className="bg-sky-600 text-white px-2 py-0.5 rounded-md font-mono">{tenantSettings.defaultCurrency || 'USD'}</span>
+            </div>
+          </div>
+
+          {/* Currency Selector Grid */}
+          <div>
+            <label className="text-[11px] font-black uppercase text-gray-500 tracking-wider block mb-3">
+              Select Primary Default Currency
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {SUPPORTED_CURRENCIES_LIST.map((cur) => {
+                const isSelected = (tenantSettings.defaultCurrency || 'USD') === cur.code;
+                return (
+                  <button
+                    key={cur.code}
+                    type="button"
+                    onClick={() => setTenantSettings({ ...tenantSettings, defaultCurrency: cur.code, depositCurrency: cur.code })}
+                    className={`p-3.5 rounded-2xl border text-left transition relative flex flex-col justify-between ${
+                      isSelected
+                        ? 'border-sky-500 bg-sky-50/80 ring-2 ring-sky-500/30 shadow-sm'
+                        : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <span className="text-2xl">{cur.flag}</span>
+                      {isSelected && (
+                        <span className="h-5 w-5 rounded-full bg-sky-600 text-white flex items-center justify-center text-[10px]">
+                          <Check className="h-3 w-3 stroke-[3]" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-2">
+                      <div className="font-mono font-black text-gray-900 text-sm flex items-center gap-1.5">
+                        <span>{cur.code}</span>
+                        <span className="text-gray-400 font-sans text-xs font-semibold">({cur.symbol})</span>
+                      </div>
+                      <div className="text-[11px] font-bold text-gray-600 truncate mt-0.5">{cur.name}</div>
+                      <div className="text-[10px] text-gray-400 font-medium truncate mt-0.5">{cur.region}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Multi-currency switch */}
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-black text-gray-900">Real-Time Currency Converter for International Guests</h4>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Allow visitors to switch currencies on your storefront header while base amounts remain grounded in your default currency.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                id="currencyConversion"
+                checked={tenantSettings.currencyConversionEnabled ?? true}
+                onChange={(e) => setTenantSettings({ ...tenantSettings, currencyConversionEnabled: e.target.checked })}
+                className="h-4 w-4 text-sky-600 rounded border-gray-300"
+              />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-gray-100 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-sky-200 disabled:opacity-50"
+            >
+              <Save className={`h-4 w-4 ${saving ? 'animate-spin' : ''}`} />
+              {saving ? 'Saving...' : 'Save Default Currency'}
             </button>
           </div>
         </div>
