@@ -274,6 +274,10 @@ export default function SaaSSuperAdmin() {
   const [demoLeads, setDemoLeads] = useState<any[]>([]);
   const [demoLeadsSearch, setDemoLeadsSearch] = useState('');
 
+  // Workspace filtering and view mode states
+  const [workspaceStatusFilter, setWorkspaceStatusFilter] = useState<'all' | 'active' | 'trial' | 'suspended'>('all');
+  const [workspaceViewMode, setWorkspaceViewMode] = useState<'subscription' | 'contact'>('subscription');
+
   // Transactions tracking states
   const [txSearch, setTxSearch] = useState('');
   const [txStatusFilter, setTxStatusFilter] = useState('all');
@@ -479,6 +483,9 @@ export default function SaaSSuperAdmin() {
 
   // Search workspaces and custom profile dropdown states
   const [tenantSearchTerm, setTenantSearchTerm] = useState('');
+  const [operatorSearchTerm, setOperatorSearchTerm] = useState('');
+  const [operatorPlanFilter, setOperatorPlanFilter] = useState('all');
+  const [txBillingFilter, setTxBillingFilter] = useState('all');
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   // Integrations settings state
@@ -944,40 +951,131 @@ export default function SaaSSuperAdmin() {
     }
   };
 
-  // Unified Invoices List combining DB invoices and synthesized tenant fallbacks with sequential numbering
+  // Unified Invoices List containing purely authentic Firestore invoices with sequential numbering & metadata
   const allInvoices = React.useMemo(() => {
-    const list = invoices.map((inv) => {
-      const formattedNo = generateInvoiceNumber(inv, null, tenants);
+    return invoices.map((raw) => {
+      let docId = raw.id || '';
+      let tenantId = raw.tenantId;
+      let invoiceNo = raw.no || raw.invoiceNumber;
+      
+      if (!tenantId && docId.includes('_INV-')) {
+        const parts = docId.split('_INV-');
+        tenantId = parts[0];
+        if (!invoiceNo) invoiceNo = 'INV-' + parts[1];
+      } else if (!tenantId && docId.startsWith('tenant_')) {
+        const lastIdx = docId.lastIndexOf('_');
+        if (lastIdx > 0) {
+          tenantId = docId.substring(0, lastIdx);
+          if (!invoiceNo) invoiceNo = docId.substring(lastIdx + 1);
+        }
+      }
+      if (!invoiceNo) {
+        invoiceNo = docId.startsWith('INV-') ? docId : (raw.number || ('INV-' + (docId.slice(-4) || '1001').toUpperCase()));
+      }
+      const matchedTenant = tenants.find(t => t.id === tenantId || t.slug === tenantId);
+      const tenantName = raw.tenantName || matchedTenant?.companyName || tenantId || 'Operator Workspace';
+      const plan = raw.plan || matchedTenant?.plan || 'Standard';
+      const billingInterval = raw.billingInterval || matchedTenant?.billingInterval || 'monthly';
+      const isLifetime = billingInterval === 'lifetime' || String(plan).toLowerCase().includes('lifetime') || String(raw.dueDate || '').toLowerCase().includes('lifetime');
+
+      let status = (raw.status || '').toUpperCase();
+      if (!status) {
+        if (raw.paid === true || isLifetime || (matchedTenant && matchedTenant.status === 'active' && !matchedTenant.manualPaymentPending)) {
+          status = 'PAID';
+        } else {
+          status = 'UNPAID';
+        }
+      }
+
+      let amount = raw.amount;
+      if (!amount || amount === '$0.00' || amount === 0) {
+        if (raw.price) {
+          amount = typeof raw.price === 'number' ? `$${raw.price}.00` : raw.price;
+        } else if (matchedTenant) {
+          const priceVal = getPlanPrice(matchedTenant.plan, matchedTenant.billingInterval || 'monthly', packages);
+          amount = `$${priceVal}.00`;
+        } else {
+          amount = '$0.00';
+        }
+      }
+
       return {
-        ...inv,
-        no: formattedNo
+        ...raw,
+        id: docId,
+        no: invoiceNo,
+        tenantId,
+        tenantName,
+        amount,
+        status,
+        plan,
+        billingInterval,
+        dueDate: isLifetime ? 'Lifetime Access' : (raw.dueDate || 'N/A'),
+        createdAt: raw.createdAt || raw.updatedAt || raw.date || new Date().toISOString()
       };
-    });
+    }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }, [invoices, tenants, packages]);
+
+  // Real Dynamic MRR Trajectory computed from actual tenant activation timelines
+  const revenueTrajectory = React.useMemo(() => {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const now = new Date();
+    const buckets: { key: string; label: string; year: number; month: number }[] = [];
+    const monthsMap: Record<string, number> = {};
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = monthNames[d.getMonth()];
+      buckets.push({ key, label, year: d.getFullYear(), month: d.getMonth() });
+      monthsMap[key] = 0;
+    }
 
     tenants.forEach(t => {
-      const exists = list.some(inv => inv.tenantId === t.id || inv.tenantId === t.slug);
-      if (!exists) {
-        const isLifetime = t.billingInterval === 'lifetime' || String(t.plan || '').toLowerCase().includes('lifetime');
-        const planName = formatPlanName(t.plan, packages, t.billingInterval);
-        const planPrice = getPlanPrice(t.plan, t.billingInterval, packages);
-        const invoiceNo = generateInvoiceNumber({ tenantId: t.id }, null, tenants);
-        list.push({
-          id: `${t.id}_${invoiceNo}`,
-          tenantId: t.id,
-          tenantName: t.companyName || 'Operator Workspace',
-          no: invoiceNo,
-          invoiceDate: t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
-          dueDate: isLifetime ? 'Lifetime Access' : (t.trialEnds ? new Date(t.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A'),
-          amount: `$${planPrice}.00`,
-          status: t.status === 'active' ? 'PAID' : t.manualPaymentPending ? 'PENDING' : 'UNPAID',
-          plan: planName,
-          billingInterval: t.billingInterval || 'monthly',
-          isSynthesized: true
+      if (t.status === 'active') {
+        const joinDate = t.createdAt ? new Date(t.createdAt) : now;
+        const joinKey = `${joinDate.getFullYear()}-${String(joinDate.getMonth() + 1).padStart(2, '0')}`;
+        const price = getPlanPrice(t.plan, t.billingInterval || 'monthly', packages);
+        
+        buckets.forEach(b => {
+          if (b.key >= joinKey) {
+            monthsMap[b.key] = (monthsMap[b.key] || 0) + price;
+          }
         });
       }
     });
-    return list.sort((a, b) => new Date(b.createdAt || b.invoiceDate || 0).getTime() - new Date(a.createdAt || a.invoiceDate || 0).getTime());
-  }, [invoices, tenants, packages]);
+
+    return buckets.map(b => ({
+      name: b.label,
+      value: monthsMap[b.key] || 0
+    }));
+  }, [tenants, packages]);
+
+  // Verified Actual Payments Total from Firestore Invoices
+  const { paidRevenueTotal, paidInvoicesCount, unpaidInvoicesCount, unpaidRevenueTotal } = React.useMemo(() => {
+    let paidTotal = 0;
+    let paidCount = 0;
+    let unpaidTotal = 0;
+    let unpaidCount = 0;
+
+    allInvoices.forEach(inv => {
+      const rawAmt = String(inv.amount || '0').replace(/[^0-9.]/g, '');
+      const num = parseFloat(rawAmt) || 0;
+      if (inv.status === 'PAID') {
+        paidTotal += num;
+        paidCount++;
+      } else {
+        unpaidTotal += num;
+        unpaidCount++;
+      }
+    });
+
+    return {
+      paidRevenueTotal: paidTotal,
+      paidInvoicesCount: paidCount,
+      unpaidRevenueTotal: unpaidTotal,
+      unpaidInvoicesCount: unpaidCount
+    };
+  }, [allInvoices]);
 
   const handleProcessPayment = async (inv: any) => {
     const matchedTenant = tenants.find(t => t.id === inv.tenantId);
@@ -2553,7 +2651,7 @@ export default function SaaSSuperAdmin() {
 
   const renderSidebarNav = (collapsed: boolean) => (
     <div className="space-y-4 overflow-y-auto pr-1 scrollbar-hide pb-8 flex-1">
-      {/* OVERVIEW */}
+      {/* HUB 1: COMMAND CENTER */}
       <div className="space-y-1">
         {!collapsed && (
           <p className="px-3 text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 mt-1 text-left">Main Engine</p>
@@ -2561,11 +2659,11 @@ export default function SaaSSuperAdmin() {
         {renderSidebarItem('overview', 'Command Center', Zap)}
       </div>
 
-      {/* NETWORK & SITES */}
+      {/* HUB 2: WORKSPACES & DIRECTORY */}
       <div className="space-y-1">
         {!collapsed ? (
           <button onClick={() => toggleMenu('network')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Workspaces & Sites</p>
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Workspaces & Directory</p>
             {expandedMenus.network ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
           </button>
         ) : (
@@ -2573,37 +2671,19 @@ export default function SaaSSuperAdmin() {
         )}
         {(expandedMenus.network || collapsed) && (
           <div className="space-y-1 pl-0.5">
-            {renderSidebarItem('workspaces', 'All Workspaces', Building)}
-            {renderSidebarItem('resource_usage', 'Resource Usage', Database)}
-            {renderSidebarItem('showcase', 'Client Directory', Image)}
-          </div>
-        )}
-      </div>
-
-      {/* CUSTOMERS */}
-      <div className="space-y-1">
-        {!collapsed ? (
-          <button onClick={() => toggleMenu('customers')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Users & Accounts</p>
-            {expandedMenus.customers ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
-          </button>
-        ) : (
-          <hr className="my-2 border-slate-800/60 dark:border-slate-800/60" />
-        )}
-        {(expandedMenus.customers || collapsed) && (
-          <div className="space-y-1 pl-0.5">
-            {renderSidebarItem('operators', 'Platform Operators', Users)}
+            {renderSidebarItem('workspaces', 'All Workspaces', Building, true, tenants.length)}
+            {renderSidebarItem('resource_usage', 'Cloud Quotas & Usage', Database)}
+            {renderSidebarItem('showcase', 'Client Showcase', Image)}
             {renderSidebarItem('end_users', 'Global End-Users', Globe)}
-            {renderSidebarItem('demo_leads', 'Demo Leads', Megaphone)}
           </div>
         )}
       </div>
 
-      {/* BILLING & SALES */}
+      {/* HUB 3: FINANCIALS & BILLING */}
       <div className="space-y-1">
         {!collapsed ? (
           <button onClick={() => toggleMenu('billing')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Billing & Gateways</p>
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Financials & Billing</p>
             {expandedMenus.billing ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
           </button>
         ) : (
@@ -2611,39 +2691,19 @@ export default function SaaSSuperAdmin() {
         )}
         {(expandedMenus.billing || collapsed) && (
           <div className="space-y-1 pl-0.5">
+            {renderSidebarItem('transactions', 'Invoices & Ledger', DollarSign, allInvoices.length > 0, allInvoices.length > 0 ? allInvoices.length : undefined)}
             {renderSidebarItem('packages', 'Subscriptions & Plans', CreditCard)}
-            {renderSidebarItem('transactions', 'Invoices & Ledger', DollarSign)}
             {renderSidebarItem('coupons', 'Promo & AppSumo', Tag)}
             {renderSidebarItem('integrations', 'Master Gateways', Wallet)}
           </div>
         )}
       </div>
 
-      {/* CONTENT */}
-      <div className="space-y-1">
-        {!collapsed ? (
-          <button onClick={() => toggleMenu('content')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Content & Docs</p>
-            {expandedMenus.content ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
-          </button>
-        ) : (
-          <hr className="my-2 border-slate-800/60 dark:border-slate-800/60" />
-        )}
-        {(expandedMenus.content || collapsed) && (
-          <div className="space-y-1 pl-0.5">
-            {renderSidebarItem('blogs', 'AI Blog Engine', FileText)}
-            {renderSidebarItem('announcements', 'Promotions & Banner', Megaphone)}
-            {renderSidebarItem('knowledge_base', 'Knowledge Base', BookOpen)}
-            {renderSidebarItem('docs_engine', 'Docs Hub', Globe)}
-          </div>
-        )}
-      </div>
-
-      {/* SUPPORT */}
+      {/* HUB 4: SUPPORT & OPERATIONS */}
       <div className="space-y-1">
         {!collapsed ? (
           <button onClick={() => toggleMenu('support')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Support & Help</p>
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Support & Inquiries</p>
             {expandedMenus.support ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
           </button>
         ) : (
@@ -2651,16 +2711,17 @@ export default function SaaSSuperAdmin() {
         )}
         {(expandedMenus.support || collapsed) && (
           <div className="space-y-1 pl-0.5">
-            {renderSidebarItem('tickets', 'Helpdesk Tickets', MessageSquare, true, stats.pendingTicketsCount || 3)}
+            {renderSidebarItem('tickets', 'Helpdesk Tickets', MessageSquare, (stats.pendingTicketsCount || 0) > 0, (stats.pendingTicketsCount || 0) > 0 ? stats.pendingTicketsCount : undefined)}
+            {renderSidebarItem('demo_leads', 'Demo Inquiries', Megaphone, demoLeads.length > 0, demoLeads.length > 0 ? demoLeads.length : undefined)}
           </div>
         )}
       </div>
 
-      {/* SYSTEM */}
+      {/* HUB 5: PLATFORM GOVERNANCE */}
       <div className="space-y-1">
         {!collapsed ? (
           <button onClick={() => toggleMenu('system')} className="w-full flex items-center justify-between px-3 py-1 mt-2 group cursor-pointer">
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Governance & Logs</p>
+            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider group-hover:text-slate-300 transition-colors">Platform Governance</p>
             {expandedMenus.system ? <ChevronUp className="w-3 h-3 text-slate-400" /> : <ChevronDown className="w-3 h-3 text-slate-400" />}
           </button>
         ) : (
@@ -2671,6 +2732,8 @@ export default function SaaSSuperAdmin() {
             {renderSidebarItem('branding', 'Global Branding', Settings)}
             {renderSidebarItem('security', 'Admin Roles & 2FA', ShieldAlert)}
             {renderSidebarItem('mailjet', 'Audit & Telemetry', Activity)}
+            {renderSidebarItem('blogs', 'AI Blog Engine', FileText)}
+            {renderSidebarItem('announcements', 'Promotions & Banner', Megaphone)}
           </div>
         )}
       </div>
@@ -3095,11 +3158,11 @@ export default function SaaSSuperAdmin() {
                       </div>
                     </div>
                     <p className={`text-2xl sm:text-3xl font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {stats.totalTenants || 15}
+                      {loading ? '...' : stats.totalTenants}
                     </p>
                     <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
-                      <span className="text-[11px] text-slate-400">Registered tenants</span>
-                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">+2 this week</span>
+                      <span className="text-[11px] text-slate-400">{stats.activeTenants} active • {tenants.filter(t => t.status === 'trial').length} trial</span>
+                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">Live DB</span>
                     </div>
                   </div>
 
@@ -3116,11 +3179,11 @@ export default function SaaSSuperAdmin() {
                       </div>
                     </div>
                     <p className={`text-2xl sm:text-3xl font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      ${(stats.totalMRR || 4046).toLocaleString()}
+                      ${loading ? '...' : stats.totalMRR.toLocaleString()}
                     </p>
                     <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
-                      <span className="text-[11px] text-slate-400">Monthly recurring</span>
-                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">+18.4% MoM</span>
+                      <span className="text-[11px] text-slate-400">Active contracts</span>
+                      <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-md">Contract Run-Rate</span>
                     </div>
                   </div>
 
@@ -3137,20 +3200,22 @@ export default function SaaSSuperAdmin() {
                       </div>
                     </div>
                     <p className={`text-2xl sm:text-3xl font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      {stats.activeTenants || 6}
+                      {loading ? '...' : stats.activeTenants}
                     </p>
                     <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
-                      <span className="text-[11px] text-slate-400">{stats.avgUsage || 40}% utilization</span>
-                      <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded-md">Stable</span>
+                      <span className="text-[11px] text-slate-400">{stats.avgUsage}% active rate</span>
+                      <span className="text-[11px] font-medium text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/40 px-1.5 py-0.5 rounded-md">
+                        {stats.suspendedTenants > 0 ? `${stats.suspendedTenants} suspended` : 'All Healthy'}
+                      </span>
                     </div>
                   </div>
 
-                  {/* Card 4: Today's Revenue */}
+                  {/* Card 4: Verified Inflow Collections */}
                   <div className={`p-4 sm:p-5 rounded-2xl border text-left transition-all relative overflow-hidden group ${
                     isDarkMode ? 'bg-[#0d121f]/90 border-slate-850 hover:border-slate-750' : 'bg-white border-slate-200/80 hover:border-slate-300 shadow-xs'
                   }`}>
                     <div className="flex items-center justify-between mb-2.5">
-                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Today's Inflow</span>
+                      <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Verified Collections</span>
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
                         isDarkMode ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-50 text-amber-600'
                       }`}>
@@ -3158,11 +3223,13 @@ export default function SaaSSuperAdmin() {
                       </div>
                     </div>
                     <p className={`text-2xl sm:text-3xl font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                      ${stats.todayRevenue > 0 ? stats.todayRevenue.toLocaleString() : '0.00'}
+                      ${loading ? '...' : paidRevenueTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-850">
-                      <span className="text-[11px] text-slate-400">New invoices</span>
-                      <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-md">Live</span>
+                      <span className="text-[11px] text-slate-400">{paidInvoicesCount} paid receipts</span>
+                      <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-md">
+                        {unpaidInvoicesCount > 0 ? `${unpaidInvoicesCount} pending` : 'Settled'}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -3253,21 +3320,14 @@ export default function SaaSSuperAdmin() {
                       <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Monthly recurring revenue trends & projections</p>
                     </div>
                     <span className="text-[11px] px-2 py-0.5 rounded-md font-medium bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
-                      +26% YoY
+                      Live Active Flow
                     </span>
                   </div>
 
                   <div className="h-44 w-full -mx-2">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart 
-                        data={[
-                          { name: 'Feb', value: 2400 },
-                          { name: 'Mar', value: 2900 },
-                          { name: 'Apr', value: 3100 },
-                          { name: 'May', value: 3200 },
-                          { name: 'Jun', value: 3600 },
-                          { name: 'Jul', value: stats.totalMRR || 4046 },
-                        ]}
+                        data={revenueTrajectory}
                         margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
                       >
                         <defs>
@@ -3298,7 +3358,7 @@ export default function SaaSSuperAdmin() {
                             borderRadius: '8px',
                             boxShadow: '0 4px 16px rgba(0,0,0,0.1)'
                           }}
-                          formatter={(value) => [`$${value}`, 'MRR']}
+                          formatter={(value) => [`$${Number(value).toLocaleString()}`, 'MRR']}
                         />
                         <Area 
                           type="monotone" 
@@ -3318,19 +3378,26 @@ export default function SaaSSuperAdmin() {
                   }`}>
                     <div>
                       <span className={`block text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        ${((stats.totalMRR || 4046)/1000).toFixed(1)}k
+                        ${((stats.totalMRR || 0)/1000).toFixed(1)}k
                       </span>
                       <span className="text-[10px] text-slate-400">Current MRR</span>
                     </div>
                     <div>
                       <span className={`block text-xs font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
-                        $3.2k
+                        ${(((revenueTrajectory[revenueTrajectory.length - 2]?.value || 0))/1000).toFixed(1)}k
                       </span>
                       <span className="text-[10px] text-slate-400">Prior Month</span>
                     </div>
                     <div>
                       <span className="block text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                        +26%
+                        {(() => {
+                          const curr = stats.totalMRR || 0;
+                          const prior = revenueTrajectory[revenueTrajectory.length - 2]?.value || 0;
+                          if (prior === 0 && curr > 0) return '+100%';
+                          if (prior === 0 && curr === 0) return '0%';
+                          const pct = (((curr - prior) / prior) * 100).toFixed(1);
+                          return `${Number(pct) >= 0 ? '+' : ''}${pct}%`;
+                        })()}
                       </span>
                       <span className="text-[10px] text-slate-400">Net Expansion</span>
                     </div>
@@ -3441,51 +3508,287 @@ export default function SaaSSuperAdmin() {
         )}
 
         {activeTab === 'operators' && (
-          <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-gray-800 bg-slate-900/40' : 'border-gray-200 bg-white shadow-sm'}`}>
-            <div className={`p-4 sm:p-5 border-b flex items-center justify-between ${isDarkMode ? 'border-slate-850 bg-slate-900/40' : 'border-slate-100 bg-white'}`}>
-              <div>
-                <h2 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Platform Operators & Workspace Owners</h2>
-                <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>Administrative contacts, operational phone numbers, and physical addresses across workspaces.</p>
-              </div>
+          <div className="space-y-5 animate-fadeIn text-left">
+            {/* Hub Quick-Navigation Sub-Bar */}
+            <div className={`p-1.5 rounded-2xl border flex items-center space-x-1 overflow-x-auto ${
+              isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/80'
+            }`}>
+              <button
+                onClick={() => setActiveTab('workspaces')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Building className="w-3.5 h-3.5" />
+                <span>All Workspaces</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('operators')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Operator Contacts</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  isDarkMode ? 'bg-indigo-700 text-indigo-100' : 'bg-indigo-50 text-indigo-600'
+                }`}>
+                  {tenants.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('resource_usage')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Resource Quotas</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('showcase')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Image className="w-3.5 h-3.5" />
+                <span>Client Showcase</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('end_users')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Global End-Users</span>
+              </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className={`border-b text-xs font-medium ${isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'}`}>
-                    <th className="py-3 px-5">Company / Brand</th>
-                    <th className="py-3 px-5">Admin Email</th>
-                    <th className="py-3 px-5">Phone Number</th>
-                    <th className="py-3 px-5">Contact Address</th>
-                    <th className="py-3 px-5">Plan Tier</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
-                  {tenants.map((t) => (
-                    <tr key={t.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/30' : 'hover:bg-slate-50'}`}>
-                      <td className="py-3.5 px-5">
-                        <div>
-                          <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{t.companyName || 'Unnamed Workspace'}</p>
-                          <span className="text-[11px] text-slate-400">{t.customDomain || `${t.slug}.tripbone.com`}</span>
-                        </div>
-                      </td>
-                      <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t.email || (t as any).adminEmail || 'N/A'}</td>
-                      <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>{t.phone || 'N/A'}</td>
-                      <td className={`py-3.5 px-5 max-w-xs truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`} title={t.address}>{t.address || 'N/A'}</td>
-                      <td className="py-3.5 px-5">
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-medium capitalize">
-                          {t.plan || 'starter'}
-                        </span>
-                      </td>
+            {/* Main Operators Table Container */}
+            <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-slate-850 bg-[#0d121f]/90' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+              <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-850 bg-[#0d121f]' : 'border-slate-100 bg-white'}`}>
+                <div>
+                  <h2 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    Platform Operators & Point of Contacts
+                  </h2>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>
+                    Administrative contacts, verified communications, operational phone numbers, and physical headquarters.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search company, contact, email, phone..."
+                      value={operatorSearchTerm}
+                      onChange={(e) => setOperatorSearchTerm(e.target.value)}
+                      className={`pl-9 pr-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-indigo-500 w-full sm:w-64 transition-all ${
+                        isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+
+                  <select
+                    value={operatorPlanFilter}
+                    onChange={(e) => setOperatorPlanFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <option value="all">All Plan Tiers</option>
+                    <option value="starter">Starter</option>
+                    <option value="professional">Professional</option>
+                    <option value="business">Business</option>
+                    <option value="agency_enterprise">Agency / Enterprise</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={`border-b text-[11px] font-semibold tracking-wider uppercase ${
+                      isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-5">Workspace & Brand</th>
+                      <th className="py-3 px-5">Administrator Email</th>
+                      <th className="py-3 px-5">Phone & WhatsApp</th>
+                      <th className="py-3 px-5">Operating Location</th>
+                      <th className="py-3 px-5">Plan Tier</th>
+                      <th className="py-3 px-5 text-center">Actions</th>
                     </tr>
-                  ))}
-                  {tenants.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-xs text-slate-400">No workspace operators registered yet.</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
+                    {(() => {
+                      const filteredOperators = tenants.filter(t => {
+                        const term = (operatorSearchTerm || '').toLowerCase().trim();
+                        const matchesSearch = !term ||
+                          (t.companyName || '').toLowerCase().includes(term) ||
+                          (t.slug || '').toLowerCase().includes(term) ||
+                          (t.email || '').toLowerCase().includes(term) ||
+                          ((t as any).adminEmail || '').toLowerCase().includes(term) ||
+                          (t.phone || '').toLowerCase().includes(term) ||
+                          (t.address || '').toLowerCase().includes(term);
+
+                        const planFormatted = (t.plan || '').toLowerCase();
+                        let matchesPlan = true;
+                        if (operatorPlanFilter !== 'all') {
+                          if (operatorPlanFilter === 'starter') matchesPlan = planFormatted.includes('starter');
+                          else if (operatorPlanFilter === 'professional') matchesPlan = planFormatted.includes('pro');
+                          else if (operatorPlanFilter === 'business') matchesPlan = planFormatted.includes('business');
+                          else if (operatorPlanFilter === 'agency_enterprise') matchesPlan = planFormatted.includes('agency') || planFormatted.includes('enterprise');
+                        }
+
+                        return matchesSearch && matchesPlan;
+                      });
+
+                      if (filteredOperators.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                              <Users className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-40" />
+                              <p className="font-medium">No workspace operators match your search.</p>
+                              <p className="text-[11px] text-slate-500 mt-1">Try clearing filters or search by another keyword.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return filteredOperators.map((t) => {
+                        const adminEmail = t.email || (t as any).adminEmail || '';
+                        const phone = t.phone || '';
+                        const cleanPhone = phone.replace(/[^0-9+]/g, '');
+
+                        return (
+                          <tr key={t.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-5">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs uppercase shrink-0 ${
+                                  isDarkMode ? 'bg-indigo-950/60 border border-indigo-800/40 text-indigo-400' : 'bg-indigo-50 border border-indigo-100 text-indigo-600'
+                                }`}>
+                                  {t.companyName ? t.companyName.charAt(0) : 'W'}
+                                </div>
+                                <div>
+                                  <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                    {t.companyName || 'Unnamed Workspace'}
+                                  </p>
+                                  <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                                    {t.customDomain || `${t.slug}.tripbone.com`}
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="py-3.5 px-5">
+                              {adminEmail ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className={`font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{adminEmail}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(adminEmail);
+                                      setSuccess(`Copied email for ${t.companyName || 'operator'}`);
+                                      setTimeout(() => setSuccess(null), 3000);
+                                    }}
+                                    className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 cursor-pointer"
+                                    title="Copy email address"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">Not provided</span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-5">
+                              {phone ? (
+                                <div className="flex items-center space-x-2">
+                                  <span className={`font-mono text-xs ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>{phone}</span>
+                                  {cleanPhone && (
+                                    <a
+                                      href={`https://wa.me/${cleanPhone.replace('+', '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="p-1 rounded-md text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30 cursor-pointer"
+                                      title="Open WhatsApp Chat"
+                                    >
+                                      <MessageSquare className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(phone);
+                                      setSuccess(`Copied phone number for ${t.companyName || 'operator'}`);
+                                      setTimeout(() => setSuccess(null), 3000);
+                                    }}
+                                    className="p-1 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 cursor-pointer"
+                                    title="Copy phone number"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-slate-400 italic">No phone record</span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-5 max-w-xs">
+                              {t.address ? (
+                                <span className={`truncate block text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`} title={t.address}>
+                                  {t.address}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400 italic text-[11px]">Unspecified</span>
+                              )}
+                            </td>
+
+                            <td className="py-3.5 px-5">
+                              <span className="text-[10px] px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-semibold capitalize border border-indigo-200/40 dark:border-indigo-800/40">
+                                {t.plan || 'starter'}
+                              </span>
+                            </td>
+
+                            <td className="py-3.5 px-5 text-center">
+                              <div className="flex items-center justify-center space-x-1.5">
+                                <button
+                                  onClick={() => {
+                                    setTxSearch(t.companyName || t.slug || '');
+                                    setActiveTab('transactions');
+                                  }}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer ${
+                                    isDarkMode ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                  }`}
+                                  title="View invoices for this operator"
+                                >
+                                  Invoices
+                                </button>
+                                <a
+                                  href={`https://${t.customDomain || `${t.slug}.tripbone.com`}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                  }`}
+                                  title="Open tenant storefront"
+                                >
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
@@ -4896,140 +5199,395 @@ export default function SaaSSuperAdmin() {
           <SaaSBlogManager isDarkMode={isDarkMode} />
         )}
         {activeTab === 'workspaces' && (
-          <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-gray-800 bg-slate-900/40' : 'border-gray-200 bg-white shadow-sm'}`}>
-            <div className={`p-6 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800 bg-slate-900/60' : 'border-gray-200 bg-white'}`}>
-              <div>
-                <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Registered Tenant Workspaces</h2>
-                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Monitor travel brands, billing schedules, and lock states.</p>
-              </div>
+          <div className="space-y-6 text-left">
+            {/* Hub Quick Navigation Bar */}
+            <div className={`p-2 rounded-2xl border flex flex-wrap items-center gap-2 ${
+              isDarkMode ? 'bg-[#0d121f]/90 border-slate-850' : 'bg-white border-slate-200/80 shadow-xs'
+            }`}>
               <button
-                onClick={() => setIsManualCustomerModalOpen(true)}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl flex items-center space-x-2 transition-colors"
+                onClick={() => { setActiveTab('workspaces'); setWorkspaceViewMode('subscription'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all ${
+                  workspaceViewMode === 'subscription'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
-                <Plus className="w-4 h-4" />
-                <span>Manual Customer</span>
+                <Building className="w-3.5 h-3.5" />
+                <span>Workspaces ({tenants.length})</span>
+              </button>
+
+              <button
+                onClick={() => { setActiveTab('workspaces'); setWorkspaceViewMode('contact'); }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all ${
+                  workspaceViewMode === 'contact'
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Operator Contacts</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('resource_usage')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Database className="w-3.5 h-3.5" />
+                <span>Cloud Quotas & Usage</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('showcase')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Image className="w-3.5 h-3.5" />
+                <span>Client Showcase</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('end_users')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Global End-Users</span>
               </button>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
-                    <th className="py-4 px-6">Company</th>
-                    <th className="py-4 px-6">Slug/ID</th>
-                    <th className="py-4 px-6">Subscription Plan</th>
-                    <th className="py-4 px-6">Status</th>
-                    <th className="py-4 px-6">Renewal Date</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
-                  {tenants.map((tenant) => (
-                    <tr key={tenant.id} className={`text-sm transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
-                      <td className={`py-4 px-6 font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{tenant.companyName}</td>
-                      <td className={`py-4 px-6 font-mono text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{tenant.slug}</td>
-                      <td className="py-4 px-6">
-                        <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-950 text-indigo-400 border border-gray-800 font-mono">
-                          {(tenant.plan || 'starter').toUpperCase()}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`inline-flex items-center space-x-1.5 text-xs font-semibold ${
-                          tenant.status === 'active' ? 'text-emerald-400' :
-                          tenant.status === 'trial' ? 'text-sky-400' :
-                          tenant.status === 'inactive' ? 'text-amber-400' :
-                          'text-rose-400'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            tenant.status === 'active' ? 'bg-emerald-400' :
-                            tenant.status === 'trial' ? 'bg-sky-400' :
-                            tenant.status === 'inactive' ? 'bg-amber-400' :
-                            'bg-rose-400'
-                          }`} />
-                          <span className="capitalize">{tenant.status || 'active'}</span>
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center space-x-1.5 text-xs text-gray-500 font-mono">
-                          <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                          <span>{getNextBillingDate(tenant)}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6 text-right">
-                        <div className="flex items-center justify-end space-x-2">
-                          <button
-                            title="Impersonate Operator"
-                            onClick={() => impersonateTenant(tenant)}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-indigo-900/50 text-indigo-400' : 'hover:bg-indigo-50 text-indigo-600'}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Upgrade / Downgrade Plan"
-                            onClick={() => { setSelectedTenant(tenant); setTenantModalTab('billing'); setIsTenantModalOpen(true); }}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-emerald-900/50 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600'}`}
-                          >
-                            <TrendingUp className="w-4 h-4" />
-                          </button>
-                          <button
-                            title="Edit Tenant Details"
-                            onClick={() => { setSelectedTenant(tenant); setTenantModalTab('overview'); setIsTenantModalOpen(true); }}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-slate-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
-                          >
-                            <Settings className="w-4 h-4" />
-                          </button>
-                          <select
-                            title="Change Subscription Status"
-                            value={tenant.status || 'active'}
-                            onChange={(e) => changeTenantStatus(tenant.id, e.target.value as any)}
-                            className={`px-2 py-1 text-xs font-bold rounded-lg border focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
-                              isDarkMode 
-                                ? 'bg-slate-900 border-gray-850 text-gray-300 focus:ring-indigo-500 focus:border-indigo-500' 
-                                : 'bg-white border-gray-200 text-gray-700 focus:ring-indigo-500 focus:border-indigo-500'
-                            }`}
-                          >
-                            <option value="trial" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Trial (7D)</option>
-                            <option value="active" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Active</option>
-                            <option value="inactive" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Inactive</option>
-                            <option value="suspended" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Suspended</option>
-                          </select>
-                          <button
-                            title="Delete Customer & Wipe Data"
-                            onClick={() => setTenantToDelete(tenant)}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-red-900/50 text-red-500' : 'hover:bg-red-50 text-red-600'}`}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Main Workspaces Directory Container */}
+            <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-slate-850 bg-[#0d121f]/90' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+              <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-850 bg-[#0d121f]' : 'border-slate-100 bg-white'}`}>
+                <div>
+                  <h2 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {workspaceViewMode === 'subscription' ? 'Registered Tenant Workspaces' : 'Workspace Operators & Contacts'}
+                  </h2>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>
+                    {workspaceViewMode === 'subscription'
+                      ? 'Live database records of active travel brands, subscription tiers, and renewal dates.'
+                      : 'Operational points of contact, verified phone numbers, administrative emails, and addresses.'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search company, slug, email..."
+                      value={tenantSearchTerm}
+                      onChange={(e) => setTenantSearchTerm(e.target.value)}
+                      className={`pl-9 pr-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48 sm:w-64 transition-all ${
+                        isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                  <button
+                    onClick={() => setIsManualCustomerModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl flex items-center space-x-1.5 transition-colors shrink-0 shadow-xs"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New Tenant</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Filter Tabs */}
+              <div className={`px-5 py-3 border-b flex items-center gap-2 overflow-x-auto ${isDarkMode ? 'border-slate-850/80 bg-slate-950/30' : 'border-slate-100 bg-slate-50/60'}`}>
+                {[
+                  { key: 'all', label: 'All Workspaces', count: tenants.length },
+                  { key: 'active', label: 'Active', count: tenants.filter(t => t.status === 'active').length },
+                  { key: 'trial', label: 'Trial', count: tenants.filter(t => t.status === 'trial').length },
+                  { key: 'suspended', label: 'Suspended / Inactive', count: tenants.filter(t => t.status === 'suspended' || t.status === 'inactive').length },
+                ].map((tab) => (
+                  <button
+                    key={tab.key}
+                    onClick={() => setWorkspaceStatusFilter(tab.key as any)}
+                    className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center space-x-1.5 ${
+                      workspaceStatusFilter === tab.key
+                        ? isDarkMode ? 'bg-slate-850 text-white' : 'bg-white text-slate-900 shadow-xs'
+                        : isDarkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                      workspaceStatusFilter === tab.key
+                        ? isDarkMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-indigo-50 text-indigo-600'
+                        : isDarkMode ? 'bg-slate-900 text-slate-500' : 'bg-slate-200/60 text-slate-600'
+                    }`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Workspaces Table */}
+              {(() => {
+                const term = (tenantSearchTerm || '').toLowerCase().trim();
+                const filteredTenants = tenants.filter(t => {
+                  const status = (t.status || 'active').toLowerCase();
+                  const matchesStatus = workspaceStatusFilter === 'all'
+                    ? true
+                    : workspaceStatusFilter === 'suspended'
+                      ? (status === 'suspended' || status === 'inactive')
+                      : status === workspaceStatusFilter;
+
+                  const matchesSearch = !term ||
+                    (t.companyName || '').toLowerCase().includes(term) ||
+                    (t.slug || '').toLowerCase().includes(term) ||
+                    (t.customDomain || '').toLowerCase().includes(term) ||
+                    (t.email || (t as any).adminEmail || '').toLowerCase().includes(term) ||
+                    (t.phone || '').toLowerCase().includes(term) ||
+                    (t.plan || '').toLowerCase().includes(term);
+
+                  return matchesStatus && matchesSearch;
+                });
+
+                return (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className={`border-b text-[11px] font-semibold uppercase tracking-wider ${isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'}`}>
+                          <th className="py-3 px-5">Workspace Brand</th>
+                          {workspaceViewMode === 'subscription' ? (
+                            <>
+                              <th className="py-3 px-5">Slug / Domain</th>
+                              <th className="py-3 px-5">Plan Tier</th>
+                              <th className="py-3 px-5">Status</th>
+                              <th className="py-3 px-5">Next Billing</th>
+                            </>
+                          ) : (
+                            <>
+                              <th className="py-3 px-5">Admin Email</th>
+                              <th className="py-3 px-5">Contact Phone</th>
+                              <th className="py-3 px-5">Operating Address</th>
+                              <th className="py-3 px-5">Plan</th>
+                            </>
+                          )}
+                          <th className="py-3 px-5 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
+                        {filteredTenants.map((tenant) => (
+                          <tr key={tenant.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/30' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-5">
+                              <div className="flex items-center space-x-3">
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs uppercase ${
+                                  isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                }`}>
+                                  {(tenant.companyName || tenant.slug || 'T')[0]}
+                                </div>
+                                <div>
+                                  <p className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>{tenant.companyName || 'Operator Workspace'}</p>
+                                  <span className="text-[11px] text-slate-400 font-mono">{tenant.slug}.tripbone.com</span>
+                                </div>
+                              </div>
+                            </td>
+
+                            {workspaceViewMode === 'subscription' ? (
+                              <>
+                                <td className={`py-3.5 px-5 font-mono text-[11px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {tenant.customDomain || 'Standard Subdomain'}
+                                </td>
+                                <td className="py-3.5 px-5">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium capitalize ${
+                                    isDarkMode ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
+                                  }`}>
+                                    {formatPlanName(tenant.plan, packages, tenant.billingInterval)}
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-5">
+                                  <span className={`inline-flex items-center space-x-1.5 text-xs font-semibold ${
+                                    tenant.status === 'active' ? 'text-emerald-500' :
+                                    tenant.status === 'trial' ? 'text-sky-500' :
+                                    tenant.status === 'inactive' ? 'text-amber-500' :
+                                    'text-rose-500'
+                                  }`}>
+                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                      tenant.status === 'active' ? 'bg-emerald-500' :
+                                      tenant.status === 'trial' ? 'bg-sky-500' :
+                                      tenant.status === 'inactive' ? 'bg-amber-500' :
+                                      'bg-rose-500'
+                                    }`} />
+                                    <span className="capitalize">{tenant.status || 'active'}</span>
+                                  </span>
+                                </td>
+                                <td className="py-3.5 px-5">
+                                  <div className="flex items-center space-x-1.5 text-xs text-slate-400 font-mono">
+                                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                                    <span>{getNextBillingDate(tenant)}</span>
+                                  </div>
+                                </td>
+                              </>
+                            ) : (
+                              <>
+                                <td className={`py-3.5 px-5 font-mono text-[11px] ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                  {tenant.email || (tenant as any).adminEmail || 'N/A'}
+                                </td>
+                                <td className={`py-3.5 px-5 ${isDarkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                                  {tenant.phone || 'N/A'}
+                                </td>
+                                <td className={`py-3.5 px-5 max-w-xs truncate ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`} title={tenant.address}>
+                                  {tenant.address || 'N/A'}
+                                </td>
+                                <td className="py-3.5 px-5">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-medium capitalize ${
+                                    isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'
+                                  }`}>
+                                    {tenant.plan || 'starter'}
+                                  </span>
+                                </td>
+                              </>
+                            )}
+
+                            <td className="py-3.5 px-5 text-right">
+                              <div className="flex items-center justify-end space-x-1.5">
+                                <button
+                                  title="Impersonate Operator"
+                                  onClick={() => impersonateTenant(tenant)}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-indigo-900/50 text-indigo-400' : 'hover:bg-indigo-50 text-indigo-600'}`}
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  title="Upgrade / Downgrade Plan"
+                                  onClick={() => { setSelectedTenant(tenant); setTenantModalTab('billing'); setIsTenantModalOpen(true); }}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-emerald-900/50 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600'}`}
+                                >
+                                  <TrendingUp className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  title="Edit Tenant Details"
+                                  onClick={() => { setSelectedTenant(tenant); setTenantModalTab('overview'); setIsTenantModalOpen(true); }}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
+                                >
+                                  <Settings className="w-3.5 h-3.5" />
+                                </button>
+                                <select
+                                  title="Change Subscription Status"
+                                  value={tenant.status || 'active'}
+                                  onChange={(e) => changeTenantStatus(tenant.id, e.target.value as any)}
+                                  className={`px-2 py-1 text-xs font-semibold rounded-lg border focus:outline-none focus:ring-1 cursor-pointer transition-colors ${
+                                    isDarkMode 
+                                      ? 'bg-slate-900 border-slate-800 text-slate-300 focus:ring-indigo-500 focus:border-indigo-500' 
+                                      : 'bg-white border-slate-200 text-slate-700 focus:ring-indigo-500 focus:border-indigo-500'
+                                  }`}
+                                >
+                                  <option value="trial" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Trial (7D)</option>
+                                  <option value="active" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Active</option>
+                                  <option value="inactive" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Inactive</option>
+                                  <option value="suspended" className={isDarkMode ? 'bg-slate-900' : 'bg-white'}>Suspended</option>
+                                </select>
+                                <button
+                                  title="Delete Customer & Wipe Data"
+                                  onClick={() => setTenantToDelete(tenant)}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-red-900/50 text-red-500' : 'hover:bg-red-50 text-red-600'}`}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+
+                        {filteredTenants.length === 0 && (
+                          <tr>
+                            <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                              <p className="font-semibold text-sm text-slate-300 mb-1">No workspaces found</p>
+                              <p className="text-slate-500">Try adjusting your search query or status filter.</p>
+                              <button
+                                onClick={() => { setTenantSearchTerm(''); setWorkspaceStatusFilter('all'); }}
+                                className="mt-3 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-600/20 text-indigo-400 hover:bg-indigo-600/30 transition-colors"
+                              >
+                                Reset Filters
+                              </button>
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         )}
 
         {activeTab === 'transactions' && (
-          <div className="space-y-6 text-left">
+          <div className="space-y-5 text-left animate-fadeIn">
+            {/* Hub Quick-Navigation Sub-Bar */}
+            <div className={`p-1.5 rounded-2xl border flex items-center space-x-1 overflow-x-auto ${
+              isDarkMode ? 'bg-slate-900/60 border-slate-800' : 'bg-slate-50 border-slate-200/80'
+            }`}>
+              <button
+                onClick={() => setActiveTab('transactions')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'bg-indigo-600 text-white shadow-xs' : 'bg-white text-indigo-600 shadow-xs border border-slate-200/60'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Invoices & Billing</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                  isDarkMode ? 'bg-indigo-700 text-indigo-100' : 'bg-indigo-50 text-indigo-600'
+                }`}>
+                  {allInvoices.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('packages')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Layers className="w-3.5 h-3.5" />
+                <span>Subscription Packages</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('integrations')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                <span>Payment Gateways (BYOPG)</span>
+              </button>
+
+              <button
+                onClick={() => setActiveTab('coupons')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-2 transition-all cursor-pointer ${
+                  isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800/60' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <Tag className="w-3.5 h-3.5" />
+                <span>Coupons & Discounts</span>
+              </button>
+            </div>
+
             {/* Revenue projections */}
-            <div className={`p-6 border rounded-2xl ${isDarkMode ? 'bg-[#111928] border-gray-850' : 'bg-white border-gray-100 shadow-xs'}`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-200/50 dark:border-gray-800/50">
+            <div className={`p-5 border rounded-2xl ${isDarkMode ? 'border-slate-850 bg-[#0d121f]/90' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-200/60 dark:border-slate-850">
                 <div>
-                  <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Platform Revenue Projections</h2>
-                  <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Aggregated Monthly Recurring Revenue (MRR) based on active customer licensing plans.</p>
+                  <h2 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Platform Revenue Projections</h2>
+                  <p className={`text-xs mt-0.5 ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>Aggregated Monthly Recurring Revenue (MRR) based on active customer licensing plans.</p>
                 </div>
                 {(() => {
                   const activeTenants = tenants.filter(t => t.status === 'active');
                   const totalMRR = activeTenants.reduce((acc, t) => acc + getPlanPrice(t.plan, t.billingInterval || 'monthly', packages), 0);
                   return (
-                    <div className={`px-4 py-2 rounded-xl border flex items-center space-x-3 shrink-0 ${isDarkMode ? 'bg-slate-900 border-gray-800' : 'bg-indigo-50/50 border-indigo-100'}`}>
-                      <div className="p-2 rounded-lg bg-indigo-600 text-white shadow-xs">
-                        <DollarSign className="w-4 h-4" />
+                    <div className={`px-3.5 py-1.5 rounded-xl border flex items-center space-x-2.5 shrink-0 ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-indigo-50/50 border-indigo-100'
+                    }`}>
+                      <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                        <DollarSign className="w-3.5 h-3.5" />
                       </div>
                       <div>
-                        <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 block">Total Active MRR</span>
-                        <span className={`text-base font-bold ${isDarkMode ? 'text-white' : 'text-indigo-950'}`}>${totalMRR.toLocaleString()}/mo</span>
+                        <span className="text-[10px] font-medium text-slate-400 block uppercase tracking-wider">Total Active MRR</span>
+                        <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-indigo-950'}`}>${totalMRR.toLocaleString()}/mo</span>
                       </div>
                     </div>
                   );
@@ -5062,43 +5620,43 @@ export default function SaaSSuperAdmin() {
                 const ent = getTierData('agency_enterprise');
 
                 return (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-gray-50/80 border-gray-200/80'}`}>
-                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider block">Starter Tier</span>
-                      <div className={`text-xl font-bold mt-1.5 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/40 border-slate-850' : 'bg-slate-50/60 border-slate-200/80'}`}>
+                      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">Starter Tier</span>
+                      <div className={`text-lg font-bold mt-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
                         ${starter.rev.toLocaleString()}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1 font-medium">
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
                         {starter.count} {starter.count === 1 ? 'active account' : 'active accounts'}
                       </span>
                     </div>
 
-                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-gray-50/80 border-gray-200/80'}`}>
-                      <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider block">Professional Tier</span>
-                      <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1.5">
+                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/40 border-slate-850' : 'bg-slate-50/60 border-slate-200/80'}`}>
+                      <span className="text-[11px] font-semibold text-indigo-500 uppercase tracking-wider block">Professional Tier</span>
+                      <div className="text-lg font-bold text-indigo-500 mt-1">
                         ${pro.rev.toLocaleString()}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1 font-medium">
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
                         {pro.count} {pro.count === 1 ? 'active account' : 'active accounts'}
                       </span>
                     </div>
 
-                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-gray-50/80 border-gray-200/80'}`}>
-                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">Business Tier</span>
-                      <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1.5">
+                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/40 border-slate-850' : 'bg-slate-50/60 border-slate-200/80'}`}>
+                      <span className="text-[11px] font-semibold text-emerald-500 uppercase tracking-wider block">Business Tier</span>
+                      <div className="text-lg font-bold text-emerald-500 mt-1">
                         ${biz.rev.toLocaleString()}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1 font-medium">
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
                         {biz.count} {biz.count === 1 ? 'active account' : 'active accounts'}
                       </span>
                     </div>
 
-                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-gray-50/80 border-gray-200/80'}`}>
-                      <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">Agency / Enterprise</span>
-                      <div className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1.5">
+                    <div className={`p-4 rounded-xl border transition-all ${isDarkMode ? 'bg-slate-950/40 border-slate-850' : 'bg-slate-50/60 border-slate-200/80'}`}>
+                      <span className="text-[11px] font-semibold text-amber-500 uppercase tracking-wider block">Agency / Enterprise</span>
+                      <div className="text-lg font-bold text-amber-500 mt-1">
                         ${ent.rev.toLocaleString()}
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 block mt-1 font-medium">
+                      <span className="text-[11px] text-slate-500 block mt-0.5">
                         {ent.count} {ent.count === 1 ? 'active account' : 'active accounts'}
                       </span>
                     </div>
@@ -5108,23 +5666,23 @@ export default function SaaSSuperAdmin() {
             </div>
 
             {/* Live Recorded Transaction Tracking */}
-            <div className={`p-6 border rounded-2xl ${isDarkMode ? 'bg-[#111928] border-gray-850' : 'bg-white border-gray-100 shadow-xs'}`}>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-slate-850 bg-[#0d121f]/90' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+              <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-850 bg-[#0d121f]' : 'border-slate-100 bg-white'}`}>
                 <div>
-                  <h3 className={`text-base font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Operator Subscription Invoices</h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Monitor and manage operator subscription billing, invoice receipts, and plan payments.</p>
+                  <h3 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Operator Subscription Invoices</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>Monitor and verify operator billing history, manual payments, renewals, and invoice receipts.</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="relative">
-                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
+                    <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                       type="text"
-                      placeholder="Search customer, operator..."
+                      placeholder="Search invoice, operator, email..."
                       value={txSearch}
                       onChange={(e) => setTxSearch(e.target.value)}
-                      className={`pl-9 pr-4 py-1.5 rounded-xl text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all ${
-                        isDarkMode ? 'bg-slate-950 border-gray-805 text-white' : 'bg-gray-50 border-gray-200 text-gray-955'
+                      className={`pl-9 pr-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-indigo-500 w-44 sm:w-56 transition-all ${
+                        isDarkMode ? 'bg-slate-900/80 border-slate-800 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
                       }`}
                     />
                   </div>
@@ -5132,238 +5690,276 @@ export default function SaaSSuperAdmin() {
                   <select
                     value={txStatusFilter}
                     onChange={(e) => setTxStatusFilter(e.target.value)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all ${
-                      isDarkMode ? 'bg-slate-950 border-gray-805 text-white' : 'bg-gray-50 border-gray-200 text-gray-955'
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
                     }`}
                   >
                     <option value="all">All Statuses</option>
-                    <option value="confirmed">Confirmed / Paid</option>
+                    <option value="paid">Paid / Confirmed</option>
                     <option value="pending">Pending Approval</option>
-                    <option value="completed">Completed</option>
                     <option value="cancelled">Cancelled</option>
+                  </select>
+
+                  <select
+                    value={txBillingFilter}
+                    onChange={(e) => setTxBillingFilter(e.target.value)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <option value="all">All Cycles</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="annual">Annual</option>
+                    <option value="lifetime">Lifetime</option>
                   </select>
 
                   <select
                     value={txSortOrder}
                     onChange={(e) => setTxSortOrder(e.target.value as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all cursor-pointer ${
-                      isDarkMode ? 'bg-slate-950 border-gray-805 text-white' : 'bg-gray-50 border-gray-200 text-gray-955'
+                    className={`px-3 py-1.5 rounded-xl text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer ${
+                      isDarkMode ? 'bg-slate-900/80 border-slate-800 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-700'
                     }`}
                   >
-                    <option value="latest">Sort: Latest Invoice (Default)</option>
-                    <option value="oldest">Sort: Oldest Invoice</option>
-                    <option value="amount-desc">Sort: Amount (High to Low)</option>
-                    <option value="amount-asc">Sort: Amount (Low to High)</option>
-                    <option value="no-desc">Sort: Invoice ID (High to Low)</option>
-                    <option value="no-asc">Sort: Invoice ID (Low to High)</option>
-                    <option value="status">Sort: Status</option>
+                    <option value="latest">Sort: Latest</option>
+                    <option value="oldest">Sort: Oldest</option>
+                    <option value="amount-desc">Amount (High to Low)</option>
+                    <option value="amount-asc">Amount (Low to High)</option>
+                    <option value="no-desc">Invoice ID (High to Low)</option>
+                    <option value="no-asc">Invoice ID (Low to High)</option>
                   </select>
                 </div>
               </div>
 
               {/* Transactions Table */}
-              <div className={`border rounded-xl overflow-hidden ${isDarkMode ? 'border-gray-800' : 'border-gray-150'}`}>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className={`border-b text-xs font-semibold ${isDarkMode ? 'border-gray-800 bg-slate-900/50 text-gray-400' : 'border-gray-200 bg-gray-50/80 text-gray-600'}`}>
-                        <th className="py-3 px-4">IN ID</th>
-                        <th className="py-3 px-4">Tenant</th>
-                        <th className="py-3 px-4">Active Package</th>
-                        <th className="py-3 px-4">Due Date</th>
-                        <th className="py-3 px-4 text-right">Amount</th>
-                        <th className="py-3 px-4 text-center">Status</th>
-                        <th className="py-3 px-4 text-center">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-150'}`}>
-                      {(() => {
-                        const filtered = allInvoices.filter(inv => {
-                          const matchedTenant = tenants.find(t => t.id === inv.tenantId);
-                          const matchesStatus = txStatusFilter === 'all' || inv.status?.toLowerCase() === txStatusFilter || (txStatusFilter === 'pending' && inv.status === 'PENDING');
-                          const companyName = (matchedTenant?.companyName || inv.tenantName || '').toLowerCase();
-                          const adminEmail = (matchedTenant?.adminEmail || matchedTenant?.email || '').toLowerCase();
-                          const slugName = (matchedTenant?.slug || '').toLowerCase();
-                          const invoiceNo = (inv.no || '').toLowerCase();
-                          const searchStr = txSearch.toLowerCase();
-                          const matchesSearch = !txSearch || companyName.includes(searchStr) || adminEmail.includes(searchStr) || slugName.includes(searchStr) || invoiceNo.includes(searchStr);
-                          return matchesStatus && matchesSearch;
-                        });
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={`border-b text-[11px] font-semibold tracking-wider uppercase ${
+                      isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-5">Invoice #</th>
+                      <th className="py-3 px-5">Operator Workspace</th>
+                      <th className="py-3 px-5">Plan & Cycle</th>
+                      <th className="py-3 px-5">Due / Renewal</th>
+                      <th className="py-3 px-5 text-right">Amount</th>
+                      <th className="py-3 px-5 text-center">Status</th>
+                      <th className="py-3 px-5 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
+                    {(() => {
+                      const filtered = allInvoices.filter(inv => {
+                        const matchedTenant = tenants.find(t => t.id === inv.tenantId);
+                        const invStatus = (inv.status || '').toLowerCase();
+                        const matchesStatus = txStatusFilter === 'all' ||
+                          (txStatusFilter === 'paid' && (invStatus === 'paid' || invStatus === 'confirmed' || invStatus === 'completed')) ||
+                          (txStatusFilter === 'pending' && (invStatus === 'pending')) ||
+                          (txStatusFilter === 'cancelled' && (invStatus === 'cancelled'));
 
-                        const parseAmt = (val: any) => {
-                          if (typeof val === 'number') return val;
-                          if (!val) return 0;
-                          const num = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
-                          return isNaN(num) ? 0 : num;
-                        };
+                        const invInterval = (inv.billingInterval || matchedTenant?.billingInterval || 'monthly').toLowerCase();
+                        const matchesInterval = txBillingFilter === 'all' || invInterval.includes(txBillingFilter);
 
-                        const parseNum = (inv: any) => {
-                          const str = String(inv.no || inv.id || '');
-                          const m = str.match(/\d+/);
-                          return m ? parseInt(m[0], 10) : 0;
-                        };
+                        const companyName = (matchedTenant?.companyName || inv.tenantName || '').toLowerCase();
+                        const adminEmail = (matchedTenant?.adminEmail || matchedTenant?.email || '').toLowerCase();
+                        const slugName = (matchedTenant?.slug || '').toLowerCase();
+                        const invoiceNo = (inv.no || inv.id || '').toLowerCase();
+                        const searchStr = txSearch.toLowerCase().trim();
+                        const matchesSearch = !searchStr ||
+                          companyName.includes(searchStr) ||
+                          adminEmail.includes(searchStr) ||
+                          slugName.includes(searchStr) ||
+                          invoiceNo.includes(searchStr);
 
-                        const sorted = [...filtered].sort((a, b) => {
-                          const dateA = new Date(a.createdAt || a.invoiceDate || 0).getTime();
-                          const dateB = new Date(b.createdAt || b.invoiceDate || 0).getTime();
+                        return matchesStatus && matchesInterval && matchesSearch;
+                      });
 
-                          if (txSortOrder === 'latest') {
-                            return dateB - dateA;
-                          } else if (txSortOrder === 'oldest') {
-                            return dateA - dateB;
-                          } else if (txSortOrder === 'amount-desc') {
-                            return parseAmt(b.amount) - parseAmt(a.amount);
-                          } else if (txSortOrder === 'amount-asc') {
-                            return parseAmt(a.amount) - parseAmt(b.amount);
-                          } else if (txSortOrder === 'no-desc') {
-                            return parseNum(b) - parseNum(a);
-                          } else if (txSortOrder === 'no-asc') {
-                            return parseNum(a) - parseNum(b);
-                          } else if (txSortOrder === 'status') {
-                            return String(a.status || '').localeCompare(String(b.status || ''));
+                      const parseAmt = (val: any) => {
+                        if (typeof val === 'number') return val;
+                        if (!val) return 0;
+                        const num = parseFloat(String(val).replace(/[^0-9.-]+/g, ''));
+                        return isNaN(num) ? 0 : num;
+                      };
+
+                      const parseNum = (inv: any) => {
+                        const str = String(inv.no || inv.id || '');
+                        const m = str.match(/\d+/);
+                        return m ? parseInt(m[0], 10) : 0;
+                      };
+
+                      const sorted = [...filtered].sort((a, b) => {
+                        const dateA = new Date(a.createdAt || a.invoiceDate || 0).getTime();
+                        const dateB = new Date(b.createdAt || b.invoiceDate || 0).getTime();
+
+                        if (txSortOrder === 'latest') return dateB - dateA;
+                        if (txSortOrder === 'oldest') return dateA - dateB;
+                        if (txSortOrder === 'amount-desc') return parseAmt(b.amount) - parseAmt(a.amount);
+                        if (txSortOrder === 'amount-asc') return parseAmt(a.amount) - parseAmt(b.amount);
+                        if (txSortOrder === 'no-desc') return parseNum(b) - parseNum(a);
+                        if (txSortOrder === 'no-asc') return parseNum(a) - parseNum(b);
+                        return dateB - dateA;
+                      });
+
+                      if (sorted.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
+                              <FileText className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-40" />
+                              <p className="font-medium">No operator invoices found matching the filter criteria.</p>
+                              <p className="text-[11px] text-slate-500 mt-1">Try broadening your search term or changing the status filter.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return sorted.map((inv) => {
+                        const matchedTenant = tenants.find(t => t.id === inv.tenantId);
+                        const isLifetime = inv.billingInterval === 'lifetime' || matchedTenant?.billingInterval === 'lifetime' || String(inv.dueDate || '').toLowerCase().includes('lifetime');
+
+                        let dueDateDisplay = inv.dueDate;
+                        if (!dueDateDisplay || dueDateDisplay === 'N/A' || dueDateDisplay === '-') {
+                          if (matchedTenant) {
+                            dueDateDisplay = getNextBillingDate(matchedTenant);
+                          } else if (inv.createdAt) {
+                            dueDateDisplay = getNextBillingDate({ createdAt: inv.createdAt, billingInterval: inv.billingInterval || 'monthly' });
+                          } else {
+                            dueDateDisplay = getNextBillingDate({ createdAt: new Date().toISOString(), billingInterval: inv.billingInterval || 'monthly' });
                           }
-                          return dateB - dateA;
-                        });
-
-                        if (sorted.length === 0) {
-                          return (
-                            <tr>
-                              <td colSpan={7} className="py-8 text-center text-xs text-gray-500">
-                                No operator invoices found matching the criteria.
-                              </td>
-                            </tr>
-                          );
                         }
+                        const showLifetime = isLifetime || dueDateDisplay === 'Never (Lifetime)';
+                        const invInterval = inv.billingInterval || matchedTenant?.billingInterval || 'monthly';
+                        const planFormatted = formatPlanName(inv.plan || matchedTenant?.plan, packages, invInterval);
 
-                        return sorted.map((inv, idx) => {
-                          const matchedTenant = tenants.find(t => t.id === inv.tenantId);
-                          const isLifetime = inv.billingInterval === 'lifetime' || matchedTenant?.billingInterval === 'lifetime' || String(inv.dueDate || '').toLowerCase().includes('lifetime');
-
-                          let dueDateDisplay = inv.dueDate;
-                          if (!dueDateDisplay || dueDateDisplay === 'N/A' || dueDateDisplay === '-') {
-                            if (matchedTenant) {
-                              dueDateDisplay = getNextBillingDate(matchedTenant);
-                            } else if (inv.createdAt) {
-                              dueDateDisplay = getNextBillingDate({ createdAt: inv.createdAt, billingInterval: inv.billingInterval || 'monthly' });
-                            } else {
-                              dueDateDisplay = getNextBillingDate({ createdAt: new Date().toISOString(), billingInterval: inv.billingInterval || 'monthly' });
-                            }
-                          }
-                          const showLifetime = isLifetime || dueDateDisplay === 'Never (Lifetime)';
-                          const invInterval = inv.billingInterval || matchedTenant?.billingInterval || 'monthly';
-                          const planFormatted = formatPlanName(inv.plan || matchedTenant?.plan, packages, invInterval);
-                          const planColor = getPackageTextColor(inv.plan || matchedTenant?.plan || '', planFormatted);
-
-                          const rowBg = idx % 2 === 0
-                            ? (isDarkMode ? 'bg-[#111928]' : 'bg-white')
-                            : (isDarkMode ? 'bg-slate-800/50' : 'bg-gray-100/90');
-
-                          return (
-                            <tr key={inv.id} className={`text-xs ${rowBg} hover:opacity-90 transition-colors border-none`}>
-                              <td className="py-3.5 px-4 font-bold font-mono border-none">
+                        return (
+                          <tr key={inv.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-5 font-bold font-mono">
+                              <button
+                                onClick={() => setViewingInvoice(inv)}
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold flex items-center gap-1.5 cursor-pointer"
+                                title="Click to view full invoice details"
+                              >
+                                <span>#{inv.no || inv.id || 'INV-1001'}</span>
+                                <Eye className="w-3 h-3 text-indigo-400 opacity-70" />
+                              </button>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {matchedTenant?.companyName || inv.tenantName || 'Operator Workspace'}
+                              </span>
+                              <span className="block text-[11px] text-slate-400">
+                                {matchedTenant?.adminEmail || matchedTenant?.email || 'N/A'} • {matchedTenant?.slug ? `${matchedTenant.slug}.tripbone.com` : 'SaaS Tenant'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span className="font-medium capitalize text-slate-700 dark:text-slate-200">
+                                {planFormatted}
+                              </span>
+                              <span className="block text-[10px] text-slate-400 capitalize">
+                                {invInterval} cycle
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              {showLifetime ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/40 dark:border-emerald-800/40">
+                                  ✨ Lifetime
+                                </span>
+                              ) : (
+                                <span className={isDarkMode ? 'text-slate-300' : 'text-slate-700'}>
+                                  {dueDateDisplay}
+                                </span>
+                              )}
+                            </td>
+                            <td className={`py-3.5 px-5 text-right font-bold font-mono ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                              {inv.amount || '$0.00'}
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ${
+                                inv.status === 'PAID'
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800/40'
+                                  : inv.status === 'PENDING'
+                                    ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/40'
+                                    : inv.status === 'CANCELLED'
+                                      ? 'bg-slate-100 dark:bg-slate-800/60 text-slate-500 border-slate-200 dark:border-slate-700'
+                                      : 'bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-800/40'
+                              }`}>
+                                {inv.status || 'UNPAID'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <div className="flex items-center justify-center space-x-1">
                                 <button
                                   onClick={() => setViewingInvoice(inv)}
-                                  className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold flex items-center gap-1 cursor-pointer"
-                                  title="Click to view full invoice details"
+                                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                  }`}
+                                  title="View Invoice Details & Receipt"
                                 >
-                                  <span>#{inv.no || inv.id || 'INV-1001'}</span>
-                                  <Eye className="w-3 h-3 text-indigo-400 opacity-70" />
+                                  <Eye className="w-3.5 h-3.5" />
                                 </button>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                  {matchedTenant?.companyName || inv.tenantName || 'Operator Workspace'}
-                                </span>
-                                <span className="block text-[10px] text-gray-500">
-                                  {matchedTenant?.adminEmail || matchedTenant?.email || 'N/A'} • {matchedTenant?.slug ? `${matchedTenant.slug}.tripbone.com` : 'SaaS Tenant'}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 font-bold text-xs">
-                                <span className={planColor}>
-                                  {planFormatted}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 font-bold text-xs">
-                                {showLifetime ? (
-                                  <span className="text-emerald-600 dark:text-emerald-400">
-                                    ✨ Lifetime Access
-                                  </span>
-                                ) : (
-                                  <span className={isDarkMode ? 'text-gray-200' : 'text-gray-800'}>
-                                    {dueDateDisplay}
-                                  </span>
+
+                                {inv.status !== 'PAID' && (
+                                  <button
+                                    onClick={() => handleProcessPayment(inv)}
+                                    className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30 rounded-lg transition-colors cursor-pointer"
+                                    title="Confirm Payment & Activate Subscription"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
                                 )}
-                              </td>
-                              <td className={`py-3.5 px-4 text-right font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {inv.amount || '$0.00'}
-                              </td>
-                              <td className="py-3.5 px-4 text-center">
-                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                                  inv.status === 'PAID'
-                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                                    : inv.status === 'PENDING'
-                                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 animate-pulse'
-                                      : inv.status === 'CANCELLED'
-                                        ? 'bg-gray-500/10 text-gray-500 border-gray-500/20'
-                                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                                }`}>
-                                  {inv.status || 'UNPAID'}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 text-center">
-                                <div className="flex items-center justify-center space-x-1.5 flex-wrap gap-1">
+
+                                <button
+                                  onClick={() => handleOpenRenewModal(inv)}
+                                  className="p-1.5 text-indigo-500 hover:text-indigo-400 hover:bg-indigo-950/30 rounded-lg transition-colors cursor-pointer"
+                                  title="Renew Subscription"
+                                >
+                                  <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+
+                                {inv.status !== 'CANCELLED' && (
                                   <button
-                                    onClick={() => setViewingInvoice(inv)}
-                                    className="p-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-lg transition-colors shadow-xs cursor-pointer"
-                                    title="View Invoice Details & Receipt"
+                                    onClick={() => handleCancelInvoice(inv)}
+                                    className="p-1.5 text-amber-500 hover:text-amber-400 hover:bg-amber-950/30 rounded-lg transition-colors cursor-pointer"
+                                    title="Cancel Invoice"
                                   >
-                                    <Eye className="w-3.5 h-3.5" />
+                                    <XCircle className="w-3.5 h-3.5" />
                                   </button>
+                                )}
 
-                                  {inv.status !== 'PAID' && (
-                                    <button
-                                      onClick={() => handleProcessPayment(inv)}
-                                      className="p-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors shadow-xs cursor-pointer"
-                                      title="Process Payment & Activate Subscription"
-                                    >
-                                      <Check className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
+                                <button
+                                  onClick={() => handleDeleteInvoice(inv)}
+                                  className="p-1.5 text-rose-400 hover:text-rose-500 hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete Invoice"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+              </div>
 
-                                  <button
-                                    onClick={() => handleOpenRenewModal(inv)}
-                                    className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors shadow-xs cursor-pointer"
-                                    title="Renew Subscription"
-                                  >
-                                    <RefreshCw className="w-3.5 h-3.5" />
-                                  </button>
-
-                                  {inv.status !== 'CANCELLED' && (
-                                    <button
-                                      onClick={() => handleCancelInvoice(inv)}
-                                      className="p-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors shadow-xs cursor-pointer"
-                                      title="Cancel Invoice"
-                                    >
-                                      <XCircle className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-
-                                  <button
-                                    onClick={() => handleDeleteInvoice(inv)}
-                                    className="p-1.5 bg-rose-500/10 hover:bg-rose-600 text-rose-500 hover:text-white rounded-lg transition-colors shadow-xs cursor-pointer"
-                                    title="Delete Invoice"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        });
-                      })()}
-                    </tbody>
-                  </table>
-                </div>
+              {/* Table Summary Footer */}
+              <div className={`p-4 border-t flex flex-col sm:flex-row items-center justify-between text-xs gap-2 ${
+                isDarkMode ? 'border-slate-850 bg-slate-950/30 text-slate-400' : 'border-slate-100 bg-slate-50/60 text-slate-500'
+              }`}>
+                <span>
+                  Showing invoices filtered by status and search criteria.
+                </span>
+                {(txSearch || txStatusFilter !== 'all' || txBillingFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setTxSearch('');
+                      setTxStatusFilter('all');
+                      setTxBillingFilter('all');
+                    }}
+                    className="text-xs font-semibold text-indigo-500 hover:underline cursor-pointer"
+                  >
+                    Reset all filters
+                  </button>
+                )}
               </div>
             </div>
           </div>

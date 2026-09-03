@@ -105,13 +105,35 @@ service cloud.firestore {
     
     // --- Invoices ---
     match /invoices/{invoiceId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin();
+      allow get: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().get('role', '') == 'admin' && (getUserData().get('tenantId', '') == resource.data.get('tenantId', '') || resource.data.get('tenantId', null) == null))
+      );
+      allow list: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().get('role', '') == 'admin' && resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+      );
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (incoming().get('tenantId', '') == getUserData().get('tenantId', '') || (resource != null && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')))
+      );
     }
 
     match /tenant_invoices/{invoiceId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin();
+      allow get: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().get('role', '') == 'admin' && (getUserData().get('tenantId', '') == resource.data.get('tenantId', '') || resource.data.get('tenantId', null) == null))
+      );
+      allow list: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().get('role', '') == 'admin' && resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+      );
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (incoming().get('tenantId', '') == getUserData().get('tenantId', '') || (resource != null && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')))
+      );
     }
 
     // --- Waivers ---
@@ -121,15 +143,39 @@ service cloud.firestore {
     }
 
     match /signed_waivers/{waiverId} {
-      allow read: if true;
-      allow create: if true;
-      allow update, delete: if isSuperAdmin() || isAdmin();
+      // Protected: Only SuperAdmin, tenant admin of this workspace, or the customer who signed can view
+      allow get: if isSuperAdmin() || (
+        isSignedIn() && (
+          (resource.data.get('tenantId', null) != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == resource.data.tenantId) ||
+          (resource.data.get('userId', null) != null && resource.data.userId == request.auth.uid) ||
+          (resource.data.get('customerEmail', null) != null && request.auth.token.email != null && resource.data.customerEmail == request.auth.token.email)
+        )
+      );
+      allow list: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        resource.data.get('tenantId', '') == getUserData().get('tenantId', '')
+      );
+      allow create: if true; // Public customers sign waivers during booking flow
+      allow update, delete: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        resource.data.get('tenantId', '') == getUserData().get('tenantId', '')
+      );
     }
 
     // --- Site Settings ---
     match /settings/{id} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin();
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (
+          id == getUserData().get('tenantId', '') ||
+          id == 'settings_' + getUserData().get('tenantId', '') ||
+          id == 'general'
+        )
+      );
     }
 
     // --- Payment Settings (Private credentials) ---
@@ -304,10 +350,20 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isValidId(userId);
       
-      // Allow searching for own profile by email (essential for merging partners on signup)
-      allow list: if isSignedIn() && (isAdmin() || (resource.data.email.lower() == request.auth.token.email.lower()));
+      // Allow searching for own profile by email, or tenant admins listing users of their tenant, or SuperAdmin
+      allow list: if isSignedIn() && (
+        isSuperAdmin() || 
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'admin' && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')) ||
+        (resource.data.email.lower() == request.auth.token.email.lower())
+      );
       
-      allow write: if isAdmin();
+      // Write rule for admins: Prevents privilege escalation (cannot grant or modify superadmin role unless already superadmin)
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (!incoming().keys().hasAny(['role']) || incoming().role != 'superadmin') &&
+        (incoming().get('tenantId', '') == getUserData().get('tenantId', '') || (resource != null && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')))
+      );
       
       // Regular signup creation
       allow create: if isOwner(userId) && 
@@ -317,10 +373,15 @@ service cloud.firestore {
       // Identity maintenance
       allow update: if isOwner(userId) && 
                       incoming().createdAt == existing().createdAt &&
-                      !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email']);
+                      !incoming().diff(existing()).affectedKeys().hasAny(['role', 'email', 'tenantId']);
       
       // Allow users to delete their own account or clean up merged temporary profiles matching their email
-      allow delete: if isAdmin() || (isSignedIn() && existing().email == request.auth.token.email);
+      allow delete: if isSuperAdmin() || (
+        isSignedIn() && (
+          existing().email == request.auth.token.email ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('role', '') == 'admin' && existing().get('tenantId', '') == getUserData().get('tenantId', '') && existing().get('role', '') != 'superadmin')
+        )
+      );
     }
 
     // --- Saved Itineraries ---
@@ -463,16 +524,45 @@ service cloud.firestore {
 
     // --- Inventory & Logistics Catalog ---
     match /inventory/{inventoryId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (
+          (request.resource != null && request.resource.data.get('tenantId', null) != null && getUserData().get('tenantId', null) == request.resource.data.get('tenantId', null)) ||
+          (resource != null && resource.data.get('tenantId', null) != null && getUserData().get('tenantId', null) == resource.data.get('tenantId', null)) ||
+          inventoryId == getUserData().get('tenantId', '')
+        )
+      );
     }
 
     match /inventory_items/{itemId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (
+          (request.resource != null && request.resource.data.get('tenantId', null) != null && getUserData().get('tenantId', null) == request.resource.data.get('tenantId', null)) ||
+          (resource != null && resource.data.get('tenantId', null) != null && getUserData().get('tenantId', null) == resource.data.get('tenantId', null))
+        )
+      );
     }
 
     // --- Customer Proposals ---
     match /proposals/{proposalId} {
-      allow read, write: if true;
+      allow read: if true; // Proposals are publicly viewable by recipient via custom link
+      allow create: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (getUserData().get('role', '') == 'admin' || getUserData().get('role', '') == 'staff')
+      );
+      allow update, delete: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (
+          resource.data.get('tenantId', null) == null ||
+          resource.data.get('tenantId', '') == getUserData().get('tenantId', '')
+        )
+      );
     }
 
     // --- Support Tickets ---
@@ -503,11 +593,27 @@ service cloud.firestore {
 
     // --- WhatsApp CRM Chats and Messages ---
     match /whatsapp_chats/{chatId} {
-      allow read, write: if isAdmin();
+      allow get: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (resource.data.get('tenantId', null) == null || resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+      );
+      allow list: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin' &&
+        (resource.data.get('tenantId', null) == null || resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+      );
+      allow write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin'
+      );
     }
 
     match /whatsapp_messages/{messageId} {
-      allow read, write: if isAdmin();
+      allow read, write: if isSuperAdmin() || (
+        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        getUserData().get('role', '') == 'admin'
+      );
     }
 
     match /analytics_pageviews/{docId} {
