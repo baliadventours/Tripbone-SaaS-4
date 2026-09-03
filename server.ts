@@ -8,7 +8,7 @@ import axios from "axios";
 import multer from "multer";
 import admin from "firebase-admin";
 import dns from "dns";
-import { getAdminApp, getAdminDb, verifyAdmin, verifyUser, getDocViaRest, createDocViaRest, writeDocViaRest, deleteDocViaRest } from "./src/services/firebaseAdmin.js";
+import { getAdminApp, getAdminDb, verifyAdmin, verifySuperAdmin, verifyTenantAccess, verifyUser, getDocViaRest, createDocViaRest, writeDocViaRest, deleteDocViaRest } from "./src/services/firebaseAdmin.js";
 import { parseRestValue, parseRestDocument, fetchFromREST, generateContentWithFallback, resolveTenantGeminiKey } from "./src/services/apiHelpers.js";
 import geminiRouter from "./src/server/routes/gemini.js";
 import { securityHeadersMiddleware, sanitizeBodyMiddleware, createRateLimiter } from "./src/server/security.js";
@@ -1303,6 +1303,107 @@ export async function createServer() {
     return { clientId: (clientId || "").trim(), secretKey: (secretKey || "").trim(), mode, baseUrl };
   }
 
+  // GET /api/payment/public-config/:tenantId - Returns sanitized, safe payment settings without ANY secret keys
+  app.get("/api/payment/public-config/:tenantId", async (req: any, res: any) => {
+    try {
+      const tenantId = (req.params.tenantId || "global").trim();
+      const db = getAdminDb();
+      let data: any = null;
+
+      try {
+        if (db && !db._isFallback) {
+          const docSnap = await db.collection("paymentSettings").doc(tenantId).get();
+          if (docSnap.exists) {
+            data = docSnap.data();
+          } else {
+            const legacySnap = await db.collection("settings").doc(`payment_${tenantId}`).get();
+            if (legacySnap.exists) data = legacySnap.data();
+          }
+        }
+      } catch (e) {
+        console.warn(`[Public Payment Config] DB query fallback:`, e);
+      }
+
+      if (!data) {
+        return res.json({
+          success: true,
+          tenantId,
+          config: {
+            activeProviderId: "bank_transfer",
+            isBankTransferEnabled: true,
+            isPayOnArrivalEnabled: true,
+            isStripeEnabled: false,
+            isPaypalEnabled: false,
+            defaultCurrency: "USD",
+            currency: "USD"
+          }
+        });
+      }
+
+      // Filter and sanitize - NEVER expose secretKey, apiKey, webhookSecret, or any private tokens
+      const rawProviders = data.providerConfigs || {};
+      const sanitizedProviders: Record<string, any> = {};
+
+      for (const [key, val] of Object.entries(rawProviders) as [string, any][]) {
+        sanitizedProviders[key] = {
+          providerId: val.providerId || key,
+          mode: val.mode || "sandbox",
+          enabled: !!val.enabled,
+          publicKey: val.publicKey || "",
+          bankName: val.bankName || "",
+          accountNumber: val.accountNumber || "",
+          accountHolder: val.accountHolder || "",
+          swiftCode: val.swiftCode || "",
+          instructions: val.instructions || ""
+        };
+      }
+
+      const safeConfig = {
+        tenantId,
+        activeProviderId: data.activeProviderId || "bank_transfer",
+        depositType: data.depositType || "percentage",
+        depositPercentage: data.depositPercentage ?? 100,
+        fixedDepositAmount: data.fixedDepositAmount ?? 0,
+        depositCurrency: data.depositCurrency || data.defaultCurrency || "USD",
+        defaultCurrency: data.defaultCurrency || "USD",
+        currency: data.currency || data.defaultCurrency || "USD",
+        autoConfirmOnPayment: data.autoConfirmOnPayment ?? true,
+        currencyConversionEnabled: data.currencyConversionEnabled ?? false,
+        customExchangeRates: data.customExchangeRates || {},
+        providerConfigs: sanitizedProviders,
+        // Public gateway booleans
+        isStripeEnabled: data.isStripeEnabled ?? (sanitizedProviders.stripe?.enabled ?? false),
+        isMidtransEnabled: data.isMidtransEnabled ?? (sanitizedProviders.midtrans?.enabled ?? false),
+        isXenditEnabled: data.isXenditEnabled ?? (sanitizedProviders.xendit?.enabled ?? false),
+        isRazorpayEnabled: data.isRazorpayEnabled ?? (sanitizedProviders.razorpay?.enabled ?? false),
+        isAdyenEnabled: data.isAdyenEnabled ?? (sanitizedProviders.adyen?.enabled ?? false),
+        isWiseEnabled: data.isWiseEnabled ?? (sanitizedProviders.wise?.enabled ?? false),
+        isPaypalEnabled: data.isPaypalEnabled ?? (sanitizedProviders.paypal?.enabled ?? false),
+        creditCardEnabled: data.creditCardEnabled ?? ((sanitizedProviders.paypal?.enabled || sanitizedProviders.stripe?.enabled) ?? false),
+        isBankTransferEnabled: data.isBankTransferEnabled ?? (sanitizedProviders.bank_transfer?.enabled ?? true),
+        isPayOnArrivalEnabled: data.isPayOnArrivalEnabled ?? (sanitizedProviders.pay_on_arrival?.enabled ?? true),
+        // Public client IDs & instructions only
+        stripePublicKey: data.stripePublicKey || sanitizedProviders.stripe?.publicKey || "",
+        paypalClientId: data.paypalClientId || sanitizedProviders.paypal?.publicKey || "",
+        paypalSandboxClientId: data.paypalSandboxClientId || (sanitizedProviders.paypal?.mode === 'sandbox' ? sanitizedProviders.paypal?.publicKey : "") || "",
+        paypalMode: data.paypalMode || sanitizedProviders.paypal?.mode || "live",
+        midtransClientKey: data.midtransClientKey || sanitizedProviders.midtrans?.publicKey || "",
+        razorpayKeyId: data.razorpayKeyId || sanitizedProviders.razorpay?.publicKey || "",
+        bankName: data.bankName || sanitizedProviders.bank_transfer?.bankName || "",
+        accountNumber: data.accountNumber || sanitizedProviders.bank_transfer?.accountNumber || "",
+        accountHolder: data.accountHolder || sanitizedProviders.bank_transfer?.accountHolder || "",
+        swiftCode: data.swiftCode || sanitizedProviders.bank_transfer?.swiftCode || "",
+        bankInstructions: data.bankInstructions || data.paymentInstructions || sanitizedProviders.bank_transfer?.instructions || ""
+      };
+
+      res.setHeader("Cache-Control", "public, max-age=60, s-maxage=120");
+      return res.json({ success: true, tenantId, config: safeConfig });
+    } catch (err: any) {
+      console.error("[Public Payment Config Error]:", err);
+      return res.status(500).json({ success: false, error: "Failed to load payment configuration." });
+    }
+  });
+
   // POST /api/payment/paypal/create-order
   app.post("/api/payment/paypal/create-order", async (req: any, res: any) => {
     try {
@@ -2241,8 +2342,8 @@ export async function createServer() {
     try {
       const authHeader = req.headers.authorization;
       const idToken = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : undefined;
-      const authResult = await verifyAdmin(idToken);
-      if (!authResult.isAdmin) {
+      const authResult = await verifySuperAdmin(idToken);
+      if (!authResult.isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden: Superadmin authorization required." });
       }
 
@@ -3081,9 +3182,9 @@ export async function createServer() {
     try {
       const authHeader = req.headers.authorization;
       const idToken = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : undefined;
-      const authResult = await verifyAdmin(idToken);
+      const authResult = await verifySuperAdmin(idToken);
       
-      if (!authResult.isAdmin) {
+      if (!authResult.isSuperAdmin) {
         return res.status(403).json({ error: "Forbidden: Super Admin access required to delete workspaces." });
       }
 
@@ -3356,7 +3457,7 @@ export async function createServer() {
     }
   });
 
-  // API Route: Full Site Backup (Admin Only)
+  // API Route: Full Site Backup (Tenant-Scoped or SuperAdmin Global)
   app.get("/api/admin/backup", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
@@ -3368,10 +3469,15 @@ export async function createServer() {
         return res.status(403).json({ error: "Unauthorized: Admin access required for backups." });
       }
 
+      const isSuper = !!authResult.isSuperAdmin;
+      const callerTenantId = authResult.tenantId;
+
+      if (!isSuper && !callerTenantId) {
+        return res.status(403).json({ error: "Forbidden: No tenant associated with this admin account." });
+      }
+
       const db = getAdminDb();
-      
-      // Diagnostic: List collections
-      console.log(`[Backup] Starting backup...`);
+      console.log(`[Backup] Starting backup (SuperAdmin: ${isSuper}, Tenant: ${callerTenantId || 'global'})...`);
       
       const collections = [
         'tours', 
@@ -3409,16 +3515,34 @@ export async function createServer() {
       const backup: Record<string, any[]> = {};
       let totalDocs = 0;
 
-      // Fetch all collections sequentially to avoid timeouts and resource exhaustion
+      // Fetch collections sequentially to avoid timeouts and resource exhaustion
       for (const colName of collectionsToBackup) {
         try {
-          const snapshot = await db.collection(colName).limit(5000).get();
-          totalDocs += snapshot.size;
-          backup[colName] = snapshot.docs.map((doc: any) => ({
+          let snapshotDocs: any[] = [];
+          
+          if (isSuper) {
+            const snapshot = await db.collection(colName).limit(5000).get();
+            snapshotDocs = snapshot.docs;
+          } else {
+            // Tenant Isolation: For tenant-scoped admins, filter exclusively by tenantId!
+            if (colName === 'users') {
+              const snap = await db.collection(colName).where("tenantId", "==", callerTenantId).limit(5000).get();
+              snapshotDocs = snap.docs;
+            } else if (colName === 'generalSettings' || colName === 'communicationSettings') {
+              const docSnap = await db.collection(colName).doc(callerTenantId!).get();
+              if (docSnap.exists) snapshotDocs = [docSnap];
+            } else {
+              const snap = await db.collection(colName).where("tenantId", "==", callerTenantId).limit(5000).get();
+              snapshotDocs = snap.docs;
+            }
+          }
+
+          totalDocs += snapshotDocs.length;
+          backup[colName] = snapshotDocs.map((doc: any) => ({
             id: doc.id,
             ...doc.data()
           }));
-          console.log(`[Server Backup] Collection ${colName}: found ${snapshot.size} docs.`);
+          console.log(`[Server Backup] Collection ${colName}: found ${snapshotDocs.length} docs.`);
         } catch (colErr: any) {
           console.warn(`[Backup] Warning: Could not backup collection ${colName}:`, colErr.message);
           backup[colName] = [];
@@ -3429,7 +3553,8 @@ export async function createServer() {
       const metadata = {
         version: "2.1",
         timestamp,
-        source: "Bali Adventours CMS",
+        source: isSuper ? "Tripbone Global System" : `Tripbone Tenant: ${callerTenantId}`,
+        tenantId: isSuper ? "global" : callerTenantId,
         totalCollections: collectionsToBackup.length,
         totalDocumentsFound: totalDocs,
         databaseId: db.databaseId || 'ai-studio-tripbonesaas-bc73f611-b9f1-4175-a949-14e52d815420',
@@ -3438,7 +3563,7 @@ export async function createServer() {
       };
 
       res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename=bali_adventours_backup_${timestamp.split('T')[0]}.json`);
+      res.setHeader('Content-Disposition', `attachment; filename=tripbone_backup_${isSuper ? 'global' : callerTenantId}_${timestamp.split('T')[0]}.json`);
       res.status(200).json({ metadata, data: backup });
 
     } catch (error: any) {
@@ -3447,15 +3572,15 @@ export async function createServer() {
     }
   });
 
-  // API Route: Restore Site (Admin Only)
+  // API Route: Restore Site (SuperAdmin Only)
   app.post("/api/admin/restore", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
       const idToken = authHeader?.startsWith('Bearer ') ? authHeader.split('Bearer ')[1] : undefined;
 
-      const adminAuth = await verifyAdmin(idToken);
-      if (!adminAuth.isAdmin) {
-        return res.status(403).json({ error: "Unauthorized: Admin access required for restore." });
+      const adminAuth = await verifySuperAdmin(idToken);
+      if (!adminAuth.isSuperAdmin) {
+        return res.status(403).json({ error: "Unauthorized: Super Admin access required for restore operations." });
       }
 
       const { data } = req.body;

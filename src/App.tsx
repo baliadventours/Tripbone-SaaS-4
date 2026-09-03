@@ -90,7 +90,7 @@ import { useTenantSEO } from './hooks/useTenantSEO';
 const Chatbot = lazyWithRetry(() => import('./components/Chatbot'));
 
 function AppContent() {
-  const { isMaster, isAppGate, tenant, tenantId, loading: tenantLoading, setPreviewTenant, isImpersonating } = useTenant();
+  const { isMaster, isAppGate, tenant, tenantId, loading: tenantLoading, setPreviewTenant, isImpersonating, error: tenantError } = useTenant();
   const { settings, loading: settingsLoading } = useSettings();
   const location = useLocation();
 
@@ -322,8 +322,58 @@ function AppContent() {
 
   const dynamicStatus = !isMaster && tenant ? getDynamicStatus(tenant) : 'active';
 
-  // Handle non-existent tenant (e.g., test123.tripbone.com or sample123.tripbone.com)
+  // Handle non-existent tenant or database connectivity/billing pauses
   if (!isMaster && !tenant) {
+    const isDbBillingError = Boolean(
+      tenantError && (
+        tenantError.toLowerCase().includes('billing') ||
+        tenantError.toLowerCase().includes('permission-denied') ||
+        tenantError.toLowerCase().includes('permission_denied') ||
+        tenantError.toLowerCase().includes('permission denied') ||
+        tenantError.toLowerCase().includes('quota')
+      )
+    );
+
+    if (isDbBillingError) {
+      return (
+        <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
+          <div className="max-w-md w-full bg-[#0b0f19] border border-amber-500/30 p-8 rounded-3xl shadow-2xl space-y-6">
+            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-2xl flex items-center justify-center mx-auto animate-pulse">
+              <ShieldAlert className="w-8 h-8" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-xl font-black text-white">Database Service Paused</h1>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Your workspace data at <span className="font-mono text-cyan-400">{window.location.hostname}</span> is <strong className="text-emerald-400">safe and intact</strong>. Google Cloud has temporarily paused database queries because project billing needs to be activated.
+              </p>
+            </div>
+            <div className="bg-amber-950/30 border border-amber-500/20 rounded-xl p-3.5 text-left space-y-1.5">
+              <p className="text-[11px] text-amber-300 font-bold uppercase tracking-wider">Administrator Action Required:</p>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Google Cloud Project <code className="font-mono text-amber-200 bg-amber-950/60 px-1 py-0.5 rounded">gen-lang-client-0785892115</code> requires an active Cloud Billing account to serve Firestore requests.
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-800/80 flex flex-col gap-2.5">
+              <a
+                href="https://console.developers.google.com/billing/enable?project=gen-lang-client-0785892115"
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 text-black font-bold text-xs shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-amber-500 transition"
+              >
+                Enable Google Cloud Billing
+              </a>
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full py-3 rounded-xl bg-slate-800 text-slate-200 font-bold text-xs hover:text-white hover:bg-slate-700 transition border border-slate-700/60"
+              >
+                Retry Connection
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#070b13] text-gray-100 flex flex-col items-center justify-center p-6 text-center font-sans antialiased">
         <div className="max-w-md w-full bg-[#0b0f19] border border-slate-800 p-8 rounded-3xl shadow-2xl space-y-6">

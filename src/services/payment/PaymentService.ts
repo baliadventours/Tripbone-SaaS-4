@@ -325,6 +325,68 @@ export class PaymentService {
     const legacyDocRef = doc(db, 'settings', 'payment_' + tenantId);
     await setDoc(legacyDocRef, sanitizedFields, { merge: true });
 
+    // Sync sanitized public version (WITHOUT private secret keys) for checkout and storefront
+    try {
+      const publicProviders: Record<string, any> = {};
+      for (const [key, cfg] of Object.entries(updatedSettings.providerConfigs || {})) {
+        publicProviders[key] = {
+          providerId: cfg.providerId,
+          mode: cfg.mode,
+          enabled: !!cfg.enabled,
+          publicKey: cfg.publicKey || '',
+          bankName: cfg.bankName || '',
+          accountNumber: cfg.accountNumber || '',
+          accountHolder: cfg.accountHolder || '',
+          swiftCode: cfg.swiftCode || '',
+          instructions: cfg.instructions || '',
+        };
+      }
+
+      const publicSanitizedFields = sanitizeFirestoreData({
+        activeProviderId: updatedSettings.activeProviderId,
+        activeGateway: updatedSettings.activeProviderId,
+        depositType: updatedSettings.depositType,
+        depositPercentage: updatedSettings.depositPercentage,
+        fixedDepositAmount: updatedSettings.fixedDepositAmount,
+        depositCurrency: updatedSettings.depositCurrency || updatedSettings.defaultCurrency || 'USD',
+        defaultCurrency: updatedSettings.defaultCurrency || 'USD',
+        currency: updatedSettings.defaultCurrency || 'USD',
+        autoConfirmOnPayment: updatedSettings.autoConfirmOnPayment,
+        currencyConversionEnabled: updatedSettings.currencyConversionEnabled,
+        customExchangeRates: updatedSettings.customExchangeRates,
+        providerConfigs: publicProviders,
+        updatedAt: updatedSettings.updatedAt,
+        isStripeEnabled: updatedSettings.providerConfigs.stripe?.enabled ?? false,
+        isXenditEnabled: updatedSettings.providerConfigs.xendit?.enabled ?? false,
+        isRazorpayEnabled: updatedSettings.providerConfigs.razorpay?.enabled ?? false,
+        isAdyenEnabled: updatedSettings.providerConfigs.adyen?.enabled ?? false,
+        isPaypalEnabled: updatedSettings.providerConfigs.paypal?.enabled ?? false,
+        isWiseEnabled: updatedSettings.providerConfigs.wise?.enabled ?? false,
+        creditCardEnabled: (updatedSettings.providerConfigs.paypal?.enabled || updatedSettings.providerConfigs.stripe?.enabled) ?? false,
+        isMidtransEnabled: updatedSettings.providerConfigs.midtrans?.enabled ?? false,
+        isBankTransferEnabled: updatedSettings.providerConfigs.bank_transfer?.enabled ?? true,
+        isPayOnArrivalEnabled: updatedSettings.providerConfigs.pay_on_arrival?.enabled ?? true,
+        stripePublicKey: updatedSettings.providerConfigs.stripe?.publicKey || '',
+        paypalClientId: updatedSettings.providerConfigs.paypal?.publicKey || '',
+        paypalSandboxClientId: (updatedSettings.providerConfigs.paypal?.mode === 'sandbox' ? updatedSettings.providerConfigs.paypal?.publicKey : '') || '',
+        paypalMode: updatedSettings.providerConfigs.paypal?.mode || 'live',
+        midtransClientKey: updatedSettings.providerConfigs.midtrans?.publicKey || '',
+        razorpayKeyId: updatedSettings.providerConfigs.razorpay?.publicKey || '',
+        bankName: updatedSettings.providerConfigs.bank_transfer?.bankName || '',
+        accountNumber: updatedSettings.providerConfigs.bank_transfer?.accountNumber || '',
+        accountHolder: updatedSettings.providerConfigs.bank_transfer?.accountHolder || '',
+        swiftCode: updatedSettings.providerConfigs.bank_transfer?.swiftCode || '',
+        paymentInstructions: updatedSettings.providerConfigs.bank_transfer?.instructions || '',
+        bankInstructions: updatedSettings.providerConfigs.bank_transfer?.instructions || '',
+        mode: (activeConfig as GatewayConfig)?.mode || 'sandbox',
+      });
+
+      const publicDocRef = doc(db, 'paymentSettings_public', tenantId);
+      await setDoc(publicDocRef, publicSanitizedFields, { merge: true });
+    } catch (pubErr) {
+      console.warn('[PaymentService] Failed syncing public payment settings:', pubErr);
+    }
+
     // Sync default currency to main site settings so storefront, tours, and checkout match immediately
     if (updatedSettings.defaultCurrency) {
       try {

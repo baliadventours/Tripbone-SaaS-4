@@ -705,26 +705,47 @@ export async function safeVerifyIdToken(idToken: string): Promise<any> {
   }
 }
 
-export async function verifyAdmin(idToken?: string): Promise<{ isAdmin: boolean; error?: string; decodedToken?: any; uid?: string }> {
+export interface AdminAuthResult {
+  isAdmin: boolean;
+  isSuperAdmin: boolean;
+  tenantId?: string;
+  userEmail?: string;
+  uid?: string;
+  decodedToken?: any;
+  error?: string;
+}
+
+export async function verifyAdmin(idToken?: string): Promise<AdminAuthResult> {
   if (!idToken) {
-    return { isAdmin: false, error: "No authentication token provided." };
+    return { isAdmin: false, isSuperAdmin: false, error: "No authentication token provided." };
   }
   try {
     const decodedToken = await safeVerifyIdToken(idToken);
     const rawAdminEmail = (process.env.ADMIN_EMAIL || 'baliadventours@gmail.com').trim().toLowerCase();
     const userEmail = (decodedToken.email || '').trim().toLowerCase();
-    const isRoleAdmin = decodedToken.role === 'admin' || decodedToken.admin === true;
+    const isRoleSuperAdmin = decodedToken.role === 'superadmin' || decodedToken.superadmin === true;
+    const isRoleAdmin = decodedToken.role === 'admin' || decodedToken.admin === true || isRoleSuperAdmin;
     const uid = decodedToken.uid || decodedToken.sub;
     
-    let isAdmin = userEmail === rawAdminEmail || userEmail === 'admin@tripbone.com' || userEmail === 'kuotabox@gmail.com' || isRoleAdmin;
-    
-    // In case there is no role claim in token, check users collection as a fallback
-    if (!isAdmin && uid) {
+    const isSuperAdminEmail = userEmail === rawAdminEmail || userEmail === 'admin@tripbone.com' || userEmail === 'kuotabox@gmail.com';
+    let isSuperAdmin = isSuperAdminEmail || isRoleSuperAdmin;
+    let isAdmin = isSuperAdmin || isRoleAdmin;
+    let resolvedTenantId = decodedToken.tenantId || undefined;
+
+    // Check users collection as fallback for role and tenantId if not present in token
+    if (uid && (!isSuperAdmin || !resolvedTenantId)) {
       try {
         const userDoc = await getDocViaRest('users', uid, idToken);
-        if (userDoc && userDoc.role === 'admin') {
-          isAdmin = true;
-          console.log(`[verifyAdmin] Verified admin role from Firestore REST fallback for UID: ${uid}`);
+        if (userDoc) {
+          if (userDoc.role === 'superadmin') {
+            isSuperAdmin = true;
+            isAdmin = true;
+          } else if (userDoc.role === 'admin') {
+            isAdmin = true;
+          }
+          if (userDoc.tenantId) {
+            resolvedTenantId = userDoc.tenantId;
+          }
         }
       } catch (e) {
         console.warn("[verifyAdmin] Firestore REST role check failed:", e);
@@ -733,21 +754,69 @@ export async function verifyAdmin(idToken?: string): Promise<{ isAdmin: boolean;
 
     console.log(`[verifyAdmin] Auth Evaluation:
       User Email: "${userEmail}"
-      Target Admin: "${rawAdminEmail}"
-      Role: ${decodedToken.role}
-      Match: ${isAdmin}
+      SuperAdmin: ${isSuperAdmin}
+      IsAdmin: ${isAdmin}
+      TenantId: "${resolvedTenantId || 'none'}"
     `);
     
     if (!isAdmin) {
-      console.warn(`[verifyAdmin] Access DENIED for ${userEmail}. Expected: ${rawAdminEmail}`);
-      return { isAdmin: false, uid, error: `Access denied. ${decodedToken.email} is not in the admin list.` };
+      console.warn(`[verifyAdmin] Access DENIED for ${userEmail}.`);
+      return { isAdmin: false, isSuperAdmin: false, uid, error: `Access denied. ${decodedToken.email} does not have administrative privileges.` };
     }
     
-    return { isAdmin: true, decodedToken, uid };
+    return { 
+      isAdmin: true, 
+      isSuperAdmin, 
+      tenantId: resolvedTenantId, 
+      userEmail, 
+      uid, 
+      decodedToken 
+    };
   } catch (e: any) {
     console.error("[verifyAdmin] Token verification failed:", e.message);
-    return { isAdmin: false, error: `Token verification failed: ${e.message}` };
+    return { isAdmin: false, isSuperAdmin: false, error: `Token verification failed: ${e.message}` };
   }
+}
+
+export async function verifySuperAdmin(idToken?: string): Promise<AdminAuthResult> {
+  const result = await verifyAdmin(idToken);
+  if (!result.isAdmin || !result.isSuperAdmin) {
+    return {
+      ...result,
+      isAdmin: false,
+      isSuperAdmin: false,
+      error: "Access denied. Super Administrator access required."
+    };
+  }
+  return result;
+}
+
+export async function verifyTenantAccess(
+  idToken: string | undefined, 
+  targetTenantId?: string
+): Promise<{ allowed: boolean; auth: AdminAuthResult; error?: string }> {
+  const auth = await verifyAdmin(idToken);
+  if (!auth.isAdmin) {
+    return { allowed: false, auth, error: auth.error || "Authentication required." };
+  }
+
+  // SuperAdmins have global cross-tenant clearance
+  if (auth.isSuperAdmin) {
+    return { allowed: true, auth };
+  }
+
+  // If targetTenantId is specified, check against caller's tenantId
+  if (targetTenantId) {
+    if (!auth.tenantId || auth.tenantId !== targetTenantId) {
+      return {
+        allowed: false,
+        auth,
+        error: `Forbidden: Tenant mismatch. You cannot modify workspace '${targetTenantId}' from tenant '${auth.tenantId || 'unassigned'}'.`
+      };
+    }
+  }
+
+  return { allowed: true, auth };
 }
 
 export async function verifyUser(idToken?: string, userId?: string) {

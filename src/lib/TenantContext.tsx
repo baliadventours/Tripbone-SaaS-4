@@ -331,6 +331,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
         let tenantData: Tenant | null = null;
         let tenantDocId: string | null = null;
+        let fetchError: string | null = null;
 
         // 1. Try resolving by impersonateId if present
         if (impersonateId) {
@@ -371,11 +372,16 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (tenantQuery) {
-            const querySnapshot = await getDocs(tenantQuery);
-            if (!querySnapshot.empty) {
-              const tenantDoc = querySnapshot.docs[0];
-              tenantDocId = tenantDoc.id;
-              tenantData = { id: tenantDoc.id, ...(tenantDoc.data() as any) } as Tenant;
+            try {
+              const querySnapshot = await getDocs(tenantQuery);
+              if (!querySnapshot.empty) {
+                const tenantDoc = querySnapshot.docs[0];
+                tenantDocId = tenantDoc.id;
+                tenantData = { id: tenantDoc.id, ...(tenantDoc.data() as any) } as Tenant;
+              }
+            } catch (qErr: any) {
+              console.error('Error executing tenantQuery:', qErr);
+              fetchError = qErr.message || String(qErr);
             }
           }
 
@@ -395,8 +401,11 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
                   }
                 }
               });
-            } catch (fallbackErr) {
+            } catch (fallbackErr: any) {
               console.warn('Error in fallback customDomain scan:', fallbackErr);
+              if (!fetchError) {
+                fetchError = fallbackErr.message || String(fallbackErr);
+              }
             }
           }
         }
@@ -418,8 +427,8 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
             sessionStorage.removeItem('tripbone_impersonated_tenant_id');
           }
         } else {
-          console.warn(`Tenant not found for slug: ${slug}, domain: ${customDomain}, impersonateId: ${impersonateId}`);
-          setError(`We couldn't find the tenant space for "${slug || customDomain || impersonateId}".`);
+          console.warn(`Tenant not found for slug: ${slug}, domain: ${customDomain}, impersonateId: ${impersonateId}. Underlying error: ${fetchError}`);
+          setError(fetchError || `We couldn't find the tenant space for "${slug || customDomain || impersonateId}".`);
           setTenant(null);
           setTenantIdInternal(null);
           setActiveTenantId(null);

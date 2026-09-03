@@ -106,48 +106,61 @@ service cloud.firestore {
     // --- Invoices ---
     match /invoices/{invoiceId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     match /tenant_invoices/{invoiceId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     // --- Waivers ---
     match /waiver_templates/{templateId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     match /signed_waivers/{waiverId} {
       allow read: if true;
       allow create: if true;
-      allow update, delete: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow update, delete: if isSuperAdmin() || isAdmin();
     }
 
+    // --- Site Settings ---
     match /settings/{id} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
-    // --- Payment Settings ---
+    // --- Payment Settings (Private credentials) ---
     match /paymentSettings/{id} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || (
+      // Sensitive credentials (secretKey, private tokens) are protected and restricted to SuperAdmin or the tenant admin of this workspace
+      allow read, write: if isSuperAdmin() || (
         isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        (getUserData().role == 'admin' || getUserData().role == 'superadmin')
+        (getUserData().role == 'admin' || getUserData().role == 'superadmin') &&
+        (getUserData().get('tenantId', null) == null || id == getUserData().tenantId || id == 'payment_' + getUserData().tenantId)
       );
     }
 
-    // --- Channel Manager ---
-    match /channel_manager/{id} {
+    // --- Public Payment Settings (Sanitized, safe client flags, public keys, bank instructions) ---
+    match /paymentSettings_public/{id} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || (
+      allow write: if isSuperAdmin() || (
         isSignedIn() && 
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-        (getUserData().role == 'admin' || getUserData().role == 'superadmin')
+        (getUserData().role == 'admin' || getUserData().role == 'superadmin') &&
+        (getUserData().get('tenantId', null) == null || id == getUserData().tenantId)
+      );
+    }
+
+    // --- Channel Manager (OTA API Keys) ---
+    match /channel_manager/{id} {
+      allow read, write: if isSuperAdmin() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        (getUserData().role == 'admin' || getUserData().role == 'superadmin') &&
+        (getUserData().get('tenantId', null) == null || id == getUserData().tenantId)
       );
     }
 
@@ -167,15 +180,16 @@ service cloud.firestore {
       );
     }
 
-    // --- Tenants ---
+    // --- Tenants (Workspaces) ---
     match /tenants/{tenantId} {
       allow read: if true;
-      allow write: if isSuperAdmin();
-      allow update: if isSignedIn() && (
-        isSuperAdmin() || (
+      allow create, delete: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (
+        isSignedIn() && (
           exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
           getUserData().role == 'admin' &&
-          getUserData().tenantId == tenantId
+          getUserData().tenantId == tenantId &&
+          !incoming().diff(existing()).affectedKeys().hasAny(['plan', 'billingInterval', 'subscriptionStatus', 'planPrice', 'currency', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'approved', 'trialEndsAt', 'subscriptionEndsAt'])
         )
       );
     }
@@ -262,9 +276,9 @@ service cloud.firestore {
           ((isOwner(existing().userId) || existing().userId == 'anonymous') && (
             // Action: Cancel
             (incoming().status == "cancelled" && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-            // Action: Propose Update
+            // Action: Propose Update (Customers cannot self-confirm pending bookings)
             (
-              (incoming().status == "review_required" || (existing().status == "review_required" && incoming().status == existing().status) || (existing().status == 'pending' && incoming().status == 'confirmed')) &&
+              (incoming().status == "review_required" || (existing().status == "review_required" && incoming().status == existing().status)) &&
               isValidBooking(incoming())
             )
           ))
@@ -373,23 +387,23 @@ service cloud.firestore {
     // --- SaaS Posts (Blog) ---
     match /saas_posts/{postId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     // --- Knowledge Base & Documentation ---
     match /knowledge_base/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     match /documentation_articles/{docId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     match /documentation_categories/{catId} {
       allow read: if true;
-      allow write: if true;
+      allow write: if isSuperAdmin() || isAdmin();
     }
 
     // --- AI FAQs ---
@@ -528,24 +542,34 @@ service cloud.firestore {
     // --- Car Rental Fleet & Bookings ---
     match /rental_vehicles/{vehicleId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || (isSignedIn() && incoming().tenantId != null) || (isSignedIn() && resource.data.tenantId != null) || isSignedIn();
-      allow delete: if isSuperAdmin() || isAdmin() || (isSignedIn() && resource.data.tenantId != null) || isSignedIn();
+      allow write, delete: if isSuperAdmin() || isAdmin();
     }
 
     match /rentalVehicles/{vehicleId} {
       allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || (isSignedIn() && incoming().tenantId != null) || (isSignedIn() && resource.data.tenantId != null) || isSignedIn();
-      allow delete: if isSuperAdmin() || isAdmin() || (isSignedIn() && resource.data.tenantId != null) || isSignedIn();
+      allow write, delete: if isSuperAdmin() || isAdmin();
     }
 
     match /rental_bookings/{bookingId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow read: if isAdmin() || isValidId(bookingId) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if true;
+      allow update: if isSuperAdmin() || isAdmin() || (
+        isSignedIn() && 
+        resource.data.userId == request.auth.uid && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'customerNotes', 'updatedAt'])
+      );
+      allow delete: if isSuperAdmin() || isAdmin();
     }
 
     match /rentalBookings/{bookingId} {
-      allow read: if true;
-      allow write: if isSuperAdmin() || isAdmin() || isSignedIn();
+      allow read: if isAdmin() || isValidId(bookingId) || (isSignedIn() && resource.data.userId == request.auth.uid);
+      allow create: if true;
+      allow update: if isSuperAdmin() || isAdmin() || (
+        isSignedIn() && 
+        resource.data.userId == request.auth.uid && 
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'customerNotes', 'updatedAt'])
+      );
+      allow delete: if isSuperAdmin() || isAdmin();
     }
   }
 }

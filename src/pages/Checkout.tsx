@@ -583,8 +583,30 @@ export default function Checkout() {
     const fetchSettings = async () => {
       try {
         const activeId = tenantId || getActiveTenantId() || "global";
-        const docRef = doc(db, "paymentSettings", activeId);
-        let docSnap = await getDoc(docRef);
+        
+        // 1. Try secure public endpoint first (never contains secret keys)
+        try {
+          const apiRes = await fetch(`/api/payment/public-config/${encodeURIComponent(activeId)}`);
+          if (apiRes.ok) {
+            const json = await apiRes.json();
+            if (json?.config) {
+              setPaymentSettings(json.config);
+              return;
+            }
+          }
+        } catch (apiErr) {
+          console.warn("Public payment config API endpoint fallback:", apiErr);
+        }
+
+        // 2. Try sanitized public Firestore document
+        const publicDocRef = doc(db, "paymentSettings_public", activeId);
+        let docSnap = await getDoc(publicDocRef);
+        
+        // 3. Fallback to primary paymentSettings or legacy settings
+        if (!docSnap.exists()) {
+          const docRef = doc(db, "paymentSettings", activeId);
+          docSnap = await getDoc(docRef);
+        }
         if (!docSnap.exists()) {
           const legacyRef = doc(db, "settings", "payment_" + activeId);
           docSnap = await getDoc(legacyRef);
