@@ -43,7 +43,7 @@ console.log(`[Server] SENDER_EMAIL: ${process.env.SENDER_EMAIL || "NOT SET (will
 export async function createServer() {
   const db = getAdminDb();
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = 3000;
 
   // Apply security headers to prevent XSS, MIME sniffing, and clickjacking
   app.use(securityHeadersMiddleware);
@@ -87,6 +87,11 @@ export async function createServer() {
   // Mount Gemini Router for AI blog generator and concierge endpoints
   app.use("/api/gemini", geminiRouter);
   app.use("/api", geminiRouter);
+
+  // Health check endpoint
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
 
   // Redirect /index.html and /app.html to / for SEO duplicate content prevention
   app.use((req, res, next) => {
@@ -7941,7 +7946,7 @@ export async function createServer() {
 // Start the server
 if (!process.env.VERCEL) {
   createServer().then(app => {
-    const PORT = Number(process.env.PORT) || 3000;
+    const PORT = 3000;
     app.listen(PORT, "0.0.0.0", async () => {
       console.log(`Server running on http://localhost:${PORT}`);
 

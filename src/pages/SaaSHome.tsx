@@ -3384,7 +3384,8 @@ export default function SaaSHome() {
                                             <body>
                                               <div class="header">
                                                 <div>
-                                                  <h2>Tripbone SaaS</h2>
+                                                  <img src="${globalBrand?.logoUrl || settings?.logoURL || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4'}" alt="Tripbone" style="height: 38px; width: auto; max-width: 170px; object-fit: contain; margin-bottom: 6px; display: block;" onerror="this.style.display='none'; var fb=document.getElementById('sh-fallback-logo'); if(fb) fb.style.display='block';" />
+                                                  <h2 id="sh-fallback-logo" style="display: none; margin: 0; color: #005ea6; font-size: 28px;">Tripbone SaaS</h2>
                                                   <p>Invoice #${invoice.no}</p>
                                                 </div>
                                                 <div style="text-align: right;">

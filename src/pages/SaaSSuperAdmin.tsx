@@ -249,7 +249,7 @@ export default function SaaSSuperAdmin() {
     tagline: 'Secure Enterprise Sandbox',
     supportEmail: 'support@tripbone.com',
     copyright: '© 2026 PT Tripbone Indonesia',
-    logoUrl: '',
+    logoUrl: '/api/uploads/qmsB5Y9GFJLB4jiEqEF4',
     faviconUrl: '',
     twitterUrl: '',
     linkedinUrl: '',
@@ -8047,6 +8047,7 @@ export default function SaaSSuperAdmin() {
         const handlePrintInvoice = () => {
           const printWindow = window.open('', '_blank');
           if (!printWindow) return;
+          const logoSrc = globalBrand.logoUrl || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4';
           const content = `
             <!DOCTYPE html>
             <html>
@@ -8056,6 +8057,7 @@ export default function SaaSSuperAdmin() {
                   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; background: #fff; }
                   .invoice-box { border: none; border-radius: 0; padding: 32px; box-shadow: none; }
                   .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0284c7; padding-bottom: 20px; margin-bottom: 28px; }
+                  .brand-logo { max-height: 42px; width: auto; max-width: 190px; object-fit: contain; margin-bottom: 6px; display: block; }
                   .brand { font-size: 24px; font-weight: 800; color: #0284c7; letter-spacing: -0.5px; }
                   .subtitle { font-size: 12px; color: #64748b; margin-top: 4px; text-transform: uppercase; font-weight: 600; }
                   .inv-details { text-align: right; }
@@ -8089,7 +8091,8 @@ export default function SaaSSuperAdmin() {
                 <div class="invoice-box">
                   <div class="header">
                     <div>
-                      <div class="brand">TRIPBONE SAAS</div>
+                      <img src="${logoSrc}" alt="Tripbone" class="brand-logo" onerror="this.style.display='none'; var fb=document.getElementById('brand-fallback-text'); if(fb) fb.style.display='block';" />
+                      <div id="brand-fallback-text" class="brand" style="display: none;">TRIPBONE SAAS</div>
                       <div class="subtitle">Official Subscription Invoice</div>
                     </div>
                     <div class="inv-details">
@@ -8177,8 +8180,15 @@ export default function SaaSSuperAdmin() {
               {/* Top Banner Header */}
               <div className="px-6 py-5 border-b border-gray-200 dark:border-slate-800 flex items-center justify-between bg-gradient-to-r from-sky-500/10 via-indigo-500/10 to-transparent">
                 <div className="flex items-center space-x-3">
-                  <div className="p-2.5 bg-sky-500/10 dark:bg-sky-500/20 rounded-xl text-sky-600 dark:text-sky-400">
-                    <FileText className="w-6 h-6" />
+                  <div className="p-2 bg-white dark:bg-slate-800 rounded-xl shadow-xs border border-gray-100 dark:border-slate-700 flex items-center justify-center">
+                    <img
+                      src={globalBrand.logoUrl || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4'}
+                      alt="Tripbone Logo"
+                      className="h-7 max-w-[120px] object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold">Invoice Details</h3>

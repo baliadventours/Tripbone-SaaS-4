@@ -177,14 +177,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const globalBrandRef = doc(db, 'settings', 'globalBrand');
     const unsubscribeGlobalBrand = onSnapshot(globalBrandRef, (snapshot) => {
       if (snapshot.exists()) {
-        setGlobalBrand(snapshot.data());
+        const brandData = snapshot.data();
+        setGlobalBrand({
+          ...brandData,
+          logoUrl: brandData?.logoUrl || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4'
+        });
       } else {
         setGlobalBrand({
           platformName: 'Tripbone SaaS',
           tagline: 'Secure Enterprise Sandbox',
           supportEmail: 'support@tripbone.com',
           copyright: '© 2026 PT Tripbone Indonesia',
-          logoUrl: '',
+          logoUrl: '/api/uploads/qmsB5Y9GFJLB4jiEqEF4',
           faviconUrl: ''
         });
       }
