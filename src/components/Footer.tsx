@@ -131,7 +131,7 @@ export default function Footer() {
       case 'airbnb-fluid':
       default: // Use as standard fallback for an elegant, unified, and real-link modern layout
         return (
-          <footer className="bg-gray-50 pt-16 pb-24 text-gray-950 border-t border-gray-200/60 font-sans">
+          <footer className="bg-gray-50 pt-8 md:pt-16 pb-24 text-gray-950 border-t border-gray-200/60 font-sans">
             <div className="container mx-auto px-4 lg:px-8">
                {renderLinkColumns()}
                <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-sm font-semibold text-gray-400">

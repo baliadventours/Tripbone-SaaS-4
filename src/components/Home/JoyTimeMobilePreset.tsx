@@ -514,7 +514,7 @@ export default function JoyTimeMobilePreset({
     switch (blogBgStyle) {
       case 'subtle-slate':
         return {
-          wrapper: 'bg-slate-100/90 py-5 my-1 border-y border-slate-200/80 shadow-2xs',
+          wrapper: 'bg-slate-100/90 border-y border-slate-200/80 shadow-2xs',
           title: 'text-slate-900',
           subtitle: 'text-slate-500',
           card: 'bg-white border-slate-200/80',
@@ -522,7 +522,7 @@ export default function JoyTimeMobilePreset({
         };
       case 'soft-sky':
         return {
-          wrapper: 'bg-gradient-to-b from-sky-50 via-sky-50/70 to-blue-50/50 py-5 my-1 border-y border-sky-200/70 shadow-2xs',
+          wrapper: 'bg-gradient-to-b from-sky-50 via-sky-50/70 to-blue-50/50 border-sky-200/70 shadow-2xs',
           title: 'text-sky-950',
           subtitle: 'text-sky-700/80',
           card: 'bg-white border-sky-100',
@@ -530,7 +530,7 @@ export default function JoyTimeMobilePreset({
         };
       case 'warm-cream':
         return {
-          wrapper: 'bg-[#faf6f0] py-5 my-1 border-y border-amber-200/70 shadow-2xs',
+          wrapper: 'bg-[#faf6f0] border-y border-amber-200/70 shadow-2xs',
           title: 'text-amber-950',
           subtitle: 'text-amber-800/80',
           card: 'bg-white border-amber-100',
@@ -538,7 +538,7 @@ export default function JoyTimeMobilePreset({
         };
       case 'pure-white':
         return {
-          wrapper: 'bg-white py-5 my-1 border-y border-gray-100 shadow-2xs',
+          wrapper: 'bg-white border-y border-gray-100 shadow-2xs',
           title: 'text-gray-900',
           subtitle: 'text-gray-500',
           card: 'bg-gray-50/70 border-gray-200/80',
@@ -951,7 +951,7 @@ export default function JoyTimeMobilePreset({
   }, [activePromo, primaryColor, secondaryColor]);
 
   return (
-    <div className="bg-[#f8fafc] pb-24 space-y-5 text-left relative">
+    <div className="bg-[#f8fafc] pb-4 space-y-5 text-left relative">
       {/* 1. JOYTIME HEADER BAR (IMG_3849.png) */}
       <div 
         className="px-4 pt-3.5 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-xs transition-colors"
@@ -1677,7 +1677,8 @@ export default function JoyTimeMobilePreset({
         <div 
           id="joytime-blog-section" 
           className={cn(
-            "transition-colors",
+            "pt-7 pb-1 transition-colors",
+            blogBgStyle !== 'transparent' && "my-1 py-5",
             blogThemeConfig.wrapper
           )}
         >
@@ -1702,7 +1703,7 @@ export default function JoyTimeMobilePreset({
             </div>
 
             {/* Horizontal Snap-X Blog Cards Carousel */}
-            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2">
+            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-1">
               {displayPosts.map((post, idx) => (
                 <Link
                   key={post.id || idx}

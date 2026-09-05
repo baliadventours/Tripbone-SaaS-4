@@ -2027,7 +2027,7 @@ export default function Home() {
       </Helmet>
 
       {/* Mobile Redesigned View Layout with 10 Presets */}
-      <div className="block md:hidden bg-white pt-0 pb-6">
+      <div className="block md:hidden bg-white pt-0 pb-0">
         <MobileHomePresets
           preset={settings?.mobilePreset || builderSettings?.mobilePreset || 'joytime-special'}
           tours={tours}
