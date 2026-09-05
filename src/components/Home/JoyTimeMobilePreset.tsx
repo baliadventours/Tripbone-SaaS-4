@@ -1285,7 +1285,7 @@ export default function JoyTimeMobilePreset({
 
         {/* LAYOUT OPTION C: Multi-Card Horizontal Scroll */}
         {bannerLayout === 'multi-scroll' && (
-          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-1 -mx-4 px-4">
+          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-1">
             {promoBanners.map((slide, idx) => (
               <div
                 key={slide.id || idx}
@@ -1558,7 +1558,7 @@ export default function JoyTimeMobilePreset({
             </div>
 
             {/* Horizontal Snap-X Review Cards Carousel */}
-            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-2 -mx-4 px-4">
+            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-2">
               {displayReviews.map((rev, idx) => {
                 const platformLabel = rev.platform === 'google' ? 'Google Review' : rev.platform === 'tripadvisor' ? 'TripAdvisor' : 'Verified Booking';
                 const reviewerInitials = rev.userName?.split(' ').map(n => n[0]).join('').substring(0, 2) || 'TR';
@@ -1654,10 +1654,10 @@ export default function JoyTimeMobilePreset({
           id="joytime-blog-section" 
           className={cn(
             "transition-colors",
-            blogThemeConfig.wrapper ? blogThemeConfig.wrapper : "px-4 space-y-3"
+            blogThemeConfig.wrapper
           )}
         >
-          <div className={blogThemeConfig.wrapper ? "px-4 space-y-3" : "space-y-3"}>
+          <div className="px-4 space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between">
               <div className="space-y-0.5 max-w-[70%]">
@@ -1678,7 +1678,7 @@ export default function JoyTimeMobilePreset({
             </div>
 
             {/* Horizontal Snap-X Blog Cards Carousel */}
-            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2 -mx-4 px-4">
+            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2">
               {displayPosts.map((post, idx) => (
                 <Link
                   key={post.id || idx}
