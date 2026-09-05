@@ -74,6 +74,18 @@ export default function JoyTimeMobilePreset({
   const accentColor = joytimeCustomization?.accentColor || '#f59e0b';
   const headerBgColor = joytimeCustomization?.headerBgColor || '#ffffff';
 
+  // Multi-Banner display options
+  const bannerLayout = joytimeCustomization?.bannerLayout || 'slider';
+  const bannerAutoplay = joytimeCustomization?.bannerAutoplay !== false;
+  const bannerInterval = joytimeCustomization?.bannerAutoplayInterval || 4500;
+  const showBannerDots = joytimeCustomization?.showBannerDots !== false;
+  const showBannerCounter = joytimeCustomization?.showBannerCounter ?? true;
+
+  // Touch swipe and hover state for banner slider
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+  const [isBannerHovered, setIsBannerHovered] = useState(false);
+
   // Global event listeners for bottom navigation actions
   useEffect(() => {
     const handleToggleService = () => {
@@ -310,7 +322,154 @@ export default function JoyTimeMobilePreset({
         link: topTour ? `/tour/${topTour.slug || topTour.id}` : '/tours'
       }
     ];
-  }, [heroSlides, tours]);
+  }, [heroSlides, tours, joytimeCustomization]);
+
+  // Auto-play timer for multi-banner slider
+  useEffect(() => {
+    if (!bannerAutoplay || isBannerHovered || promoBanners.length <= 1 || bannerLayout !== 'slider') return;
+    const timer = setInterval(() => {
+      setPromoSlideIndex(prev => (prev + 1) % promoBanners.length);
+    }, bannerInterval);
+    return () => clearInterval(timer);
+  }, [bannerAutoplay, isBannerHovered, promoBanners.length, bannerInterval, bannerLayout]);
+
+  // Touch swipe handlers for smooth mobile sliding
+  const handleBannerTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.targetTouches[0].clientX);
+    setTouchEndX(null);
+  };
+
+  const handleBannerTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const handleBannerTouchEnd = () => {
+    if (touchStartX === null || touchEndX === null) return;
+    const distance = touchStartX - touchEndX;
+    const minSwipeDistance = 40;
+    if (distance > minSwipeDistance) {
+      // Swiped left -> next slide
+      setPromoSlideIndex(prev => (prev + 1) % promoBanners.length);
+    } else if (distance < -minSwipeDistance) {
+      // Swiped right -> prev slide
+      setPromoSlideIndex(prev => (prev - 1 + promoBanners.length) % promoBanners.length);
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  };
+
+  // Helper for computing linear gradient per slide
+  const getBannerGradient = (slide: JoyTimePromoItem) => {
+    const dir = slide.gradientDirection || 'to-r';
+    const angleMap: Record<string, string> = {
+      'to-r': 'to right',
+      'to-br': 'to bottom right',
+      'to-b': 'to bottom',
+      'to-tr': 'to top right',
+      'to-l': 'to left'
+    };
+    const angle = angleMap[dir] || 'to right';
+    const from = slide.gradientFrom || primaryColor;
+    const via = slide.gradientVia ? `, ${slide.gradientVia}` : '';
+    const to = slide.gradientTo || secondaryColor;
+    return `linear-gradient(${angle}, ${from}${via}, ${to})`;
+  };
+
+  // Homepage Reviews Section Settings & Data
+  const showReviewsSection = joytimeCustomization?.showReviewsSection !== false;
+  const reviewsTitle = joytimeCustomization?.reviewsTitle || 'Traveler Reviews & Experiences';
+  const reviewsSubtitle = joytimeCustomization?.reviewsSubtitle || 'Real reviews from verified adventurers';
+
+  const displayReviews = useMemo(() => {
+    const approved = reviews.filter(r => r.status === 'approved' || !r.status);
+    if (approved.length > 0) return approved;
+    return [
+      {
+        id: 'rev-sample-1',
+        userId: 'u1',
+        userName: 'Sarah Jenkins',
+        userPhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
+        nationality: 'Australia',
+        tourTitle: tours[0]?.title || 'Nusa Penida Island Tour',
+        rating: 5,
+        title: 'Unbelievable Experience!',
+        comment: 'Best tour ever! The private chauffeur was punctual, friendly, and took the most incredible photos. Booking through mobile was seamless.',
+        platform: 'tripadvisor',
+        createdAt: '2 days ago'
+      },
+      {
+        id: 'rev-sample-2',
+        userId: 'u2',
+        userName: 'Marcus Lindqvist',
+        userPhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+        nationality: 'Sweden',
+        tourTitle: tours[1]?.title || 'Mount Batur Sunrise Trek',
+        rating: 5,
+        title: 'Highlight of our trip',
+        comment: 'Everything went like clockwork. The guide was knowledgeable and the views were breathtaking. 10/10 recommend!',
+        platform: 'google',
+        createdAt: '1 week ago'
+      },
+      {
+        id: 'rev-sample-3',
+        userId: 'u3',
+        userName: 'Aiko Tanaka',
+        userPhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+        nationality: 'Japan',
+        tourTitle: tours[2]?.title || 'Ubud Waterfall & Rice Terraces',
+        rating: 5,
+        title: 'Super smooth booking',
+        comment: 'We got our mobile voucher immediately on WhatsApp and the driver was ready at the lobby on time. Fantastic hospitality!',
+        platform: 'direct',
+        createdAt: '2 weeks ago'
+      }
+    ] as Review[];
+  }, [reviews, tours]);
+
+  // Homepage Blog Section Settings & Data
+  const showBlogSection = joytimeCustomization?.showBlogSection !== false;
+  const blogTitle = joytimeCustomization?.blogTitle || 'Travel Guides & Stories';
+  const blogSubtitle = joytimeCustomization?.blogSubtitle || 'Insider tips, curated itineraries & packing guides';
+
+  const displayPosts = useMemo(() => {
+    const published = posts.filter(p => p.status === 'published' || p.status === 'active' || !p.status);
+    if (published.length > 0) return published;
+    return [
+      {
+        id: 'sample-post-1',
+        title: 'Top 7 Hidden Beaches & Secret Coves You Must Visit',
+        slug: 'hidden-beaches-secret-coves',
+        excerpt: 'Discover tranquil shores away from the crowds, pristine coral reefs, and picturesque sunset viewpoints.',
+        coverImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80',
+        category: 'Travel Guide',
+        author: 'Tripbone Concierge',
+        readTime: '4 min read',
+        status: 'published'
+      },
+      {
+        id: 'sample-post-2',
+        title: 'Ultimate First-Timer Guide: Currency, SIM Cards & Transport',
+        slug: 'first-timer-guide-currency-transport',
+        excerpt: 'Everything you need to know before landing: airport fast-track, hassle-free private drivers, and etiquette.',
+        coverImage: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80',
+        category: 'Tips & Hacks',
+        author: 'Local Guide Team',
+        readTime: '5 min read',
+        status: 'published'
+      },
+      {
+        id: 'sample-post-3',
+        title: 'Best Coffee Plantations, Jungle Swings & Waterfalls',
+        slug: 'coffee-plantations-waterfalls',
+        excerpt: 'Experience authentic roast tastings, sacred temple springs, and majestic highland panoramic views.',
+        coverImage: 'https://images.unsplash.com/photo-1518548419970-58e3b4079ab2?auto=format&fit=crop&w=800&q=80',
+        category: 'Experiences',
+        author: 'Adventure Desk',
+        readTime: '3 min read',
+        status: 'published'
+      }
+    ] as BlogPost[];
+  }, [posts]);
 
   // Search submission
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -820,10 +979,17 @@ export default function JoyTimeMobilePreset({
         </div>
       </div>
 
-      {/* 3. PROMOTION CAROUSEL BANNER (IMG_3849.png) */}
+      {/* 3. PROMOTION MULTI-BANNER SLIDER SECTION */}
       <div id="joytime-promotion-section" className="px-4">
         <div className="flex items-center justify-between mb-2.5">
-          <h3 className="text-base font-black text-gray-900">Promotion</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-base font-black text-gray-900">Promotion</h3>
+            {promoBanners.length > 1 && (
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                {promoBanners.length} Deals
+              </span>
+            )}
+          </div>
           <Link
             to="/tours"
             className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5"
@@ -832,73 +998,289 @@ export default function JoyTimeMobilePreset({
           </Link>
         </div>
 
-        {/* Colorful Rounded VIP Promo Card */}
-        <div 
-          className="relative rounded-2xl overflow-hidden text-white shadow-md transition-all"
-          style={{ background: activePromoGradient }}
-        >
-          {/* Background Illustration & Overlay */}
+        {/* LAYOUT OPTION A: Full-Width Swipeable Slider (Default) */}
+        {bannerLayout === 'slider' && (
           <div 
-            className="absolute inset-0 mix-blend-overlay"
-            style={{ opacity: (activePromo.overlayOpacity ?? 25) / 100 }}
+            className="relative rounded-2xl overflow-hidden shadow-md group select-none"
+            onTouchStart={handleBannerTouchStart}
+            onTouchMove={handleBannerTouchMove}
+            onTouchEnd={handleBannerTouchEnd}
+            onMouseEnter={() => setIsBannerHovered(true)}
+            onMouseLeave={() => setIsBannerHovered(false)}
           >
-            <SmartImage
-              src={activePromo.image}
-              alt="Promo Banner"
-              className="w-full h-full object-cover"
-              aspectRatio="auto"
-              width={600}
-              quality={75}
-            />
-          </div>
+            <div 
+              className="flex transition-transform duration-500 ease-out"
+              style={{ transform: `translateX(-${(promoSlideIndex % promoBanners.length) * 100}%)` }}
+            >
+              {promoBanners.map((slide, idx) => (
+                <div 
+                  key={slide.id || idx}
+                  className="w-full shrink-0 relative text-white min-h-[145px] flex flex-col justify-between"
+                  style={{ background: getBannerGradient(slide) }}
+                >
+                  {/* Background overlay image */}
+                  <div 
+                    className="absolute inset-0 mix-blend-overlay pointer-events-none"
+                    style={{ opacity: (slide.overlayOpacity ?? 25) / 100 }}
+                  >
+                    <SmartImage
+                      src={slide.image}
+                      alt={slide.title}
+                      className="w-full h-full object-cover"
+                      aspectRatio="auto"
+                      width={600}
+                      quality={75}
+                    />
+                  </div>
 
-          <Link
-            to={activePromo.link}
-            className="relative z-10 p-5 flex flex-col justify-between min-h-[140px] block cursor-pointer"
-          >
-            <div className="space-y-1">
-              <span 
-                className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
-                style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.2)' }}
-              >
-                {activePromo.badge}
-              </span>
-              <h4 className="text-lg font-black tracking-tight leading-tight text-white drop-shadow-xs">
-                {activePromo.title}
-              </h4>
-              <p className="text-[10px] text-white/90 font-semibold line-clamp-1">
-                {activePromo.subtitle}
-              </p>
-            </div>
+                  <Link
+                    to={slide.link}
+                    className="relative z-10 p-5 flex flex-col justify-between h-full min-h-[145px] block cursor-pointer"
+                  >
+                    <div className="space-y-1 max-w-[85%]">
+                      <span 
+                        className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                        style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.25)' }}
+                      >
+                        {slide.badge}
+                      </span>
+                      <h4 className="text-lg font-black tracking-tight leading-tight text-white drop-shadow-xs">
+                        {slide.title}
+                      </h4>
+                      <p className="text-[10px] text-white/90 font-semibold line-clamp-1">
+                        {slide.subtitle}
+                      </p>
+                    </div>
 
-            <div className="pt-3 flex items-center justify-between">
-              <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider text-amber-200 border border-white/25">
-                PROMO CODE: {activePromo.promoCode}
-              </span>
-              <span className="text-xs font-black text-white flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-lg backdrop-blur-xs">
-                {activePromo.buttonText || 'Book Now'} <LucideIcons.ArrowRight className="w-3 h-3" />
-              </span>
-            </div>
-          </Link>
-
-          {/* Dots Indicator */}
-          {promoBanners.length > 1 && (
-            <div className="absolute bottom-2 right-4 flex items-center gap-1.5 z-20">
-              {promoBanners.map((_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setPromoSlideIndex(i)}
-                  className={cn(
-                    "h-1.5 transition-all rounded-full",
-                    promoSlideIndex % promoBanners.length === i ? "w-4 bg-white" : "w-1.5 bg-white/40"
-                  )}
-                  aria-label={`Slide ${i + 1}`}
-                />
+                    <div className="pt-3 flex items-center justify-between">
+                      <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider text-amber-200 border border-white/25">
+                        CODE: {slide.promoCode}
+                      </span>
+                      <span className="text-xs font-black text-white flex items-center gap-1 bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                        {slide.buttonText || 'Book Now'} <LucideIcons.ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
+                  </Link>
+                </div>
               ))}
             </div>
-          )}
-        </div>
+
+            {/* Slide counter pill (Top-Right) */}
+            {showBannerCounter && promoBanners.length > 1 && (
+              <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/40 backdrop-blur-md text-[10px] font-black text-white/95 border border-white/20 z-20 pointer-events-none">
+                {(promoSlideIndex % promoBanners.length) + 1} / {promoBanners.length}
+              </div>
+            )}
+
+            {/* Subtle Prev/Next Click Chevrons */}
+            {promoBanners.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPromoSlideIndex(prev => (prev - 1 + promoBanners.length) % promoBanners.length);
+                  }}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/25 backdrop-blur-xs text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer"
+                  aria-label="Previous Slide"
+                >
+                  <LucideIcons.ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setPromoSlideIndex(prev => (prev + 1) % promoBanners.length);
+                  }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-black/25 backdrop-blur-xs text-white/80 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20 cursor-pointer"
+                  aria-label="Next Slide"
+                >
+                  <LucideIcons.ChevronRight className="w-4 h-4" />
+                </button>
+              </>
+            )}
+
+            {/* Dots Indicator (Bottom-Right) */}
+            {showBannerDots && promoBanners.length > 1 && (
+              <div className="absolute bottom-2.5 right-4 flex items-center gap-1.5 z-20">
+                {promoBanners.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setPromoSlideIndex(i)}
+                    className={cn(
+                      "h-1.5 transition-all rounded-full cursor-pointer",
+                      promoSlideIndex % promoBanners.length === i ? "w-4 bg-white" : "w-1.5 bg-white/45"
+                    )}
+                    aria-label={`Slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LAYOUT OPTION B: Peek Carousel (Native horizontal swipe with edge peek) */}
+        {bannerLayout === 'carousel-peek' && (
+          <div className="overflow-x-auto snap-x snap-mandatory no-scrollbar flex gap-3 pb-1 -mx-4 px-4">
+            {promoBanners.map((slide, idx) => (
+              <div
+                key={slide.id || idx}
+                className="snap-center shrink-0 w-[86%] rounded-2xl overflow-hidden shadow-md relative min-h-[145px] text-white"
+                style={{ background: getBannerGradient(slide) }}
+              >
+                <div 
+                  className="absolute inset-0 mix-blend-overlay pointer-events-none"
+                  style={{ opacity: (slide.overlayOpacity ?? 25) / 100 }}
+                >
+                  <SmartImage
+                    src={slide.image}
+                    alt={slide.title}
+                    className="w-full h-full object-cover"
+                    aspectRatio="auto"
+                    width={500}
+                    quality={75}
+                  />
+                </div>
+                <Link
+                  to={slide.link}
+                  className="relative z-10 p-5 flex flex-col justify-between h-full min-h-[145px] block cursor-pointer"
+                >
+                  <div className="space-y-1">
+                    <span 
+                      className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                      style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.25)' }}
+                    >
+                      {slide.badge}
+                    </span>
+                    <h4 className="text-lg font-black tracking-tight leading-tight text-white drop-shadow-xs">
+                      {slide.title}
+                    </h4>
+                    <p className="text-[10px] text-white/90 font-semibold line-clamp-1">
+                      {slide.subtitle}
+                    </p>
+                  </div>
+                  <div className="pt-3 flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider text-amber-200 border border-white/25">
+                      CODE: {slide.promoCode}
+                    </span>
+                    <span className="text-xs font-black text-white flex items-center gap-1 bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                      {slide.buttonText || 'Book Now'} <LucideIcons.ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* LAYOUT OPTION C: Multi-Card Horizontal Scroll */}
+        {bannerLayout === 'multi-scroll' && (
+          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-1 -mx-4 px-4">
+            {promoBanners.map((slide, idx) => (
+              <div
+                key={slide.id || idx}
+                className="snap-start shrink-0 w-[260px] rounded-2xl overflow-hidden shadow-xs relative min-h-[140px] text-white"
+                style={{ background: getBannerGradient(slide) }}
+              >
+                <div 
+                  className="absolute inset-0 mix-blend-overlay pointer-events-none"
+                  style={{ opacity: (slide.overlayOpacity ?? 25) / 100 }}
+                >
+                  <SmartImage
+                    src={slide.image}
+                    alt={slide.title}
+                    className="w-full h-full object-cover"
+                    aspectRatio="auto"
+                    width={400}
+                    quality={75}
+                  />
+                </div>
+                <Link
+                  to={slide.link}
+                  className="relative z-10 p-4 flex flex-col justify-between h-full min-h-[140px] block cursor-pointer"
+                >
+                  <div className="space-y-1">
+                    <span 
+                      className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                      style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.25)' }}
+                    >
+                      {slide.badge}
+                    </span>
+                    <h4 className="text-base font-black tracking-tight leading-tight text-white drop-shadow-xs">
+                      {slide.title}
+                    </h4>
+                    <p className="text-[10px] text-white/90 font-medium line-clamp-1">
+                      {slide.subtitle}
+                    </p>
+                  </div>
+                  <div className="pt-2 flex items-center justify-between">
+                    <span className="px-2 py-0.5 bg-white/20 rounded text-[9px] font-black text-amber-200">
+                      {slide.promoCode}
+                    </span>
+                    <span className="text-[11px] font-black text-white flex items-center gap-0.5">
+                      {slide.buttonText || 'Book'} <LucideIcons.ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* LAYOUT OPTION D: Stacked Vertical Cards */}
+        {bannerLayout === 'stacked' && (
+          <div className="space-y-3">
+            {promoBanners.map((slide, idx) => (
+              <div
+                key={slide.id || idx}
+                className="rounded-2xl overflow-hidden shadow-md relative min-h-[140px] text-white"
+                style={{ background: getBannerGradient(slide) }}
+              >
+                <div 
+                  className="absolute inset-0 mix-blend-overlay pointer-events-none"
+                  style={{ opacity: (slide.overlayOpacity ?? 25) / 100 }}
+                >
+                  <SmartImage
+                    src={slide.image}
+                    alt={slide.title}
+                    className="w-full h-full object-cover"
+                    aspectRatio="auto"
+                    width={600}
+                    quality={75}
+                  />
+                </div>
+                <Link
+                  to={slide.link}
+                  className="relative z-10 p-5 flex flex-col justify-between min-h-[140px] block cursor-pointer"
+                >
+                  <div className="space-y-1">
+                    <span 
+                      className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                      style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.25)' }}
+                    >
+                      {slide.badge}
+                    </span>
+                    <h4 className="text-lg font-black tracking-tight leading-tight text-white drop-shadow-xs">
+                      {slide.title}
+                    </h4>
+                    <p className="text-[10px] text-white/90 font-semibold line-clamp-1">
+                      {slide.subtitle}
+                    </p>
+                  </div>
+                  <div className="pt-3 flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider text-amber-200 border border-white/25">
+                      CODE: {slide.promoCode}
+                    </span>
+                    <span className="text-xs font-black text-white flex items-center gap-1 bg-white/20 px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                      {slide.buttonText || 'Book Now'} <LucideIcons.ArrowRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* 4. TOP TRENDS SECTION (IMG_3849.png) */}
@@ -1033,7 +1415,193 @@ export default function JoyTimeMobilePreset({
         </div>
       )}
 
-      {/* 7. FLOATING MASCOT CHAT BUBBLE WIDGET (IMG_3849.png & IMG_3850.png) */}
+      {/* 7. CUSTOMER REVIEWS & SOCIAL PROOF SECTION */}
+      {showReviewsSection && displayReviews.length > 0 && (
+        <div id="joytime-reviews-section" className="px-4 space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-0.5 max-w-[70%]">
+              <h3 className="text-base font-black text-gray-900 leading-tight">
+                {reviewsTitle}
+              </h3>
+              <p className="text-[11px] text-gray-500 font-medium line-clamp-1">
+                {reviewsSubtitle}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-xl shrink-0">
+              <LucideIcons.Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <span className="text-xs font-black text-amber-900">4.9</span>
+              <span className="text-[10px] text-amber-700 font-bold">/ 5.0</span>
+            </div>
+          </div>
+
+          {/* Horizontal Snap-X Review Cards Carousel */}
+          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-2 -mx-4 px-4">
+            {displayReviews.map((rev, idx) => {
+              const platformLabel = rev.platform === 'google' ? 'Google Review' : rev.platform === 'tripadvisor' ? 'TripAdvisor' : 'Verified Booking';
+              const reviewerInitials = rev.userName?.split(' ').map(n => n[0]).join('').substring(0, 2) || 'TR';
+
+              return (
+                <div
+                  key={rev.id || idx}
+                  className="snap-start shrink-0 w-[280px] bg-white rounded-2xl p-4 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between text-left space-y-3"
+                >
+                  <div className="space-y-2.5">
+                    {/* Reviewer Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {rev.userPhoto ? (
+                          <img
+                            src={rev.userPhoto}
+                            alt={rev.userName}
+                            className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-gray-100"
+                          />
+                        ) : (
+                          <div 
+                            className="w-8 h-8 rounded-full text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs"
+                            style={{ backgroundColor: primaryColor }}
+                          >
+                            {reviewerInitials}
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-xs font-black text-gray-900 truncate leading-tight">
+                            {rev.userName}
+                          </p>
+                          <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 leading-tight mt-0.5">
+                            <LucideIcons.Check className="w-2.5 h-2.5 stroke-[3]" /> Verified Traveler
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Stars */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <LucideIcons.Star
+                            key={s}
+                            className={cn(
+                              "w-3 h-3",
+                              s <= (rev.rating || 5)
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-gray-200"
+                            )}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Booked Experience Tag */}
+                    {rev.tourTitle && (
+                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-50/70 border border-sky-100 text-[10px] font-bold text-sky-800 truncate">
+                        <LucideIcons.Compass className="w-3 h-3 text-sky-600 shrink-0" />
+                        <span className="truncate">{rev.tourTitle}</span>
+                      </div>
+                    )}
+
+                    {/* Review Text */}
+                    <p className="text-[11px] text-gray-700 font-medium leading-relaxed italic line-clamp-3">
+                      "{rev.comment}"
+                    </p>
+                  </div>
+
+                  {/* Card Bottom Meta */}
+                  <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[10px] text-gray-400 font-semibold">
+                    <span className="flex items-center gap-1">
+                      <LucideIcons.ShieldCheck className="w-3 h-3 text-emerald-500" />
+                      {platformLabel}
+                    </span>
+                    <span>{rev.createdAt ? (typeof rev.createdAt === 'string' ? rev.createdAt : 'Recent') : 'Verified'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 8. TRAVEL GUIDES & BLOG STORIES SECTION */}
+      {showBlogSection && displayPosts.length > 0 && (
+        <div id="joytime-blog-section" className="px-4 space-y-3">
+          {/* Header */}
+          <div className="flex items-start justify-between">
+            <div className="space-y-0.5 max-w-[70%]">
+              <h3 className="text-base font-black text-gray-900 leading-tight">
+                {blogTitle}
+              </h3>
+              <p className="text-[11px] text-gray-500 font-medium line-clamp-1">
+                {blogSubtitle}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSubView('blog')}
+              className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 shrink-0 cursor-pointer pt-0.5"
+            >
+              View All <LucideIcons.ArrowRight className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Horizontal Snap-X Blog Cards Carousel */}
+          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2 -mx-4 px-4">
+            {displayPosts.map((post, idx) => (
+              <Link
+                key={post.id || idx}
+                to={`/blog/${post.slug || post.id}`}
+                className="snap-start shrink-0 w-[260px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer text-left"
+              >
+                {/* 16:9 Thumbnail with Overlay Pill */}
+                <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
+                  <SmartImage
+                    src={post.coverImage || post.featuredImage || (post as any).image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=400&q=80'}
+                    alt={post.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    aspectRatio="auto"
+                    width={260}
+                    quality={75}
+                  />
+                  {/* Category Pill */}
+                  <div className="absolute top-2.5 left-2.5">
+                    <span 
+                      className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md text-white shadow-xs"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {post.category || 'Travel Guide'}
+                    </span>
+                  </div>
+                  {/* Read time */}
+                  <div className="absolute bottom-2 right-2.5 px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-xs text-white text-[9px] font-bold flex items-center gap-1">
+                    <LucideIcons.Clock className="w-2.5 h-2.5" />
+                    <span>{(post as any).readTime || '4 min read'}</span>
+                  </div>
+                </div>
+
+                {/* Body Content */}
+                <div className="p-3.5 flex flex-col justify-between flex-1 space-y-2">
+                  <div className="space-y-1">
+                    <h4 className="text-xs font-black text-gray-900 leading-snug line-clamp-2 group-hover:text-sky-600 transition-colors">
+                      {post.title}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed line-clamp-2">
+                      {post.excerpt || (post.content ? post.content.substring(0, 80) + '...' : '')}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-gray-50 flex items-center justify-between">
+                    <span className="text-[10px] text-gray-400 font-medium">
+                      {post.author || 'Local Guide Team'}
+                    </span>
+                    <span className="text-[11px] font-bold text-sky-600 flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform">
+                      Read <LucideIcons.ChevronRight className="w-3 h-3" />
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 9. FLOATING MASCOT CHAT BUBBLE WIDGET (IMG_3849.png & IMG_3850.png) */}
       <button
         type="button"
         onClick={() => {

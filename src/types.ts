@@ -870,6 +870,19 @@ export interface JoyTimePresetCustomization {
   accentColor?: string;
   headerBgColor?: string;
   banners?: JoyTimeBannerSlide[];
+  // Multi-banner options
+  bannerLayout?: 'slider' | 'carousel-peek' | 'multi-scroll' | 'stacked';
+  bannerAutoplay?: boolean;
+  bannerAutoplayInterval?: number;
+  showBannerDots?: boolean;
+  showBannerCounter?: boolean;
+  // Homepage section settings
+  showReviewsSection?: boolean;
+  reviewsTitle?: string;
+  reviewsSubtitle?: string;
+  showBlogSection?: boolean;
+  blogTitle?: string;
+  blogSubtitle?: string;
 }
 
 export type JoyTimeCustomization = JoyTimePresetCustomization;

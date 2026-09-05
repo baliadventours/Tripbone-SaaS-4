@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { 
   Palette, Image as ImageIcon, Sparkles, Plus, Trash2, Sliders, Check, 
-  Eye, RefreshCw, Upload, ArrowRight, Layers, Tag, ExternalLink
+  Eye, RefreshCw, Upload, ArrowRight, Layers, Tag, ExternalLink, Copy,
+  ArrowUp, ArrowDown, Star, MessageSquare, BookOpen, Clock, Play
 } from 'lucide-react';
 import { JoyTimePresetCustomization, JoyTimeBannerSlide } from '../../types';
 import { cn } from '../../lib/utils';
@@ -169,7 +170,7 @@ export default function JoyTimeCustomizer({
   brandLogo,
   brandName = 'My Tour Brand'
 }: JoyTimeCustomizerProps) {
-  const [activeTab, setActiveTab] = useState<'colors' | 'banners'>('colors');
+  const [activeTab, setActiveTab] = useState<'colors' | 'banners' | 'sections'>('colors');
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
   const [uploading, setUploading] = useState(false);
 
@@ -183,6 +184,22 @@ export default function JoyTimeCustomizer({
     ? effectiveCustomization.banners 
     : DEFAULT_BANNERS;
 
+  // Multi-Banner layout and slider options
+  const bannerLayout = effectiveCustomization?.bannerLayout || 'slider';
+  const bannerAutoplay = effectiveCustomization?.bannerAutoplay !== false;
+  const bannerAutoplayInterval = effectiveCustomization?.bannerAutoplayInterval || 4500;
+  const showBannerDots = effectiveCustomization?.showBannerDots !== false;
+  const showBannerCounter = effectiveCustomization?.showBannerCounter ?? true;
+
+  // Homepage section settings
+  const showReviewsSection = effectiveCustomization?.showReviewsSection !== false;
+  const reviewsTitle = effectiveCustomization?.reviewsTitle || 'Traveler Reviews & Experiences';
+  const reviewsSubtitle = effectiveCustomization?.reviewsSubtitle || 'Real reviews from verified travelers';
+
+  const showBlogSection = effectiveCustomization?.showBlogSection !== false;
+  const blogTitle = effectiveCustomization?.blogTitle || 'Travel Guides & Stories';
+  const blogSubtitle = effectiveCustomization?.blogSubtitle || 'Insider tips, curated itineraries & packing guides';
+
   const currentSlide = banners[activeSlideIndex] || banners[0] || DEFAULT_BANNERS[0];
 
   const updateCustomization = (partial: Partial<JoyTimePresetCustomization>) => {
@@ -192,6 +209,17 @@ export default function JoyTimeCustomizer({
       accentColor,
       headerBgColor,
       banners,
+      bannerLayout,
+      bannerAutoplay,
+      bannerAutoplayInterval,
+      showBannerDots,
+      showBannerCounter,
+      showReviewsSection,
+      reviewsTitle,
+      reviewsSubtitle,
+      showBlogSection,
+      blogTitle,
+      blogSubtitle,
       ...partial
     });
   };
@@ -224,6 +252,30 @@ export default function JoyTimeCustomizer({
     const updated = [...banners, newSlide];
     updateCustomization({ banners: updated });
     setActiveSlideIndex(updated.length - 1);
+  };
+
+  const handleDuplicateSlide = (index: number) => {
+    const target = banners[index];
+    if (!target) return;
+    const duplicated: JoyTimeBannerSlide = {
+      ...target,
+      id: `banner-${Date.now()}`,
+      title: `${target.title} (Copy)`
+    };
+    const updated = [...banners];
+    updated.splice(index + 1, 0, duplicated);
+    updateCustomization({ banners: updated });
+    setActiveSlideIndex(index + 1);
+  };
+
+  const handleMoveSlide = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= banners.length) return;
+    const updated = [...banners];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+    updateCustomization({ banners: updated });
+    setActiveSlideIndex(targetIndex);
   };
 
   const handleDeleteSlide = (index: number) => {
@@ -285,7 +337,7 @@ export default function JoyTimeCustomizer({
         </div>
 
         {/* Sub Navigation Switcher */}
-        <div className="flex bg-gray-100 p-1 rounded-xl">
+        <div className="flex bg-gray-100 p-1 rounded-xl flex-wrap gap-1">
           <button
             type="button"
             onClick={() => setActiveTab('colors')}
@@ -295,7 +347,7 @@ export default function JoyTimeCustomizer({
             )}
           >
             <Palette className="w-3.5 h-3.5 text-sky-600" />
-            Color Presets & Palette
+            Color Palette
           </button>
           <button
             type="button"
@@ -306,7 +358,18 @@ export default function JoyTimeCustomizer({
             )}
           >
             <ImageIcon className="w-3.5 h-3.5 text-orange-500" />
-            Banner & Gradient Builder ({banners.length})
+            Multi-Banner & Slider ({banners.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('sections')}
+            className={cn(
+              "px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2",
+              activeTab === 'sections' ? "bg-white text-gray-900 shadow-xs" : "text-gray-600 hover:text-gray-900"
+            )}
+          >
+            <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+            Homepage Sections (Reviews & Blog)
           </button>
         </div>
       </div>
@@ -468,44 +531,216 @@ export default function JoyTimeCustomizer({
       {/* TAB 2: BANNER & GRADIENT BUILDER */}
       {activeTab === 'banners' && (
         <div className="space-y-6">
-          {/* Slide Switcher Strip */}
-          <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1">
-            <div className="flex items-center gap-2">
-              {banners.map((slide, idx) => (
-                <button
-                  key={slide.id || idx}
-                  type="button"
-                  onClick={() => setActiveSlideIndex(idx)}
-                  className={cn(
-                    "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 border",
-                    activeSlideIndex === idx
-                      ? "bg-sky-600 text-white border-sky-600 shadow-xs"
-                      : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
-                  )}
+          {/* Multi-Banner Layout Modes Card */}
+          <div className="bg-sky-50/60 p-4 rounded-2xl border border-sky-200/80 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="text-xs font-black text-sky-950 uppercase tracking-wider flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-sky-600" />
+                  Multi-Banner Display Options
+                </h4>
+                <p className="text-[11px] text-sky-800 font-medium mt-0.5">
+                  Choose how promotional slides are rendered and animated on the JoyTime mobile storefront.
+                </p>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 self-start">
+                {banners.length} Active {banners.length === 1 ? 'Banner' : 'Banners'}
+              </span>
+            </div>
+
+            {/* Layout Options Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              {[
+                { 
+                  id: 'slider', 
+                  title: 'Full-Width Slider', 
+                  desc: 'Auto-sliding touch carousel with pagination dots & swipe',
+                  icon: Play
+                },
+                { 
+                  id: 'carousel-peek', 
+                  title: 'Peek Carousel', 
+                  desc: 'Card shows 86% with adjacent slide peeking to invite swipe',
+                  icon: Layers
+                },
+                { 
+                  id: 'multi-scroll', 
+                  title: 'Card Stream', 
+                  desc: 'Horizontal scrollable row of compact promo banners',
+                  icon: ArrowRight
+                },
+                { 
+                  id: 'stacked', 
+                  title: 'Stacked Cards', 
+                  desc: 'Vertical stacked banners with high-impact visuals',
+                  icon: Tag
+                }
+              ].map((opt) => {
+                const isSelected = bannerLayout === opt.id;
+                const IconComponent = opt.icon;
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => updateCustomization({ bannerLayout: opt.id as any })}
+                    className={cn(
+                      "p-3 rounded-xl text-left transition-all border flex flex-col justify-between cursor-pointer",
+                      isSelected 
+                        ? "bg-white border-sky-600 ring-2 ring-sky-500/20 shadow-xs" 
+                        : "bg-white/60 border-sky-100 hover:bg-white hover:border-sky-300"
+                    )}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <IconComponent className={cn("w-4 h-4", isSelected ? "text-sky-600" : "text-gray-400")} />
+                        {isSelected && <Check className="w-3.5 h-3.5 text-sky-600" />}
+                      </div>
+                      <p className={cn("text-xs font-black", isSelected ? "text-sky-950" : "text-gray-800")}>
+                        {opt.title}
+                      </p>
+                      <p className="text-[10px] text-gray-500 leading-tight mt-0.5">
+                        {opt.desc}
+                      </p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Slider Settings Row */}
+            <div className="pt-2 border-t border-sky-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Autoplay toggle */}
+              <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-sky-100">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-800">Auto-Slide Carousel</p>
+                  <p className="text-[9px] text-gray-500">Automatically advance slides</p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={bannerAutoplay}
+                  onChange={(e) => updateCustomization({ bannerAutoplay: e.target.checked })}
+                  className="w-4 h-4 text-sky-600 rounded cursor-pointer"
+                />
+              </div>
+
+              {/* Autoplay speed */}
+              <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-sky-100">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-800">Slide Timing</p>
+                  <p className="text-[9px] text-gray-500">Duration per slide</p>
+                </div>
+                <select
+                  value={bannerAutoplayInterval}
+                  onChange={(e) => updateCustomization({ bannerAutoplayInterval: Number(e.target.value) })}
+                  className="text-xs font-bold text-sky-700 bg-sky-50 border border-sky-200 rounded-lg px-2 py-1 cursor-pointer"
+                  disabled={!bannerAutoplay}
                 >
-                  <Tag className="w-3.5 h-3.5" />
-                  Slide {idx + 1}: {slide.title || 'Promo'}
-                </button>
+                  <option value={3000}>3 seconds</option>
+                  <option value={4500}>4.5 seconds</option>
+                  <option value={6000}>6 seconds</option>
+                  <option value={8000}>8 seconds</option>
+                </select>
+              </div>
+
+              {/* Dots & Counter */}
+              <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-sky-100">
+                <div>
+                  <p className="text-[11px] font-bold text-gray-800">Indicators & Dots</p>
+                  <p className="text-[9px] text-gray-500">Pills & counter tag</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1 text-[10px] font-bold text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showBannerDots}
+                      onChange={(e) => updateCustomization({ showBannerDots: e.target.checked })}
+                      className="w-3.5 h-3.5 text-sky-600 rounded"
+                    />
+                    Dots
+                  </label>
+                  <label className="flex items-center gap-1 text-[10px] font-bold text-gray-600 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showBannerCounter}
+                      onChange={(e) => updateCustomization({ showBannerCounter: e.target.checked })}
+                      className="w-3.5 h-3.5 text-sky-600 rounded"
+                    />
+                    1/{banners.length}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Slide Switcher Strip */}
+          <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 bg-gray-50 p-2.5 rounded-2xl border border-gray-200/80">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {banners.map((slide, idx) => (
+                <div key={slide.id || idx} className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setActiveSlideIndex(idx)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 border cursor-pointer",
+                      activeSlideIndex === idx
+                        ? "bg-sky-600 text-white border-sky-600 shadow-xs"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100"
+                    )}
+                  >
+                    <Tag className="w-3 h-3" />
+                    Slide {idx + 1}: {slide.title ? (slide.title.length > 14 ? slide.title.slice(0, 14) + '...' : slide.title) : 'Promo'}
+                  </button>
+                </div>
               ))}
               <button
                 type="button"
                 onClick={handleAddSlide}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-gray-100 hover:bg-gray-200 text-gray-800 transition flex items-center gap-1.5 border border-dashed border-gray-300"
+                className="px-3 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-gray-100 text-sky-700 transition flex items-center gap-1 border border-dashed border-sky-300 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5 text-sky-600" />
+                <Plus className="w-3.5 h-3.5" />
                 Add Slide
               </button>
             </div>
 
-            {banners.length > 1 && (
+            {/* Slide Actions Toolbar */}
+            <div className="flex items-center gap-1 shrink-0">
               <button
                 type="button"
-                onClick={() => handleDeleteSlide(activeSlideIndex)}
-                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-rose-50"
+                onClick={() => handleMoveSlide(activeSlideIndex, 'up')}
+                disabled={activeSlideIndex === 0}
+                className="p-1.5 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-white border border-gray-200 disabled:opacity-30 cursor-pointer"
+                title="Move Slide Left"
               >
-                <Trash2 className="w-3.5 h-3.5" /> Delete Slide
+                <ArrowUp className="w-3.5 h-3.5 -rotate-90" />
               </button>
-            )}
+              <button
+                type="button"
+                onClick={() => handleMoveSlide(activeSlideIndex, 'down')}
+                disabled={activeSlideIndex === banners.length - 1}
+                className="p-1.5 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-white border border-gray-200 disabled:opacity-30 cursor-pointer"
+                title="Move Slide Right"
+              >
+                <ArrowDown className="w-3.5 h-3.5 -rotate-90" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDuplicateSlide(activeSlideIndex)}
+                className="px-2.5 py-1.5 text-xs font-bold text-gray-700 hover:text-sky-700 rounded-lg hover:bg-white border border-gray-200 flex items-center gap-1 cursor-pointer"
+                title="Duplicate Current Slide"
+              >
+                <Copy className="w-3 h-3" />
+                Copy
+              </button>
+              {banners.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteSlide(activeSlideIndex)}
+                  className="px-2.5 py-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 rounded-lg hover:bg-rose-50 border border-rose-200 flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
@@ -848,7 +1083,170 @@ export default function JoyTimeCustomizer({
         </div>
       )}
 
-      {/* Live Mobile Storefront Preview Snippet */}
+      {/* TAB 3: HOMEPAGE SECTIONS (REVIEWS & BLOG) */}
+      {activeTab === 'sections' && (
+        <div className="space-y-6">
+          <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-200/80">
+            <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+              <Sliders className="w-3.5 h-3.5 text-emerald-600" />
+              Homepage Content Modules
+            </h4>
+            <p className="text-[11px] text-emerald-800 font-medium mt-0.5">
+              Control the social proof and editorial content featured directly on the JoyTime mobile homepage. All content automatically syncs with your live database.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. Review & Testimonials Section */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                    <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900">Review & Social Proof Section</h4>
+                    <p className="text-[10px] text-gray-500">Highlight verified customer feedback on homepage</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showReviewsSection}
+                    onChange={(e) => updateCustomization({ showReviewsSection: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-700">Section Headline</label>
+                  <input
+                    type="text"
+                    value={reviewsTitle}
+                    onChange={(e) => updateCustomization({ reviewsTitle: e.target.value })}
+                    placeholder="e.g. Traveler Reviews & Experiences"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-700">Section Subtitle</label>
+                  <input
+                    type="text"
+                    value={reviewsSubtitle}
+                    onChange={(e) => updateCustomization({ reviewsSubtitle: e.target.value })}
+                    placeholder="e.g. Real reviews from verified travelers"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Sample Review Card Mobile Preview */}
+              <div className="pt-2">
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Live Review Card Layout</p>
+                <div className="p-3.5 bg-gray-50 rounded-xl border border-gray-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-full bg-sky-600 text-white font-bold text-[10px] flex items-center justify-center">
+                        SJ
+                      </div>
+                      <div>
+                        <p className="text-[11px] font-bold text-gray-800 leading-tight">Sarah Jenkins</p>
+                        <p className="text-[9px] text-emerald-600 font-bold flex items-center gap-0.5">
+                          <Check className="w-2.5 h-2.5" /> Verified Traveler
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      {[1, 2, 3, 4, 5].map(s => (
+                        <Star key={s} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-600 italic">
+                    "Unbelievable experience! Private driver was prompt, helpful, and took amazing pictures."
+                  </p>
+                  <div className="text-[9px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md inline-block">
+                    Booked: Nusa Penida Island Tour
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Blog & Guides Section */}
+            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-xs space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                    <BookOpen className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-gray-900">Blog & Travel Guides Section</h4>
+                    <p className="text-[10px] text-gray-500">Showcase articles, tips & itineraries on homepage</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showBlogSection}
+                    onChange={(e) => updateCustomization({ showBlogSection: e.target.checked })}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-700">Section Headline</label>
+                  <input
+                    type="text"
+                    value={blogTitle}
+                    onChange={(e) => updateCustomization({ blogTitle: e.target.value })}
+                    placeholder="e.g. Travel Guides & Stories"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-bold"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-gray-700">Section Subtitle</label>
+                  <input
+                    type="text"
+                    value={blogSubtitle}
+                    onChange={(e) => updateCustomization({ blogSubtitle: e.target.value })}
+                    placeholder="e.g. Insider tips, curated itineraries & packing guides"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium"
+                  />
+                </div>
+              </div>
+
+              {/* Sample Blog Card Mobile Preview */}
+              <div className="pt-2">
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-2">Live Guide Card Layout</p>
+                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200/80 flex gap-3 items-center">
+                  <img
+                    src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=160&q=80"
+                    alt="Guide"
+                    className="w-16 h-16 rounded-lg object-cover shrink-0"
+                  />
+                  <div className="space-y-1 min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-sky-100 text-sky-700">
+                      Travel Guide
+                    </span>
+                    <p className="text-[11px] font-bold text-gray-800 truncate">Top 7 Hidden Beaches You Must Visit</p>
+                    <p className="text-[9px] text-gray-400 flex items-center gap-1">
+                      <Clock className="w-2.5 h-2.5" /> 4 min read · Concierge Desk
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="pt-4 border-t border-gray-100">
         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200/80">
           <div className="flex items-center justify-between mb-3">
