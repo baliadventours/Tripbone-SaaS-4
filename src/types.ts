@@ -831,6 +831,8 @@ export interface SiteSettings {
   mobilePreset?: 'joytime-special' | 'klook-explorer' | 'getyourguide-activity' | 'airbnb-experiences' | 'viator-classic' | 'tripadvisor-wanderer' | 'luxury-concierge' | 'boutique-minimalist' | 'nordic-adventure' | 'tokyo-cyber' | 'island-breeze' | 'default';
   mobileHookTitle?: string; // e.g. "Book Your Bali Tour"
   mobileHookSubtitle?: string; // e.g. "Verified Local Partner"
+  joytimeCustomization?: JoyTimePresetCustomization;
+  androidAppSettings?: AndroidAppSettings;
   sectionStyles?: {
     topNav?: string;
     mainNav?: string;
@@ -844,6 +846,56 @@ export interface SiteSettings {
     contactPage?: string;
     blogPage?: string;
   };
+}
+
+export interface JoyTimeBannerSlide {
+  id: string;
+  badge?: string;
+  title: string;
+  subtitle?: string;
+  promoCode?: string;
+  buttonText?: string;
+  link?: string;
+  image?: string;
+  gradientFrom?: string;
+  gradientVia?: string;
+  gradientTo?: string;
+  gradientDirection?: 'to-r' | 'to-br' | 'to-b' | 'to-tr' | 'to-l';
+  overlayOpacity?: number; // 10 to 90
+}
+
+export interface JoyTimePresetCustomization {
+  primaryColor?: string;
+  secondaryColor?: string;
+  accentColor?: string;
+  headerBgColor?: string;
+  banners?: JoyTimeBannerSlide[];
+}
+
+export type JoyTimeCustomization = JoyTimePresetCustomization;
+
+export interface AndroidAppSettings {
+  appName: string;
+  shortName: string;
+  packageName?: string;
+  appId?: string;
+  versionName: string;
+  versionCode: number;
+  appIconUrl?: string;
+  appIcon?: string;
+  splashColor?: string;
+  splashBgColor?: string;
+  splashLogo?: string;
+  themeColor?: string;
+  startUrl?: string;
+  displayMode?: 'standalone' | 'fullscreen';
+  orientation?: 'portrait' | 'any' | 'landscape';
+  enableGeolocation?: boolean;
+  enableCamera?: boolean;
+  enableOfflineCache?: boolean;
+  enablePushNotifications?: boolean;
+  enablePullToRefresh?: boolean;
+  enableHardwareBack?: boolean;
 }
 
 export interface Popup {

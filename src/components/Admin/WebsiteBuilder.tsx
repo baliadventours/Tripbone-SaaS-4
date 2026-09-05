@@ -10,6 +10,9 @@ import {
 } from 'lucide-react';
 import { uploadImage } from '../../lib/imgbb';
 import { cn } from '../../lib/utils';
+import JoyTimeCustomizer, { JoyTimeCustomization } from './JoyTimeCustomizer';
+import AndroidAppBuilder, { AndroidAppSettings } from './AndroidAppBuilder';
+import { sanitizeFirestoreData } from '../../services/payment/PaymentService';
 
 export interface BlockConfig {
   id: string;
@@ -48,10 +51,12 @@ export interface WebsiteBuilderSettings {
   mobilePreset?: string;
   mobileHookTitle?: string;
   mobileHookSubtitle?: string;
+  joytimeCustomization?: JoyTimeCustomization;
+  androidAppSettings?: AndroidAppSettings;
 }
 
 interface WebsiteBuilderProps {
-  initialTab?: 'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets';
+  initialTab?: 'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp';
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
@@ -282,7 +287,7 @@ function TourPickerManager({
 
 export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilderProps = {}) {
   const { tenantId } = useTenant();
-  const [activeTab, setActiveTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets'>(
+  const [activeTab, setActiveTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp'>(
     initialTab === 'mobilePresets' ? 'designPresets' : (initialTab || 'blocks')
   );
   const [presetDeviceTab, setPresetDeviceTab] = useState<'desktop' | 'mobile'>(
@@ -504,6 +509,10 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
       try {
         const docRef = doc(db, 'website_builder', tenantId);
         const snap = await getDoc(docRef);
+        const generalRef = doc(db, 'settings', tenantId);
+        const generalSnap = await getDoc(generalRef);
+        const generalData = generalSnap.exists() ? generalSnap.data() : {};
+
         if (snap.exists()) {
           const data = snap.data() as WebsiteBuilderSettings;
           // Merge defaults if missing blocks
@@ -514,17 +523,21 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
           setSettings({ 
             blocks: mergedBlocks, 
             menus: data.menus || [], 
-            mobilePreset: data.mobilePreset || 'joytime-special',
-            mobileHookTitle: data.mobileHookTitle || '',
-            mobileHookSubtitle: data.mobileHookSubtitle || ''
+            mobilePreset: data.mobilePreset || generalData.mobilePreset || 'joytime-special',
+            mobileHookTitle: data.mobileHookTitle || generalData.mobileHookTitle || '',
+            mobileHookSubtitle: data.mobileHookSubtitle || generalData.mobileHookSubtitle || '',
+            joytimeCustomization: data.joytimeCustomization || generalData.joytimeCustomization,
+            androidAppSettings: data.androidAppSettings || generalData.androidAppSettings
           });
         } else {
           setSettings({ 
             blocks: DEFAULT_BLOCKS, 
             menus: [], 
-            mobilePreset: 'joytime-special',
-            mobileHookTitle: 'Book Your Bali Tour',
-            mobileHookSubtitle: 'Verified Local Partner'
+            mobilePreset: generalData.mobilePreset || 'joytime-special',
+            mobileHookTitle: generalData.mobileHookTitle || 'Book Your Bali Tour',
+            mobileHookSubtitle: generalData.mobileHookSubtitle || 'Verified Local Partner',
+            joytimeCustomization: generalData.joytimeCustomization,
+            androidAppSettings: generalData.androidAppSettings
           });
         }
       } catch (err) {
@@ -540,9 +553,9 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
     if (!tenantId || !settings) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, 'website_builder', tenantId), settings);
+      await setDoc(doc(db, 'website_builder', tenantId), sanitizeFirestoreData(settings));
 
-      // Sync topNav, mainNav presets and mobilePreset to general settings
+      // Sync topNav, mainNav presets, mobilePreset, joytimeCustomization, and androidAppSettings to general settings
       const topNavBlock = settings.blocks?.find(b => b.id === 'topNav');
       const mainNavBlock = settings.blocks?.find(b => b.id === 'mainNav');
       
@@ -554,14 +567,16 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
         ...(topNavBlock?.design ? { topNav: topNavBlock.design } : {}),
         ...(mainNavBlock?.design ? { mainNav: mainNavBlock.design } : {}),
       };
-      await setDoc(generalRef, { 
+      await setDoc(generalRef, sanitizeFirestoreData({ 
         ...existingGen, 
         sectionStyles: updatedStyles, 
         themeMode: 'custom',
         mobilePreset: settings.mobilePreset || 'joytime-special',
         mobileHookTitle: settings.mobileHookTitle || '',
-        mobileHookSubtitle: settings.mobileHookSubtitle || ''
-      }, { merge: true });
+        mobileHookSubtitle: settings.mobileHookSubtitle || '',
+        joytimeCustomization: settings.joytimeCustomization || existingGen.joytimeCustomization,
+        androidAppSettings: settings.androidAppSettings || existingGen.androidAppSettings
+      }), { merge: true });
 
       alert('Website Builder settings saved successfully!');
     } catch (error) {
@@ -742,6 +757,26 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
             <Sliders className="w-4 h-4 text-orange-500" />
             <span>Design Preset (Mobile & Desktop)</span>
             <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 rounded-full">10 Desktop + 10 Mobile</span>
+          </div>
+        </button>
+        <button
+          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", activeTab === 'joytimeStudio' ? "border-sky-600 text-sky-700 bg-sky-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
+          onClick={() => setActiveTab('joytimeStudio')}
+        >
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-sky-500" />
+            <span>JoyTime Mobile Customizer</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-sky-100 text-sky-700 rounded-full">Colors & Banners</span>
+          </div>
+        </button>
+        <button
+          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", activeTab === 'androidApp' ? "border-emerald-600 text-emerald-700 bg-emerald-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
+          onClick={() => setActiveTab('androidApp')}
+        >
+          <div className="flex items-center gap-2">
+            <Smartphone className="w-4 h-4 text-emerald-500" />
+            <span>Android App Builder</span>
+            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full">APK Download</span>
           </div>
         </button>
       </div>
@@ -2846,6 +2881,28 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
           </div>
         </div>
       )}
+        </div>
+      )}
+
+      {activeTab === 'joytimeStudio' && (
+        <div className="space-y-6 animate-in fade-in">
+          <JoyTimeCustomizer
+            value={settings?.joytimeCustomization}
+            onChange={(newCust) => {
+              setSettings(prev => prev ? ({ ...prev, joytimeCustomization: newCust }) : prev);
+            }}
+          />
+        </div>
+      )}
+
+      {activeTab === 'androidApp' && (
+        <div className="space-y-6 animate-in fade-in">
+          <AndroidAppBuilder
+            value={settings?.androidAppSettings}
+            onChange={(newAppSettings) => {
+              setSettings(prev => prev ? ({ ...prev, androidAppSettings: newAppSettings }) : prev);
+            }}
+          />
         </div>
       )}
     </div>

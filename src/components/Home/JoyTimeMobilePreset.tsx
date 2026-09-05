@@ -23,6 +23,22 @@ export interface JoyTimeMobilePresetProps {
   heroSlides?: any[];
 }
 
+interface JoyTimePromoItem {
+  id: string;
+  badge: string;
+  title: string;
+  subtitle: string;
+  promoCode: string;
+  buttonText?: string;
+  image: string;
+  link: string;
+  gradientFrom?: string;
+  gradientVia?: string;
+  gradientTo?: string;
+  gradientDirection?: string;
+  overlayOpacity?: number;
+}
+
 export default function JoyTimeMobilePreset({
   tours,
   filteredTours,
@@ -50,6 +66,13 @@ export default function JoyTimeMobilePreset({
   const [sortOption, setSortOption] = useState<'popular' | 'rating' | 'price-asc' | 'price-desc'>('popular');
   const [blogCategoryFilter, setBlogCategoryFilter] = useState('all');
   const [promoSlideIndex, setPromoSlideIndex] = useState(0);
+
+  // JoyTime customization settings from tenant
+  const joytimeCustomization = settings?.joytimeCustomization;
+  const primaryColor = joytimeCustomization?.primaryColor || '#0284c7';
+  const secondaryColor = joytimeCustomization?.secondaryColor || '#0369a1';
+  const accentColor = joytimeCustomization?.accentColor || '#f59e0b';
+  const headerBgColor = joytimeCustomization?.headerBgColor || '#ffffff';
 
   // Global event listeners for bottom navigation actions
   useEffect(() => {
@@ -226,8 +249,26 @@ export default function JoyTimeMobilePreset({
     return Array.from(map.values()).slice(0, 4);
   }, [tours]);
 
-  // Real Promotional Banners from database (heroSlides or discounted tours)
-  const promoBanners = useMemo(() => {
+  // Real Promotional Banners from database (joytimeCustomization, heroSlides or discounted tours)
+  const promoBanners: JoyTimePromoItem[] = useMemo(() => {
+    // 0. Tenant custom JoyTime banners
+    if (joytimeCustomization?.banners && joytimeCustomization.banners.length > 0) {
+      return joytimeCustomization.banners.map((slide, idx) => ({
+        id: slide.id || `custom-slide-${idx}`,
+        badge: slide.badge || 'Travel like a VIP',
+        title: slide.title || 'SPECIAL COMBO OFFER',
+        subtitle: slide.subtitle || 'Fast Track, Chauffeur & Island Tour',
+        promoCode: slide.promoCode || 'COMBO25',
+        buttonText: slide.buttonText || 'Book Now',
+        image: slide.image || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80',
+        link: slide.link || '/tours',
+        gradientFrom: slide.gradientFrom,
+        gradientVia: slide.gradientVia,
+        gradientTo: slide.gradientTo,
+        gradientDirection: slide.gradientDirection,
+        overlayOpacity: slide.overlayOpacity
+      }));
+    }
     // 1. If builder/settings has heroSlides
     if (heroSlides && heroSlides.length > 0) {
       return heroSlides.map((slide, idx) => ({
@@ -608,10 +649,30 @@ export default function JoyTimeMobilePreset({
      ========================================================================= */
   const activePromo = promoBanners[promoSlideIndex % promoBanners.length];
 
+  const activePromoGradient = useMemo(() => {
+    if (!activePromo) return `linear-gradient(to right, ${primaryColor}, ${secondaryColor})`;
+    const dir = activePromo.gradientDirection || 'to-r';
+    const angleMap: Record<string, string> = {
+      'to-r': 'to right',
+      'to-br': 'to bottom right',
+      'to-b': 'to bottom',
+      'to-tr': 'to top right',
+      'to-l': 'to left'
+    };
+    const angle = angleMap[dir] || 'to right';
+    const from = activePromo.gradientFrom || primaryColor;
+    const via = activePromo.gradientVia ? `, ${activePromo.gradientVia}` : '';
+    const to = activePromo.gradientTo || secondaryColor;
+    return `linear-gradient(${angle}, ${from}${via}, ${to})`;
+  }, [activePromo, primaryColor, secondaryColor]);
+
   return (
     <div className="bg-[#f8fafc] pb-24 space-y-5 text-left relative">
       {/* 1. JOYTIME HEADER BAR (IMG_3849.png) */}
-      <div className="bg-white px-4 pt-3.5 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-xs">
+      <div 
+        className="px-4 pt-3.5 pb-3 border-b border-gray-100 sticky top-0 z-30 shadow-xs transition-colors"
+        style={{ backgroundColor: headerBgColor }}
+      >
         <div className="flex items-center gap-2.5">
           {/* Logo / Brand Mark */}
           <Link to="/" className="shrink-0 flex items-center">
@@ -622,7 +683,10 @@ export default function JoyTimeMobilePreset({
                 className="h-8 max-w-[90px] object-contain"
               />
             ) : (
-              <div className="px-2 py-1 rounded-xl bg-gradient-to-r from-sky-500 to-blue-600 text-white font-black text-xs tracking-tight shadow-xs flex items-center gap-1">
+              <div 
+                className="px-2 py-1 rounded-xl text-white font-black text-xs tracking-tight shadow-xs flex items-center gap-1"
+                style={{ background: `linear-gradient(to right, ${primaryColor}, ${secondaryColor})` }}
+              >
                 <span>JOY</span>
                 <span className="bg-amber-400 text-slate-900 px-1 rounded text-[10px]">TIME</span>
               </div>
@@ -650,7 +714,10 @@ export default function JoyTimeMobilePreset({
             >
               <LucideIcons.ShoppingCart className="w-4 h-4 text-gray-600" />
               {favoriteIds.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-sky-500 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-xs">
+                <span 
+                  className="absolute -top-1 -right-1 w-4 h-4 text-white rounded-full text-[9px] font-black flex items-center justify-center shadow-xs"
+                  style={{ backgroundColor: primaryColor }}
+                >
                   {favoriteIds.length}
                 </span>
               )}
@@ -766,9 +833,15 @@ export default function JoyTimeMobilePreset({
         </div>
 
         {/* Colorful Rounded VIP Promo Card */}
-        <div className="relative rounded-2xl overflow-hidden bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-700 text-white shadow-md">
+        <div 
+          className="relative rounded-2xl overflow-hidden text-white shadow-md transition-all"
+          style={{ background: activePromoGradient }}
+        >
           {/* Background Illustration & Overlay */}
-          <div className="absolute inset-0 opacity-25 mix-blend-overlay">
+          <div 
+            className="absolute inset-0 mix-blend-overlay"
+            style={{ opacity: (activePromo.overlayOpacity ?? 25) / 100 }}
+          >
             <SmartImage
               src={activePromo.image}
               alt="Promo Banner"
@@ -784,13 +857,16 @@ export default function JoyTimeMobilePreset({
             className="relative z-10 p-5 flex flex-col justify-between min-h-[140px] block cursor-pointer"
           >
             <div className="space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-300">
+              <span 
+                className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"
+                style={{ color: accentColor, backgroundColor: 'rgba(0,0,0,0.2)' }}
+              >
                 {activePromo.badge}
               </span>
               <h4 className="text-lg font-black tracking-tight leading-tight text-white drop-shadow-xs">
                 {activePromo.title}
               </h4>
-              <p className="text-[10px] text-sky-100 font-semibold line-clamp-1">
+              <p className="text-[10px] text-white/90 font-semibold line-clamp-1">
                 {activePromo.subtitle}
               </p>
             </div>
@@ -799,8 +875,8 @@ export default function JoyTimeMobilePreset({
               <span className="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[10px] font-black tracking-wider text-amber-200 border border-white/25">
                 PROMO CODE: {activePromo.promoCode}
               </span>
-              <span className="text-xs font-black text-white flex items-center gap-1 bg-white/10 px-2 py-1 rounded-lg">
-                Book Now <LucideIcons.ArrowRight className="w-3 h-3" />
+              <span className="text-xs font-black text-white flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                {activePromo.buttonText || 'Book Now'} <LucideIcons.ArrowRight className="w-3 h-3" />
               </span>
             </div>
           </Link>

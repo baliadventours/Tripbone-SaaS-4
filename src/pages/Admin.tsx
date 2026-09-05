@@ -535,13 +535,28 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       const params = new URLSearchParams(window.location.search);
       const menu = params.get('menu') as MenuId;
       if (menu) {
+        if ((menu as string).startsWith('wb-')) return 'website-builder';
         return menu;
       }
     }
     return 'dashboard';
   });
   const [settingsActiveTab, setSettingsActiveTab] = useState<string>('all');
-  const [websiteBuilderTab, setWebsiteBuilderTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets'>('blocks');
+  const [websiteBuilderTab, setWebsiteBuilderTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'joytimeStudio' | 'androidApp'>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const menu = params.get('menu');
+      if (menu === 'wb-site-settings') return 'siteSettings';
+      if (menu === 'wb-blocks') return 'blocks';
+      if (menu === 'wb-tours') return 'tours';
+      if (menu === 'wb-menus') return 'menus';
+      if (menu === 'wb-pages') return 'pages';
+      if (menu === 'wb-presets') return 'designPresets';
+      if (menu === 'wb-joytime') return 'joytimeStudio';
+      if (menu === 'wb-android-builder') return 'androidApp';
+    }
+    return 'blocks';
+  });
   const [autoOpenCreateUser, setAutoOpenCreateUser] = useState(false);
   const [expandedMenu, setExpandedMenu] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
@@ -645,6 +660,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         'wb-menus': 'website-builder-group',
         'wb-pages': 'website-builder-group',
         'wb-presets': 'website-builder-group',
+        'wb-joytime': 'website-builder-group',
+        'wb-android-builder': 'website-builder-group',
         'website-builder': 'website-builder-group',
         'users': 'users-group',
         'access-roles': 'users-group',
@@ -1549,7 +1566,9 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           { id: 'wb-tours', label: 'Feature & Favorite Tours' },
           { id: 'wb-menus', label: 'Custom menu' },
           { id: 'wb-pages', label: 'System Page Design' },
-          { id: 'wb-presets', label: 'Design Preset (Mobile & Desktop)' }
+          { id: 'wb-presets', label: 'Design Preset (Mobile & Desktop)' },
+          { id: 'wb-joytime', label: 'JoyTime Mobile Customizer' },
+          { id: 'wb-android-builder', label: 'Android App Builder (APK)' }
         ]
       },
       { 
@@ -5608,7 +5627,9 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                             (child.id === 'wb-tours' && websiteBuilderTab === 'tours') ||
                             (child.id === 'wb-menus' && websiteBuilderTab === 'menus') ||
                             (child.id === 'wb-pages' && websiteBuilderTab === 'pages') ||
-                            (child.id === 'wb-presets' && websiteBuilderTab === 'designPresets')
+                            (child.id === 'wb-presets' && websiteBuilderTab === 'designPresets') ||
+                            (child.id === 'wb-joytime' && websiteBuilderTab === 'joytimeStudio') ||
+                            (child.id === 'wb-android-builder' && websiteBuilderTab === 'androidApp')
                           )) ||
                           (activeMenu === 'coupons' && child.id === 'coupons') ||
                           (activeMenu === 'popups-manager' && child.id === 'popups-manager') ||
@@ -5641,6 +5662,12 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                               } else if (child.id === 'wb-presets') {
                                   setActiveMenu('website-builder');
                                   setWebsiteBuilderTab('designPresets');
+                              } else if (child.id === 'wb-joytime') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('joytimeStudio');
+                              } else if (child.id === 'wb-android-builder') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('androidApp');
                               } else if (child.id === 'company-info' || child.id === 'seo' || child.id === 'domain') {
                                   setActiveMenu('general-settings');
                                   setSettingsActiveTab(child.id);
