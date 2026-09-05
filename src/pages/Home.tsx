@@ -2029,7 +2029,7 @@ export default function Home() {
       {/* Mobile Redesigned View Layout with 10 Presets */}
       <div className="block md:hidden bg-white pt-0 pb-6">
         <MobileHomePresets
-          preset={settings?.mobilePreset || builderSettings?.mobilePreset || 'klook-explorer'}
+          preset={settings?.mobilePreset || builderSettings?.mobilePreset || 'joytime-special'}
           tours={tours}
           filteredTours={filteredTours}
           favoriteTours={getGuestFavoritesData()}

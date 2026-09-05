@@ -514,7 +514,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
           setSettings({ 
             blocks: mergedBlocks, 
             menus: data.menus || [], 
-            mobilePreset: data.mobilePreset || 'klook-explorer',
+            mobilePreset: data.mobilePreset || 'joytime-special',
             mobileHookTitle: data.mobileHookTitle || '',
             mobileHookSubtitle: data.mobileHookSubtitle || ''
           });
@@ -522,7 +522,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
           setSettings({ 
             blocks: DEFAULT_BLOCKS, 
             menus: [], 
-            mobilePreset: 'klook-explorer',
+            mobilePreset: 'joytime-special',
             mobileHookTitle: 'Book Your Bali Tour',
             mobileHookSubtitle: 'Verified Local Partner'
           });
@@ -558,7 +558,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
         ...existingGen, 
         sectionStyles: updatedStyles, 
         themeMode: 'custom',
-        mobilePreset: settings.mobilePreset || 'klook-explorer',
+        mobilePreset: settings.mobilePreset || 'joytime-special',
         mobileHookTitle: settings.mobileHookTitle || '',
         mobileHookSubtitle: settings.mobileHookSubtitle || ''
       }, { merge: true });
@@ -2342,7 +2342,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
             <div className="hidden sm:flex items-center gap-2 px-3 text-xs text-gray-500 font-medium">
               <span>Active Preset:</span>
               <span className="font-bold text-gray-900">
-                {presetDeviceTab === 'desktop' ? (brandingSettings?.brandingPreset || 'default') : (settings?.mobilePreset || 'klook-explorer')}
+                {presetDeviceTab === 'desktop' ? (brandingSettings?.brandingPreset || 'default') : (settings?.mobilePreset || 'joytime-special')}
               </span>
             </div>
           </div>
@@ -2543,7 +2543,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
                     <div className="text-right">
                       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Currently Active</p>
                       <p className="text-sm font-black text-orange-600">
-                        {settings?.mobilePreset || 'klook-explorer'}
+                        {settings?.mobilePreset || 'joytime-special'}
                       </p>
                     </div>
                   </div>
@@ -2607,6 +2607,22 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[
+              {
+                id: 'joytime-special',
+                name: 'JoyTime Super-App (Special Mobile)',
+                tag: 'Special Preset · Default',
+                tagColor: 'bg-sky-600 text-white',
+                borderAccent: 'border-sky-400 ring-2 ring-sky-400/20',
+                description: 'Asian travel super-app layout: search pill header with cart & notifications, pastel circular category navigation strip, VIP promotion carousel banner with promo codes, top trends ranking crown badges (#1, #2, #3), recently viewed dual-currency cards, destination bento mosaic, and service sheet selector.',
+                features: [
+                  'Search Pill Header with Cart & Notifications',
+                  'Pastel Circular Service Categories Strip (Tour, F&B, Spa, Souvenir, All)',
+                  'VIP Promotion Banner Carousel (Real Database Promotions & Hero Slides)',
+                  'Top Trends 2-Column Grid with Ranking Crown Badges (👑 #1, #2, #3)',
+                  'Ideal Destination Bento Photo Grid with Location Pins',
+                  'Quick Service Bottom Sheet & 5-Tab Navigation'
+                ]
+              },
               {
                 id: 'klook-explorer',
                 name: 'Klook Explorer (2-Column Grid)',
@@ -2758,7 +2774,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
                 ]
               }
             ].map((p) => {
-              const isSelected = (settings?.mobilePreset || 'klook-explorer') === p.id;
+              const isSelected = (settings?.mobilePreset || 'joytime-special') === p.id;
               return (
                 <div
                   key={p.id}

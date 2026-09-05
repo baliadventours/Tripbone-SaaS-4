@@ -7,6 +7,7 @@ import { useCurrency } from '../../lib/CurrencyContext';
 import { cn } from '../../lib/utils';
 import SmartImage from '../SmartImage';
 import CarRentalShowcase from './CarRentalShowcase';
+import JoyTimeMobilePreset from './JoyTimeMobilePreset';
 
 export interface MobileHomePresetsProps {
   preset?: string;
@@ -51,7 +52,7 @@ export default function MobileHomePresets({
     navigate(`/tours?search=${encodeURIComponent(searchTerm)}`);
   };
 
-  const activePreset = (settings?.mobilePreset || builderSettings?.mobilePreset || preset || 'klook-explorer');
+  const activePreset = (settings?.mobilePreset || builderSettings?.mobilePreset || preset || 'joytime-special');
   const hookTitle = settings?.mobileHookTitle || builderSettings?.mobileHookTitle || settings?.siteName || 'Book Your Bali Tour';
   const hookSubtitle = settings?.mobileHookSubtitle || builderSettings?.mobileHookSubtitle || 'Verified Local Partner';
 
@@ -292,6 +293,29 @@ export default function MobileHomePresets({
       </Link>
     );
   };
+
+  /* =========================================================================
+     PRESET 0: JOYTIME SUPER-APP (Special Default Mobile Preset)
+     ========================================================================= */
+  if (activePreset === 'joytime-special' || activePreset === 'default') {
+    return (
+      <JoyTimeMobilePreset
+        tours={tours}
+        filteredTours={filteredTours}
+        favoriteTours={favoriteTours}
+        categories={categories}
+        reviews={reviews}
+        posts={posts}
+        selectedCategory={selectedCategory}
+        onSelectCategory={onSelectCategory}
+        loading={loading}
+        settings={settings}
+        builderSettings={builderSettings}
+        onOpenCategoriesModal={onOpenCategoriesModal}
+        heroSlides={heroSlides}
+      />
+    );
+  }
 
   /* =========================================================================
      PRESET 1: KLOOK EXPLORER (Requested 2-column grid for Featured & Favs)

@@ -1,13 +1,18 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Compass, Sparkles, Calendar, User, MessageCircle } from 'lucide-react';
+import { Compass, Sparkles, Calendar, User, MessageCircle, Home, Gift, LayoutGrid, BookOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useAuth } from '../lib/AuthContext';
+import { useSettings } from '../lib/SettingsContext';
 
 export default function MobileNav() {
   const location = useLocation();
   const path = location.pathname;
   const { user, profile } = useAuth();
+  const { settings, builderSettings } = useSettings();
+
+  const activePreset = settings?.mobilePreset || builderSettings?.mobilePreset || 'joytime-special';
+  const isJoyTime = activePreset === 'joytime-special' || activePreset === 'default';
 
   const accountDestination = !user 
     ? '/login' 
@@ -21,7 +26,7 @@ export default function MobileNav() {
             ? '/superadmin'
             : '/customer/dashboard';
 
-  const navItems = [
+  const defaultNavItems = [
     { label: 'Explore', path: '/', icon: Compass },
     { label: 'Inspire', path: '/blog', icon: Sparkles },
     { label: 'Plan', path: '/planner', icon: Calendar },
@@ -29,9 +34,27 @@ export default function MobileNav() {
     { label: 'Account', path: accountDestination, icon: User },
   ];
 
+  const joyTimeNavItems = [
+    { label: 'Home', path: '/', icon: Home },
+    { label: 'Promotion', icon: Gift, isAction: true, actionType: 'promotion' },
+    { label: 'Service', icon: LayoutGrid, isAction: true, actionType: 'service' },
+    { label: 'Blog', path: '/blog', icon: BookOpen },
+    { label: 'Account', path: accountDestination, icon: User },
+  ];
+
+  const navItems = isJoyTime ? joyTimeNavItems : defaultNavItems;
+
   const handleAction = (item: any) => {
     if (item.label === 'Chat') {
       window.dispatchEvent(new CustomEvent('chat:toggle'));
+    } else if (item.actionType === 'service') {
+      window.dispatchEvent(new CustomEvent('service-sheet:toggle'));
+    } else if (item.actionType === 'promotion') {
+      if (path === '/') {
+        window.dispatchEvent(new CustomEvent('promotion:scroll'));
+      } else {
+        window.location.href = '/#joytime-promotion-section';
+      }
     }
   };
 
@@ -70,12 +93,12 @@ export default function MobileNav() {
             to={targetPath}
             className={cn(
               "flex flex-col items-center gap-1 min-w-[64px] transition-colors",
-              isActive ? "text-primary" : "text-gray-500 hover:text-gray-700"
+              isActive ? (isJoyTime ? "text-sky-600" : "text-primary") : "text-gray-500 hover:text-gray-700"
             )}
           >
             <div className={cn(
               "p-1.5 rounded-full transition-colors",
-              isActive ? "bg-primary/10" : "bg-transparent"
+              isActive ? (isJoyTime ? "bg-sky-50" : "bg-primary/10") : "bg-transparent"
             )}>
               <Icon className={cn("h-5 w-5", isActive && "fill-current")} />
             </div>

@@ -1451,10 +1451,11 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
             <div className="space-y-1 pt-2 border-t border-gray-50">
               <label className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-1">Mobile Frontpage Layout Preset</label>
               <select
-                value={settings?.mobilePreset || 'klook-explorer'}
+                value={settings?.mobilePreset || 'joytime-special'}
                 onChange={(e) => setSettings(s => s ? {...s, mobilePreset: e.target.value as any} : null)}
                 className="w-full bg-gray-50 border-none rounded-[12px] px-4 py-3 text-sm focus:ring-2 focus:ring-primary font-bold"
               >
+                <option value="joytime-special">JoyTime Super-App (Special Default Preset · Asian Travel Super-App)</option>
                 <option value="klook-explorer">Klook Explorer (2-Column Tour Cards & Fast Filters)</option>
                 <option value="getyourguide-activity">GetYourGuide Activity (Activity List & Bestseller Badges)</option>
                 <option value="airbnb-experiences">Airbnb Experiences (Photo-First & Authentic)</option>
