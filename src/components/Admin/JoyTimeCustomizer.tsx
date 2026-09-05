@@ -195,10 +195,12 @@ export default function JoyTimeCustomizer({
   const showReviewsSection = effectiveCustomization?.showReviewsSection !== false;
   const reviewsTitle = effectiveCustomization?.reviewsTitle || 'Traveler Reviews & Experiences';
   const reviewsSubtitle = effectiveCustomization?.reviewsSubtitle || 'Real reviews from verified travelers';
+  const reviewsBgStyle = effectiveCustomization?.reviewsBgStyle || 'subtle-slate';
 
   const showBlogSection = effectiveCustomization?.showBlogSection !== false;
   const blogTitle = effectiveCustomization?.blogTitle || 'Travel Guides & Stories';
   const blogSubtitle = effectiveCustomization?.blogSubtitle || 'Insider tips, curated itineraries & packing guides';
+  const blogBgStyle = effectiveCustomization?.blogBgStyle || 'transparent';
 
   const currentSlide = banners[activeSlideIndex] || banners[0] || DEFAULT_BANNERS[0];
 
@@ -217,9 +219,11 @@ export default function JoyTimeCustomizer({
       showReviewsSection,
       reviewsTitle,
       reviewsSubtitle,
+      reviewsBgStyle,
       showBlogSection,
       blogTitle,
       blogSubtitle,
+      blogBgStyle,
       ...partial
     });
   };
@@ -1142,6 +1146,36 @@ export default function JoyTimeCustomizer({
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium"
                   />
                 </div>
+
+                {/* Reviews Section Background Style */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                    <span>Section Background Theme</span>
+                    <span className="text-[10px] font-medium text-gray-400 capitalize">{reviewsBgStyle.replace('-', ' ')}</span>
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { id: 'subtle-slate', label: 'Slate', bg: 'bg-slate-100 border-slate-300 text-slate-800' },
+                      { id: 'soft-sky', label: 'Sky Blue', bg: 'bg-sky-50 border-sky-300 text-sky-800' },
+                      { id: 'warm-cream', label: 'Warm', bg: 'bg-[#faf6f0] border-amber-300 text-amber-900' },
+                      { id: 'pure-white', label: 'White', bg: 'bg-white border-gray-300 text-gray-800' },
+                      { id: 'dark-luxury', label: 'Dark', bg: 'bg-slate-900 border-slate-700 text-white' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => updateCustomization({ reviewsBgStyle: opt.id as any })}
+                        className={cn(
+                          "py-1.5 px-1 rounded-lg border text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer",
+                          opt.bg,
+                          reviewsBgStyle === opt.id ? "ring-2 ring-sky-500 shadow-xs scale-102" : "opacity-80 hover:opacity-100"
+                        )}
+                      >
+                        <span className="truncate">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {/* Sample Review Card Mobile Preview */}
@@ -1220,6 +1254,36 @@ export default function JoyTimeCustomizer({
                     placeholder="e.g. Insider tips, curated itineraries & packing guides"
                     className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-xs font-medium"
                   />
+                </div>
+
+                {/* Blog Section Background Style */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-[11px] font-bold text-gray-700 flex items-center justify-between">
+                    <span>Section Background Theme</span>
+                    <span className="text-[10px] font-medium text-gray-400 capitalize">{blogBgStyle === 'transparent' ? 'Clean Default' : blogBgStyle.replace('-', ' ')}</span>
+                  </label>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {[
+                      { id: 'transparent', label: 'Clean', bg: 'bg-gray-50 border-gray-200 text-gray-700' },
+                      { id: 'subtle-slate', label: 'Slate', bg: 'bg-slate-100 border-slate-300 text-slate-800' },
+                      { id: 'soft-sky', label: 'Sky Blue', bg: 'bg-sky-50 border-sky-300 text-sky-800' },
+                      { id: 'warm-cream', label: 'Warm', bg: 'bg-[#faf6f0] border-amber-300 text-amber-900' },
+                      { id: 'pure-white', label: 'White', bg: 'bg-white border-gray-300 text-gray-800' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => updateCustomization({ blogBgStyle: opt.id as any })}
+                        className={cn(
+                          "py-1.5 px-1 rounded-lg border text-[10px] font-bold flex flex-col items-center justify-center gap-0.5 transition-all cursor-pointer",
+                          opt.bg,
+                          blogBgStyle === opt.id ? "ring-2 ring-sky-500 shadow-xs scale-102" : "opacity-80 hover:opacity-100"
+                        )}
+                      >
+                        <span className="truncate">{opt.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 

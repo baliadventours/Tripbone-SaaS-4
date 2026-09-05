@@ -379,6 +379,68 @@ export default function JoyTimeMobilePreset({
   const showReviewsSection = joytimeCustomization?.showReviewsSection !== false;
   const reviewsTitle = joytimeCustomization?.reviewsTitle || 'Traveler Reviews & Experiences';
   const reviewsSubtitle = joytimeCustomization?.reviewsSubtitle || 'Real reviews from verified adventurers';
+  const reviewsBgStyle = joytimeCustomization?.reviewsBgStyle || 'subtle-slate';
+
+  const reviewsThemeConfig = useMemo(() => {
+    switch (reviewsBgStyle) {
+      case 'soft-sky':
+        return {
+          wrapper: 'bg-gradient-to-b from-sky-50 via-sky-50/70 to-blue-50/50 border-y border-sky-200/70 shadow-2xs',
+          title: 'text-sky-950',
+          subtitle: 'text-sky-700/80',
+          ratingBadge: 'bg-white/90 border border-sky-200 text-sky-900 shadow-2xs',
+          card: 'bg-white border border-sky-100 shadow-[0_2px_10px_rgba(3,105,161,0.04)] hover:shadow-md text-slate-800',
+          cardDivider: 'border-slate-100',
+          cardMeta: 'text-slate-400',
+          isDark: false
+        };
+      case 'warm-cream':
+        return {
+          wrapper: 'bg-[#faf6f0] border-y border-amber-200/70 shadow-2xs',
+          title: 'text-amber-950',
+          subtitle: 'text-amber-800/80',
+          ratingBadge: 'bg-white/90 border border-amber-200 text-amber-900 shadow-2xs',
+          card: 'bg-white border border-amber-100 shadow-[0_2px_10px_rgba(180,83,9,0.04)] hover:shadow-md text-slate-800',
+          cardDivider: 'border-amber-50',
+          cardMeta: 'text-amber-800/60',
+          isDark: false
+        };
+      case 'dark-luxury':
+        return {
+          wrapper: 'bg-slate-900 border-y border-slate-800 shadow-md',
+          title: 'text-white',
+          subtitle: 'text-slate-300',
+          ratingBadge: 'bg-slate-800 border border-slate-700 text-amber-300',
+          card: 'bg-slate-800/95 border border-slate-700 shadow-md text-slate-100',
+          cardDivider: 'border-slate-700/80',
+          cardMeta: 'text-slate-400',
+          isDark: true
+        };
+      case 'pure-white':
+        return {
+          wrapper: 'bg-white border-y border-gray-100 shadow-2xs',
+          title: 'text-gray-900',
+          subtitle: 'text-gray-500',
+          ratingBadge: 'bg-amber-50 border border-amber-200/60 text-amber-900',
+          card: 'bg-gray-50/70 border border-gray-200/80 shadow-xs hover:shadow-md text-slate-800',
+          cardDivider: 'border-gray-100',
+          cardMeta: 'text-gray-400',
+          isDark: false
+        };
+      case 'subtle-slate':
+      default:
+        return {
+          wrapper: 'bg-slate-100/90 border-y border-slate-200/80 shadow-2xs',
+          title: 'text-slate-900',
+          subtitle: 'text-slate-500',
+          ratingBadge: 'bg-white border border-slate-200/80 text-slate-900 shadow-2xs',
+          card: 'bg-white border border-slate-200/80 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md text-slate-800',
+          cardDivider: 'border-slate-100',
+          cardMeta: 'text-slate-400',
+          isDark: false
+        };
+    }
+  }, [reviewsBgStyle]);
 
   const displayReviews = useMemo(() => {
     const approved = reviews.filter(r => r.status === 'approved' || !r.status);
@@ -430,6 +492,53 @@ export default function JoyTimeMobilePreset({
   const showBlogSection = joytimeCustomization?.showBlogSection !== false;
   const blogTitle = joytimeCustomization?.blogTitle || 'Travel Guides & Stories';
   const blogSubtitle = joytimeCustomization?.blogSubtitle || 'Insider tips, curated itineraries & packing guides';
+  const blogBgStyle = joytimeCustomization?.blogBgStyle || 'transparent';
+
+  const blogThemeConfig = useMemo(() => {
+    switch (blogBgStyle) {
+      case 'subtle-slate':
+        return {
+          wrapper: 'bg-slate-100/90 py-5 my-1 border-y border-slate-200/80 shadow-2xs',
+          title: 'text-slate-900',
+          subtitle: 'text-slate-500',
+          card: 'bg-white border-slate-200/80',
+          isDark: false
+        };
+      case 'soft-sky':
+        return {
+          wrapper: 'bg-gradient-to-b from-sky-50 via-sky-50/70 to-blue-50/50 py-5 my-1 border-y border-sky-200/70 shadow-2xs',
+          title: 'text-sky-950',
+          subtitle: 'text-sky-700/80',
+          card: 'bg-white border-sky-100',
+          isDark: false
+        };
+      case 'warm-cream':
+        return {
+          wrapper: 'bg-[#faf6f0] py-5 my-1 border-y border-amber-200/70 shadow-2xs',
+          title: 'text-amber-950',
+          subtitle: 'text-amber-800/80',
+          card: 'bg-white border-amber-100',
+          isDark: false
+        };
+      case 'pure-white':
+        return {
+          wrapper: 'bg-white py-5 my-1 border-y border-gray-100 shadow-2xs',
+          title: 'text-gray-900',
+          subtitle: 'text-gray-500',
+          card: 'bg-gray-50/70 border-gray-200/80',
+          isDark: false
+        };
+      case 'transparent':
+      default:
+        return {
+          wrapper: '',
+          title: 'text-gray-900',
+          subtitle: 'text-gray-500',
+          card: 'bg-white border-gray-100',
+          isDark: false
+        };
+    }
+  }, [blogBgStyle]);
 
   const displayPosts = useMemo(() => {
     const published = posts.filter(p => p.status === 'published' || p.status === 'active' || !p.status);
@@ -1354,26 +1463,29 @@ export default function JoyTimeMobilePreset({
         <div className="px-4 space-y-3">
           <h3 className="text-base font-black text-gray-900">Ideal Destination</h3>
           
-          <div className="grid grid-cols-2 gap-2.5 h-[220px]">
+          <div className="grid grid-cols-2 gap-2.5 h-[240px]">
             {/* Left Tall Card */}
             {destinationBento[0] && (
               <Link
                 to={`/tours?location=${encodeURIComponent(destinationBento[0].name)}`}
-                className="relative rounded-2xl overflow-hidden group shadow-xs block h-full cursor-pointer"
+                className="relative rounded-2xl overflow-hidden group shadow-xs block h-full w-full cursor-pointer isolate"
               >
-                <SmartImage
-                  src={destinationBento[0].image}
-                  alt={destinationBento[0].name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                  aspectRatio="auto"
-                  width={300}
-                  quality={75}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
-                <div className="absolute bottom-3 left-3 text-white">
+                <div className="absolute inset-0">
+                  <SmartImage
+                    src={destinationBento[0].image}
+                    alt={destinationBento[0].name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    containerClassName="w-full h-full"
+                    aspectRatio="auto"
+                    width={400}
+                    quality={75}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent pointer-events-none" />
+                </div>
+                <div className="absolute bottom-3 left-3 right-3 text-white z-10 pointer-events-none">
                   <div className="flex items-center gap-1 text-xs font-black">
-                    <LucideIcons.MapPin className="w-3.5 h-3.5 text-amber-400" />
-                    <span>{destinationBento[0].name}</span>
+                    <LucideIcons.MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span className="truncate">{destinationBento[0].name}</span>
                   </div>
                   <p className="text-[10px] text-gray-200 font-medium pl-4.5">
                     {destinationBento[0].count} Experiences
@@ -1383,26 +1495,29 @@ export default function JoyTimeMobilePreset({
             )}
 
             {/* Right Stacked 2 Cards */}
-            <div className="flex flex-col gap-2.5 h-full">
+            <div className="flex flex-col gap-2.5 h-full min-h-0">
               {destinationBento.slice(1, 3).map((dest) => (
                 <Link
                   key={dest.name}
                   to={`/tours?location=${encodeURIComponent(dest.name)}`}
-                  className="relative flex-1 rounded-2xl overflow-hidden group shadow-xs block cursor-pointer"
+                  className="relative flex-1 min-h-0 rounded-2xl overflow-hidden group shadow-xs block cursor-pointer isolate"
                 >
-                  <SmartImage
-                    src={dest.image}
-                    alt={dest.name}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    aspectRatio="auto"
-                    width={300}
-                    quality={75}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                  <div className="absolute bottom-2.5 left-2.5 text-white">
+                  <div className="absolute inset-0">
+                    <SmartImage
+                      src={dest.image}
+                      alt={dest.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                      containerClassName="w-full h-full"
+                      aspectRatio="auto"
+                      width={300}
+                      quality={75}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+                  </div>
+                  <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white z-10 pointer-events-none">
                     <div className="flex items-center gap-1 text-[11px] font-black">
-                      <LucideIcons.MapPin className="w-3 h-3 text-amber-400" />
-                      <span>{dest.name}</span>
+                      <LucideIcons.MapPin className="w-3 h-3 text-amber-400 shrink-0" />
+                      <span className="truncate">{dest.name}</span>
                     </div>
                     <p className="text-[9px] text-gray-200 font-medium pl-4">
                       {dest.count} Experiences
@@ -1417,138 +1532,162 @@ export default function JoyTimeMobilePreset({
 
       {/* 7. CUSTOMER REVIEWS & SOCIAL PROOF SECTION */}
       {showReviewsSection && displayReviews.length > 0 && (
-        <div id="joytime-reviews-section" className="px-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-0.5 max-w-[70%]">
-              <h3 className="text-base font-black text-gray-900 leading-tight">
-                {reviewsTitle}
-              </h3>
-              <p className="text-[11px] text-gray-500 font-medium line-clamp-1">
-                {reviewsSubtitle}
-              </p>
+        <div 
+          id="joytime-reviews-section" 
+          className={cn(
+            "py-5.5 my-1.5 transition-colors",
+            reviewsThemeConfig.wrapper
+          )}
+        >
+          <div className="px-4 space-y-3.5">
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="space-y-0.5 max-w-[70%]">
+                <h3 className={cn("text-base font-black leading-tight", reviewsThemeConfig.title)}>
+                  {reviewsTitle}
+                </h3>
+                <p className={cn("text-[11px] font-medium line-clamp-1", reviewsThemeConfig.subtitle)}>
+                  {reviewsSubtitle}
+                </p>
+              </div>
+              <div className={cn("flex items-center gap-1 px-2.5 py-1 rounded-xl shrink-0", reviewsThemeConfig.ratingBadge)}>
+                <LucideIcons.Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span className="text-xs font-black">4.9</span>
+                <span className="text-[10px] opacity-75 font-bold">/ 5.0</span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-xl shrink-0">
-              <LucideIcons.Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              <span className="text-xs font-black text-amber-900">4.9</span>
-              <span className="text-[10px] text-amber-700 font-bold">/ 5.0</span>
-            </div>
-          </div>
 
-          {/* Horizontal Snap-X Review Cards Carousel */}
-          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-2 -mx-4 px-4">
-            {displayReviews.map((rev, idx) => {
-              const platformLabel = rev.platform === 'google' ? 'Google Review' : rev.platform === 'tripadvisor' ? 'TripAdvisor' : 'Verified Booking';
-              const reviewerInitials = rev.userName?.split(' ').map(n => n[0]).join('').substring(0, 2) || 'TR';
+            {/* Horizontal Snap-X Review Cards Carousel */}
+            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3 pb-2 -mx-4 px-4">
+              {displayReviews.map((rev, idx) => {
+                const platformLabel = rev.platform === 'google' ? 'Google Review' : rev.platform === 'tripadvisor' ? 'TripAdvisor' : 'Verified Booking';
+                const reviewerInitials = rev.userName?.split(' ').map(n => n[0]).join('').substring(0, 2) || 'TR';
 
-              return (
-                <div
-                  key={rev.id || idx}
-                  className="snap-start shrink-0 w-[280px] bg-white rounded-2xl p-4 border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between text-left space-y-3"
-                >
-                  <div className="space-y-2.5">
-                    {/* Reviewer Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {rev.userPhoto ? (
-                          <img
-                            src={rev.userPhoto}
-                            alt={rev.userName}
-                            className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-gray-100"
-                          />
-                        ) : (
-                          <div 
-                            className="w-8 h-8 rounded-full text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs"
-                            style={{ backgroundColor: primaryColor }}
-                          >
-                            {reviewerInitials}
+                return (
+                  <div
+                    key={rev.id || idx}
+                    className={cn(
+                      "snap-start shrink-0 w-[280px] rounded-2xl p-4 transition-all flex flex-col justify-between text-left space-y-3",
+                      reviewsThemeConfig.card
+                    )}
+                  >
+                    <div className="space-y-2.5">
+                      {/* Reviewer Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {rev.userPhoto ? (
+                            <img
+                              src={rev.userPhoto}
+                              alt={rev.userName}
+                              className="w-8 h-8 rounded-full object-cover shrink-0 ring-1 ring-gray-100"
+                            />
+                          ) : (
+                            <div 
+                              className="w-8 h-8 rounded-full text-white font-black text-[11px] flex items-center justify-center shrink-0 shadow-xs"
+                              style={{ backgroundColor: primaryColor }}
+                            >
+                              {reviewerInitials}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className={cn("text-xs font-black truncate leading-tight", reviewsThemeConfig.isDark ? "text-white" : "text-gray-900")}>
+                              {rev.userName}
+                            </p>
+                            <p className="text-[10px] text-emerald-500 font-bold flex items-center gap-0.5 leading-tight mt-0.5">
+                              <LucideIcons.Check className="w-2.5 h-2.5 stroke-[3]" /> Verified Traveler
+                            </p>
                           </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-xs font-black text-gray-900 truncate leading-tight">
-                            {rev.userName}
-                          </p>
-                          <p className="text-[10px] text-emerald-600 font-bold flex items-center gap-0.5 leading-tight mt-0.5">
-                            <LucideIcons.Check className="w-2.5 h-2.5 stroke-[3]" /> Verified Traveler
-                          </p>
+                        </div>
+
+                        {/* Stars */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <LucideIcons.Star
+                              key={s}
+                              className={cn(
+                                "w-3 h-3",
+                                s <= (rev.rating || 5)
+                                  ? "fill-amber-400 text-amber-400"
+                                  : "text-gray-300"
+                              )}
+                            />
+                          ))}
                         </div>
                       </div>
 
-                      {/* Stars */}
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <LucideIcons.Star
-                            key={s}
-                            className={cn(
-                              "w-3 h-3",
-                              s <= (rev.rating || 5)
-                                ? "fill-amber-400 text-amber-400"
-                                : "text-gray-200"
-                            )}
-                          />
-                        ))}
-                      </div>
+                      {/* Booked Experience Tag */}
+                      {rev.tourTitle && (
+                        <div className={cn(
+                          "flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold truncate",
+                          reviewsThemeConfig.isDark ? "bg-slate-700/80 border border-slate-600 text-sky-300" : "bg-sky-50/70 border border-sky-100 text-sky-800"
+                        )}>
+                          <LucideIcons.Compass className="w-3 h-3 text-sky-500 shrink-0" />
+                          <span className="truncate">{rev.tourTitle}</span>
+                        </div>
+                      )}
+
+                      {/* Review Text */}
+                      <p className={cn("text-[11px] font-medium leading-relaxed italic line-clamp-3", reviewsThemeConfig.isDark ? "text-slate-200" : "text-gray-700")}>
+                        "{rev.comment}"
+                      </p>
                     </div>
 
-                    {/* Booked Experience Tag */}
-                    {rev.tourTitle && (
-                      <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-sky-50/70 border border-sky-100 text-[10px] font-bold text-sky-800 truncate">
-                        <LucideIcons.Compass className="w-3 h-3 text-sky-600 shrink-0" />
-                        <span className="truncate">{rev.tourTitle}</span>
-                      </div>
-                    )}
-
-                    {/* Review Text */}
-                    <p className="text-[11px] text-gray-700 font-medium leading-relaxed italic line-clamp-3">
-                      "{rev.comment}"
-                    </p>
+                    {/* Card Bottom Meta */}
+                    <div className={cn("pt-2 border-t flex items-center justify-between text-[10px] font-semibold", reviewsThemeConfig.cardDivider, reviewsThemeConfig.cardMeta)}>
+                      <span className="flex items-center gap-1">
+                        <LucideIcons.ShieldCheck className="w-3 h-3 text-emerald-500" />
+                        {platformLabel}
+                      </span>
+                      <span>{rev.createdAt ? (typeof rev.createdAt === 'string' ? rev.createdAt : 'Recent') : 'Verified'}</span>
+                    </div>
                   </div>
-
-                  {/* Card Bottom Meta */}
-                  <div className="pt-2 border-t border-gray-50 flex items-center justify-between text-[10px] text-gray-400 font-semibold">
-                    <span className="flex items-center gap-1">
-                      <LucideIcons.ShieldCheck className="w-3 h-3 text-emerald-500" />
-                      {platformLabel}
-                    </span>
-                    <span>{rev.createdAt ? (typeof rev.createdAt === 'string' ? rev.createdAt : 'Recent') : 'Verified'}</span>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
 
       {/* 8. TRAVEL GUIDES & BLOG STORIES SECTION */}
       {showBlogSection && displayPosts.length > 0 && (
-        <div id="joytime-blog-section" className="px-4 space-y-3">
-          {/* Header */}
-          <div className="flex items-start justify-between">
-            <div className="space-y-0.5 max-w-[70%]">
-              <h3 className="text-base font-black text-gray-900 leading-tight">
-                {blogTitle}
-              </h3>
-              <p className="text-[11px] text-gray-500 font-medium line-clamp-1">
-                {blogSubtitle}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveSubView('blog')}
-              className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 shrink-0 cursor-pointer pt-0.5"
-            >
-              View All <LucideIcons.ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          {/* Horizontal Snap-X Blog Cards Carousel */}
-          <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2 -mx-4 px-4">
-            {displayPosts.map((post, idx) => (
-              <Link
-                key={post.id || idx}
-                to={`/blog/${post.slug || post.id}`}
-                className="snap-start shrink-0 w-[260px] bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer text-left"
+        <div 
+          id="joytime-blog-section" 
+          className={cn(
+            "transition-colors",
+            blogThemeConfig.wrapper ? blogThemeConfig.wrapper : "px-4 space-y-3"
+          )}
+        >
+          <div className={blogThemeConfig.wrapper ? "px-4 space-y-3" : "space-y-3"}>
+            {/* Header */}
+            <div className="flex items-start justify-between">
+              <div className="space-y-0.5 max-w-[70%]">
+                <h3 className={cn("text-base font-black leading-tight", blogThemeConfig.title)}>
+                  {blogTitle}
+                </h3>
+                <p className={cn("text-[11px] font-medium line-clamp-1", blogThemeConfig.subtitle)}>
+                  {blogSubtitle}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSubView('blog')}
+                className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 shrink-0 cursor-pointer pt-0.5"
               >
+                View All <LucideIcons.ArrowRight className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Horizontal Snap-X Blog Cards Carousel */}
+            <div className="overflow-x-auto snap-x no-scrollbar flex gap-3.5 pb-2 -mx-4 px-4">
+              {displayPosts.map((post, idx) => (
+                <Link
+                  key={post.id || idx}
+                  to={`/blog/${post.slug || post.id}`}
+                  className={cn(
+                    "snap-start shrink-0 w-[260px] rounded-2xl overflow-hidden border shadow-[0_2px_10px_rgba(0,0,0,0.03)] hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer text-left",
+                    blogThemeConfig.card
+                  )}
+                >
                 {/* 16:9 Thumbnail with Overlay Pill */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-gray-100">
                   <SmartImage
@@ -1597,6 +1736,7 @@ export default function JoyTimeMobilePreset({
                 </div>
               </Link>
             ))}
+            </div>
           </div>
         </div>
       )}

@@ -880,9 +880,11 @@ export interface JoyTimePresetCustomization {
   showReviewsSection?: boolean;
   reviewsTitle?: string;
   reviewsSubtitle?: string;
+  reviewsBgStyle?: 'subtle-slate' | 'soft-sky' | 'warm-cream' | 'pure-white' | 'dark-luxury';
   showBlogSection?: boolean;
   blogTitle?: string;
   blogSubtitle?: string;
+  blogBgStyle?: 'transparent' | 'subtle-slate' | 'soft-sky' | 'warm-cream' | 'pure-white';
 }
 
 export type JoyTimeCustomization = JoyTimePresetCustomization;
