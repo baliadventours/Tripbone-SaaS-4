@@ -48,6 +48,7 @@ export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss(), renameHtmlPlugin()],
     build: {
+      emptyOutDir: false,
       rollupOptions: {
         input: path.resolve(__dirname, 'index.html')
       }

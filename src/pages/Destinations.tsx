@@ -88,10 +88,11 @@ export default function Destinations() {
   const filteredLocations = useMemo(() => {
     if (!searchTerm.trim()) return displayLocations;
     const term = searchTerm.toLowerCase();
-    return displayLocations.filter(loc => 
-      loc.name.toLowerCase().includes(term) || 
-      (loc.description && loc.description.toLowerCase().includes(term))
-    );
+    return displayLocations.filter(loc => {
+      const name = (loc?.name || '').toLowerCase();
+      const desc = (loc?.description || '').toLowerCase();
+      return name.includes(term) || desc.includes(term);
+    });
   }, [displayLocations, searchTerm]);
 
   if (pageData && pageData.content) {
@@ -180,23 +181,24 @@ export default function Destinations() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredLocations.map((loc, i) => {
-              let rawImage = loc.featuredImage || loc.image || loc.imageUrl;
+              const locName = loc?.name || 'Destination';
+              let rawImage = loc?.featuredImage || loc?.image || loc?.imageUrl;
               if (rawImage && rawImage.startsWith('api/')) {
                 rawImage = '/' + rawImage;
               }
-              const imageSrc = rawImage || `https://picsum.photos/seed/${encodeURIComponent(loc.name.toLowerCase())}/800/1000`;
-              const description = loc.description || `Discover the breathtaking natural beauty, local culture, and memorable tour experiences in ${loc.name}.`;
+              const imageSrc = rawImage || `https://picsum.photos/seed/${encodeURIComponent(locName.toLowerCase())}/800/1000`;
+              const description = loc?.description || `Discover the breathtaking natural beauty, local culture, and memorable tour experiences in ${locName}.`;
 
               return (
                 <div 
-                  key={loc.id || i} 
+                  key={loc?.id || i} 
                   className="group relative bg-white rounded-[28px] overflow-hidden border border-gray-100 shadow-sm hover:shadow-2xl transition-all duration-500 flex flex-col"
                 >
                   {/* Featured Image Container */}
                   <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100">
                     <img 
                       src={imageSrc} 
-                      alt={loc.name}
+                      alt={locName}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                       referrerPolicy="no-referrer"
                     />
@@ -205,7 +207,7 @@ export default function Destinations() {
                     <div className="absolute top-4 left-4">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-md text-gray-900 rounded-full text-[11px] font-black shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" />
-                        <span>{toTitleCase(loc.name)}</span>
+                        <span>{toTitleCase(locName)}</span>
                       </span>
                     </div>
                   </div>
@@ -214,7 +216,7 @@ export default function Destinations() {
                   <div className="p-6 flex flex-col flex-1 justify-between space-y-4">
                     <div className="space-y-2">
                       <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-primary transition-colors">
-                        {toTitleCase(loc.name)}
+                        {toTitleCase(locName)}
                       </h3>
                       <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3">
                         {description}
@@ -224,7 +226,7 @@ export default function Destinations() {
                     <div className="pt-4 border-t border-gray-100 flex items-center justify-between">
                       <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Guided Experiences</span>
                       <Link 
-                        to={`/tours?location=${encodeURIComponent(loc.id)}`}
+                        to={`/tours?location=${encodeURIComponent(loc?.id || locName)}`}
                         className="inline-flex items-center gap-2 bg-primary/10 hover:bg-primary text-primary hover:text-white px-4 py-2.5 rounded-xl font-black text-xs transition-all duration-300"
                       >
                         <span>View Tours</span>

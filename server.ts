@@ -7794,6 +7794,14 @@ export async function createServer() {
       immutable: true
     }));
 
+    // Prevent caching of 404s on missing JS/CSS assets
+    app.use('/assets', (req, res) => {
+      res.status(404).set({
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0'
+      }).send('Asset not found');
+    });
+
     app.get('*', async (req, res, next) => {
       // 1. Fast protection against malicious bot scanners probing WordPress or other server exploits.
       // This saves massive network traffic (solving 5GB/12hr bandwidth spikes) and prevents useless database lookups.
