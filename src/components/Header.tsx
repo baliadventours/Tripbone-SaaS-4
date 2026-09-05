@@ -156,6 +156,10 @@ export default function Header() {
 
   const isTourDetail = location.pathname.startsWith('/tour/');
   const isCheckout = location.pathname.startsWith('/checkout');
+  const isHome = location.pathname === '/';
+  const activeMobilePreset = settings?.mobilePreset || builderSettings?.mobilePreset || 'joytime-special';
+  const isJoyTime = activeMobilePreset === 'joytime-special' || activeMobilePreset === 'default';
+  const hideMobileHeaderOnHome = isHome && isJoyTime;
 
   // Theme Logic & Preset Resolution
   const topNavBlock = builderSettings?.blocks?.find(b => b.id === 'topNav');
@@ -1153,7 +1157,7 @@ export default function Header() {
   return (
     <header className={cn(
       "fixed top-0 z-50 w-full transition-all",
-      isCheckout ? "hidden md:block shadow-none" : "shadow-sm md:shadow-none",
+      (isCheckout || hideMobileHeaderOnHome) ? "hidden md:block shadow-none" : "shadow-sm md:shadow-none",
       (topNavStyle === 'default' || !topNavStyle) ? "bg-white" : "bg-transparent"
     )}>
       {/* Top Dark Announcement / Header Navigation Bar */}

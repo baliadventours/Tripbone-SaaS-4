@@ -91,7 +91,7 @@ const Chatbot = lazyWithRetry(() => import('./components/Chatbot'));
 
 function AppContent() {
   const { isMaster, isAppGate, tenant, tenantId, loading: tenantLoading, setPreviewTenant, isImpersonating, error: tenantError } = useTenant();
-  const { settings, loading: settingsLoading } = useSettings();
+  const { settings, builderSettings, loading: settingsLoading } = useSettings();
   const location = useLocation();
 
   // Dynamically update document metadata based on tenant data
@@ -104,6 +104,10 @@ function AppContent() {
   const isDashboard = location.pathname.startsWith('/customer');
   const isCheckout = location.pathname.startsWith('/checkout');
   const isTourDetail = location.pathname.startsWith('/tour/') || (location.pathname.startsWith('/tours/') && location.pathname !== '/tours');
+  const isHome = location.pathname === '/';
+  const activeMobilePreset = settings?.mobilePreset || builderSettings?.mobilePreset || 'joytime-special';
+  const isJoyTime = activeMobilePreset === 'joytime-special' || activeMobilePreset === 'default';
+  const hideMobileHeaderOnHome = isHome && isJoyTime;
 
   // Dynamic Tenant Branding Styles Override
   useEffect(() => {
@@ -448,6 +452,7 @@ function AppContent() {
         !hideMainLayout && !isDashboard && (
           isCheckout ? "md:pt-[120px]" : 
           isTourDetail ? "pt-16 md:pt-[120px]" : 
+          hideMobileHeaderOnHome ? "pt-0 md:pt-[120px]" :
           "pt-[80px] md:pt-[120px]"
         )
       )}>
