@@ -10,6 +10,13 @@ import { formatPageTitle } from '../lib/seoUtils';
 import { useDynamicPage } from '../hooks/useDynamicPage';
 import DynamicPageLayout from '../components/DynamicPageLayout';
 
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/(?:^|[\s\-\/\(\)])\S/g, char => char.toUpperCase());
+};
+
 const DEFAULT_DESTINATIONS: LocationMeta[] = [
   {
     id: 'ubud-default',
@@ -198,7 +205,7 @@ export default function Destinations() {
                     <div className="absolute top-4 left-4">
                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-md text-gray-900 rounded-full text-[11px] font-black shadow-sm">
                         <MapPin className="h-3 w-3 text-primary" />
-                        <span>{loc.name}</span>
+                        <span>{toTitleCase(loc.name)}</span>
                       </span>
                     </div>
                   </div>
@@ -207,7 +214,7 @@ export default function Destinations() {
                   <div className="p-6 flex flex-col flex-1 justify-between space-y-4">
                     <div className="space-y-2">
                       <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-primary transition-colors">
-                        {loc.name}
+                        {toTitleCase(loc.name)}
                       </h3>
                       <p className="text-xs text-gray-600 font-medium leading-relaxed line-clamp-3">
                         {description}

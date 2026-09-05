@@ -39,6 +39,15 @@ interface JoyTimePromoItem {
   overlayOpacity?: number;
 }
 
+// Helper to format destination / location names into proper Title Case
+// Examples: "ubud" or "UBUD" -> "Ubud", "Tanjung benoa" or "tanjung benoa" -> "Tanjung Benoa"
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .toLowerCase()
+    .replace(/(?:^|[\s\-\/\(\)])\S/g, char => char.toUpperCase());
+};
+
 export default function JoyTimeMobilePreset({
   tours,
   filteredTours,
@@ -203,16 +212,21 @@ export default function JoyTimeMobilePreset({
     return 'Experience';
   };
 
-  // Dynamic Distinct Locations extracted from real database tours
+  // Dynamic Distinct Locations extracted from real database tours (Title Case & case-insensitive deduplication)
   const dynamicLocations = useMemo(() => {
-    const locs = new Set<string>();
+    const locMap = new Map<string, string>(); // lowercase key -> Title Cased name
     tours.forEach(t => {
       if (t.location && t.location.trim()) {
         const cleanLoc = t.location.trim().split(',')[0].trim();
-        if (cleanLoc.length > 1) locs.add(cleanLoc);
+        if (cleanLoc.length > 1) {
+          const key = cleanLoc.toLowerCase();
+          if (!locMap.has(key)) {
+            locMap.set(key, toTitleCase(cleanLoc));
+          }
+        }
       }
     });
-    return Array.from(locs).slice(0, 6);
+    return Array.from(locMap.values()).slice(0, 6);
   }, [tours]);
 
   // Top Trends Tours (sorted by booked count or rating popularity)
@@ -240,20 +254,22 @@ export default function JoyTimeMobilePreset({
     return (favoriteTours && favoriteTours.length > 0 ? favoriteTours : tours).slice(0, 4);
   }, [tours, recentlyViewedIds, favoriteTours]);
 
-  // Dynamic Ideal Destinations computed from real tours
+  // Dynamic Trending Destinations computed from real tours (Normalized to Title Case and merged)
   const destinationBento = useMemo(() => {
     const map = new Map<string, { name: string; count: number; image: string }>();
     tours.forEach(t => {
-      const loc = t.location?.trim().split(',')[0].trim();
-      if (!loc) return;
-      if (!map.has(loc)) {
-        map.set(loc, {
-          name: loc,
+      const rawLoc = t.location?.trim().split(',')[0].trim();
+      if (!rawLoc) return;
+      const key = rawLoc.toLowerCase();
+      const title = toTitleCase(rawLoc);
+      if (!map.has(key)) {
+        map.set(key, {
+          name: title,
           count: 1,
           image: t.featuredImage || t.gallery?.[0] || 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=600&q=80'
         });
       } else {
-        const item = map.get(loc)!;
+        const item = map.get(key)!;
         item.count += 1;
         if (!item.image && t.featuredImage) item.image = t.featuredImage;
       }
@@ -698,7 +714,7 @@ export default function JoyTimeMobilePreset({
 
             {/* Category & Location Subtext (Soft Blue / Slate) */}
             <p className="text-[10px] font-medium text-sky-700/80 line-clamp-1">
-              {tour.location || 'Bali'} • {getCategoryName(tour)}
+              {toTitleCase(tour.location || 'Bali')} • {getCategoryName(tour)}
             </p>
           </div>
 
@@ -1458,10 +1474,18 @@ export default function JoyTimeMobilePreset({
         </div>
       </div>
 
-      {/* 6. IDEAL DESTINATION BENTO GRID (IMG_3850.png) */}
+      {/* 6. TRENDING DESTINATION BENTO GRID */}
       {destinationBento.length >= 2 && (
         <div className="px-4 space-y-3">
-          <h3 className="text-base font-black text-gray-900">Ideal Destination</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-black text-gray-900">Trending Destination</h3>
+            <Link
+              to="/destinations"
+              className="text-xs font-bold text-sky-600 hover:text-sky-700 flex items-center gap-0.5 cursor-pointer"
+            >
+              See all <LucideIcons.ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
           
           <div className="grid grid-cols-2 gap-2.5 h-[240px]">
             {/* Left Tall Card */}
@@ -1485,7 +1509,7 @@ export default function JoyTimeMobilePreset({
                 <div className="absolute bottom-3 left-3 right-3 text-white z-10 pointer-events-none">
                   <div className="flex items-center gap-1 text-xs font-black">
                     <LucideIcons.MapPin className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                    <span className="truncate">{destinationBento[0].name}</span>
+                    <span className="truncate">{toTitleCase(destinationBento[0].name)}</span>
                   </div>
                   <p className="text-[10px] text-gray-200 font-medium pl-4.5">
                     {destinationBento[0].count} Experiences
@@ -1517,7 +1541,7 @@ export default function JoyTimeMobilePreset({
                   <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white z-10 pointer-events-none">
                     <div className="flex items-center gap-1 text-[11px] font-black">
                       <LucideIcons.MapPin className="w-3 h-3 text-amber-400 shrink-0" />
-                      <span className="truncate">{dest.name}</span>
+                      <span className="truncate">{toTitleCase(dest.name)}</span>
                     </div>
                     <p className="text-[9px] text-gray-200 font-medium pl-4">
                       {dest.count} Experiences
