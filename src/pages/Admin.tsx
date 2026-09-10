@@ -194,6 +194,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
 
   const [tours, setTours] = useState<Tour[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [leadForProposal, setLeadForProposal] = useState<Inquiry | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tourTypes, setTourTypes] = useState<TourType[]>([]);
   const [locations, setLocations] = useState<LocationMeta[]>([]);
@@ -5306,8 +5307,19 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                   <td className="px-6 py-4">
                     <div className="flex justify-center gap-2">
                       <button 
+                        onClick={() => {
+                          setLeadForProposal(inquiry);
+                          setActiveMenu('ai-hub');
+                        }}
+                        className="px-2.5 py-1.5 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1 transition-all shadow-sm cursor-pointer"
+                        title="Create Official Proposal from this Lead"
+                      >
+                        <Icons.Sparkles className="h-3.5 w-3.5" />
+                        <span>Proposal</span>
+                      </button>
+                      <button 
                         onClick={() => setSelectedInquiry(inquiry)}
-                        className="p-2 text-gray-400 hover:text-primary hover:bg-orange-50 rounded-lg transition-all"
+                        className="p-2 text-gray-400 hover:text-primary hover:bg-orange-50 rounded-lg transition-all cursor-pointer"
                         title="View Full Plan"
                       >
                         <Icons.ExternalLink className="h-4 w-4" />
@@ -5501,9 +5513,20 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                   <div className="flex gap-4">
                     <button 
                       onClick={() => setSelectedInquiry(null)}
-                      className="px-6 py-3 rounded-xl font-black text-xs text-gray-500 hover:bg-gray-100 transition-all uppercase tracking-widest"
+                      className="px-6 py-3 rounded-xl font-black text-xs text-gray-500 hover:bg-gray-100 transition-all uppercase tracking-widest cursor-pointer"
                     >
                       Close Window
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const inq = selectedInquiry;
+                        setSelectedInquiry(null);
+                        setLeadForProposal(inq);
+                        setActiveMenu('ai-hub');
+                      }}
+                      className="px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl font-black text-xs transition-all shadow-xl shadow-orange-100 uppercase tracking-widest flex items-center gap-2 cursor-pointer"
+                    >
+                      <Icons.Sparkles className="h-4 w-4" /> Create Official Proposal
                     </button>
                     <button 
                       onClick={async () => {
@@ -6128,7 +6151,11 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           )}
           {activeMenu === 'ai-hub' && (
             <div className="space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
-               <ProposalGenerator tenantId={tenant?.id} />
+               <ProposalGenerator 
+                 tenantId={tenant?.id} 
+                 initialLead={leadForProposal}
+                 onClearInitialLead={() => setLeadForProposal(null)}
+               />
             </div>
           )}
           {(['users', 'users-admins', 'users-suppliers', 'users-agents', 'users-customers'] as MenuId[]).includes(activeMenu) && (

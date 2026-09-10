@@ -55,6 +55,10 @@ import {
   RotateCcw,
   ExternalLink
 } from 'lucide-react';
+import { ProposalEditorPane } from './proposal/ProposalEditorPane';
+import { ProposalPreviewPane } from './proposal/ProposalPreviewPane';
+import { IncomingLeadsModal } from './proposal/IncomingLeadsModal';
+import { ImportTourModal } from './proposal/ImportTourModal';
 
 export interface InventoryItem {
   id: string;
@@ -332,10 +336,34 @@ export function getIncExcCategoryBadgeClass(category: string): string {
 interface ProposalGeneratorProps {
   isDarkMode?: boolean;
   tenantId?: string;
+  initialLead?: any | null;
+  onClearInitialLead?: () => void;
 }
 
-export default function ProposalGenerator({ isDarkMode = false, tenantId }: ProposalGeneratorProps) {
+export default function ProposalGenerator({ 
+  isDarkMode = false, 
+  tenantId, 
+  initialLead, 
+  onClearInitialLead 
+}: ProposalGeneratorProps) {
   const [activeSubTab, setActiveSubTab] = useState<'create' | 'inventory' | 'inclusions_exclusions' | 'history'>('create');
+
+  // Incoming Leads from AI Trip Planner
+  const [incomingLeads, setIncomingLeads] = useState<any[]>([]);
+  const [isLeadsDrawerOpen, setIsLeadsDrawerOpen] = useState<boolean>(false);
+  const [linkedInquiryId, setLinkedInquiryId] = useState<string | null>(null);
+
+  // Published Tours from Catalog for Quick Import
+  const [availableTours, setAvailableTours] = useState<any[]>([]);
+  const [isTourModalOpen, setIsTourModalOpen] = useState<boolean>(false);
+  const [tourSearch, setTourSearch] = useState<string>('');
+
+  // Mobile studio view switcher
+  const [mobileStudioTab, setMobileStudioTab] = useState<'editor' | 'preview'>('editor');
+
+  // Inline custom stop adder state per day
+  const [inlineStopInput, setInlineStopInput] = useState<{ [day: number]: { name: string; type: string; price: number } }>({});
+  const [editingDayTitles, setEditingDayTitles] = useState<{ [day: number]: string }>({});
 
   // Inclusions, Exclusions & Terms Manager State
   const [incExcManagerTab, setIncExcManagerTab] = useState<'inclusions' | 'exclusions' | 'terms'>('inclusions');
@@ -657,6 +685,318 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
     return () => { try { unsubscribe(); } catch (_) {} };
   }, []);
 
+  // Live sync incoming inquiries from AI Trip Planner
+  useEffect(() => {
+    let unsubscribe = () => {};
+    try {
+      const inqRef = collection(db, 'inquiries');
+      unsubscribe = onSnapshot(inqRef, (snap) => {
+        if (!snap) return;
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        list.sort((a: any, b: any) => {
+          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+          return tB - tA;
+        });
+        setIncomingLeads(list);
+      }, (err) => {
+        console.warn("Inquiries listener notice:", err);
+      });
+    } catch (e) {
+      console.warn("Error setting inquiries listener:", e);
+    }
+    return () => { try { unsubscribe(); } catch (_) {} };
+  }, []);
+
+  // Live sync published tours from catalog
+  useEffect(() => {
+    let unsubscribe = () => {};
+    try {
+      const tourRef = collection(db, 'tours');
+      unsubscribe = onSnapshot(tourRef, (snap) => {
+        if (!snap) return;
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAvailableTours(list);
+      }, (err) => {
+        console.warn("Tours listener notice:", err);
+      });
+    } catch (e) {
+      console.warn("Error setting tours listener:", e);
+    }
+    return () => { try { unsubscribe(); } catch (_) {} };
+  }, []);
+
+  // Load Lead into Proposal Workflow
+  const handleLoadInquiryLead = (inq: any) => {
+    setGuestName(inq.userName || 'Valued Guest');
+    setEmail(inq.userEmail || '');
+    setPhone(inq.userPhone || '');
+
+    // Parse pax count
+    let adults = 2;
+    let children = 0;
+    const personVal = String(inq.formData?.persons || '');
+    if (personVal.includes('Just me') || personVal.includes('1 Person')) {
+      adults = 1;
+    } else {
+      const match = personVal.match(/\d+/);
+      if (match) adults = parseInt(match[0], 10) || 2;
+    }
+    setAdultsCount(adults);
+    setChildrenCount(children);
+    setPaxCount(adults + children);
+
+    // Parse duration
+    let days = 3;
+    const rawDays = inq.itinerary?.dailyPlans || inq.itinerary?.days || [];
+    if (rawDays.length > 0) {
+      days = rawDays.length;
+    } else if (inq.formData?.duration) {
+      days = parseInt(inq.formData.duration, 10) || 3;
+    }
+    setDurationDays(Math.max(1, Math.min(30, days)));
+
+    // Extract activities and build line items & narrative
+    const newLineItems: ProposalLineItem[] = [];
+    const narrative: ItineraryDayNarrative[] = [];
+    const newTitles: { [day: number]: string } = {};
+
+    rawDays.forEach((d: any, idx: number) => {
+      const dayNum = d.day || idx + 1;
+      const dayTitle = d.title || d.dayTitle || `Day ${dayNum}: Exploration`;
+      newTitles[dayNum] = dayTitle;
+      const acts = d.activities || [];
+
+      narrative.push({
+        dayNumber: dayNum,
+        title: dayTitle,
+        summary: acts.map((a: any) => `${a.time ? a.time + ' - ' : ''}${a.title || a.name}`).join('. ') || `Day program highlights for ${dayTitle}`,
+        activities: acts.map((a: any) => a.title || a.name || 'Activity')
+      });
+
+      acts.forEach((act: any) => {
+        const actTitle = act.title || act.name || 'Activity';
+        const isTransport = actTitle.toLowerCase().includes('pickup') || actTitle.toLowerCase().includes('transfer') || actTitle.toLowerCase().includes('drive') || actTitle.toLowerCase().includes('car');
+        const isMeal = actTitle.toLowerCase().includes('lunch') || actTitle.toLowerCase().includes('dinner') || actTitle.toLowerCase().includes('breakfast') || actTitle.toLowerCase().includes('culinary');
+        const isStay = actTitle.toLowerCase().includes('hotel') || actTitle.toLowerCase().includes('resort') || actTitle.toLowerCase().includes('check-in') || actTitle.toLowerCase().includes('villa');
+        const type = isTransport ? 'Transportation' : isMeal ? 'Meal' : isStay ? 'Accommodation' : 'Attraction';
+
+        newLineItems.push({
+          inventoryId: `lead_${dayNum}_${Math.random().toString(36).substring(2, 7)}`,
+          name: actTitle,
+          type,
+          price: 0,
+          adultPrice: 0,
+          childPrice: 0,
+          priceType: 'Per person',
+          quantity: 1,
+          subtotal: 0,
+          day: dayNum,
+          description: act.description || act.location || ''
+        });
+      });
+    });
+
+    if (newLineItems.length > 0) {
+      setSelectedLineItems(newLineItems);
+    }
+    setEditingDayTitles(newTitles);
+
+    // Capture guest preferences into specialNotes
+    const prefList = [
+      inq.summary ? `Visitor Trip Summary: ${inq.summary}` : '',
+      inq.formData?.interests ? `Interests: ${inq.formData.interests}` : '',
+      inq.formData?.experience || inq.formData?.vibe ? `Vibe: ${inq.formData.experience || inq.formData.vibe}` : '',
+      inq.formData?.budget ? `Budget Range: ${inq.formData.budget}` : '',
+      inq.formData?.hotelType ? `Hotel Preference: ${inq.formData.hotelType}` : '',
+      inq.formData?.from ? `Traveling From: ${inq.formData.from}` : ''
+    ].filter(Boolean);
+
+    setSpecialNotes(prefList.join('\n'));
+    setLinkedInquiryId(inq.id);
+
+    // Build draft proposal object for instant preview
+    const fullProposal: Proposal = {
+      proposalTitle: inq.planTitle || `Custom Tour Proposal for ${inq.userName || 'Guest'}`,
+      guestName: inq.userName || 'Valued Guest',
+      email: inq.userEmail || '',
+      phone: inq.userPhone || '',
+      nationality: '',
+      paxCount: adults + children,
+      adultsCount: adults,
+      childrenCount: children,
+      paxBreakdown: formatPaxBreakdown(adults, children),
+      durationDays: days,
+      marginPercentage: 15,
+      baseSubtotal: 0,
+      adultsSubtotal: 0,
+      childrenSubtotal: 0,
+      marginAmount: 0,
+      totalPrice: 0,
+      isCustomPriceEnabled: false,
+      customTotalPrice: '',
+      currency,
+      selectedItems: newLineItems,
+      companyName,
+      companyLogo,
+      companyEmail,
+      companyPhone,
+      companyAddress,
+      companyWebsite,
+      welcomeMessage: inq.summary 
+        ? `Dear ${inq.userName || 'Guest'}, thank you for crafting your vacation on our website's AI Trip Planner! We are thrilled to present this customized official proposal based on your exact itinerary.`
+        : `Dear ${inq.userName || 'Guest'}, we are delighted to share your tailored travel proposal with dedicated vehicles, licensed guides, and curated experiences.`,
+      itineraryNarrative: narrative.length > 0 ? narrative : Array.from({ length: days }, (_, i) => ({
+        dayNumber: i + 1,
+        title: `Day ${i + 1}: Highlights & Exploration`,
+        summary: `Custom exploration and private touring program.`,
+        activities: []
+      })),
+      inclusions: PRESET_INCLUSIONS.slice(0, 6),
+      exclusions: PRESET_EXCLUSIONS.slice(0, 4),
+      termsAndConditions: masterTerms.slice(0, 5),
+      importantTips: [
+        "Private AC vehicle with dedicated driver-guide included throughout.",
+        "Pickup and drop-off coordinated directly via WhatsApp prior to tour dates.",
+        "Comfortable clothing, walking shoes, and sunglasses recommended."
+      ],
+      closingNotes: `We look forward to hosting you! Reach out to us via WhatsApp (${companyPhone}) with any questions or custom tweaks.`,
+      status: 'Draft'
+    };
+
+    setGeneratedProposal(fullProposal);
+    setIsLeadsDrawerOpen(false);
+    onClearInitialLead?.();
+    setPickedNotification(`Loaded travel plan from ${inq.userName || 'Guest'}!`);
+    setTimeout(() => setPickedNotification(null), 3500);
+  };
+
+  // Import Existing Tour from Catalog
+  const handleImportTour = (tour: any) => {
+    const days = Math.max(1, (tour.itinerary?.length || 1));
+    setDurationDays(days);
+    const tourTitle = tour.title || 'Tour Package';
+    setGuestName(guestName || 'Valued Guest');
+
+    const narrative: ItineraryDayNarrative[] = (tour.itinerary || []).map((d: any, idx: number) => ({
+      dayNumber: d.day || idx + 1,
+      title: d.title || `Day ${d.day || idx + 1}`,
+      summary: d.description || '',
+      activities: [d.title || `Day ${d.day} Program`]
+    }));
+
+    const newTitles: { [day: number]: string } = {};
+    (tour.itinerary || []).forEach((d: any, idx: number) => {
+      newTitles[d.day || idx + 1] = d.title || `Day ${d.day || idx + 1}`;
+    });
+    setEditingDayTitles(newTitles);
+
+    const lineItems: ProposalLineItem[] = (tour.itinerary || []).map((d: any, idx: number) => ({
+      inventoryId: `tour_${d.day || idx + 1}_${Math.random().toString(36).substring(2, 6)}`,
+      name: d.title || `Day ${d.day || idx + 1} Program`,
+      type: 'Attraction',
+      price: tour.price ? Math.round(tour.price / days) : 0,
+      adultPrice: tour.price ? Math.round(tour.price / days) : 0,
+      childPrice: 0,
+      priceType: 'Per person',
+      quantity: 1,
+      subtotal: tour.price ? Math.round(tour.price / days) * paxCount : 0,
+      day: d.day || idx + 1,
+      description: d.description || ''
+    }));
+
+    setSelectedLineItems(lineItems);
+    if (Array.isArray(tour.inclusions) && tour.inclusions.length > 0) {
+      setSelectedInclusions(tour.inclusions);
+    }
+    if (Array.isArray(tour.exclusions) && tour.exclusions.length > 0) {
+      setSelectedExclusions(tour.exclusions);
+    }
+
+    setSpecialNotes(tour.description || '');
+
+    const draft: Proposal = {
+      proposalTitle: `Official Proposal: ${tourTitle}`,
+      guestName: guestName || 'Valued Guest',
+      email,
+      phone,
+      nationality,
+      paxCount,
+      adultsCount,
+      childrenCount,
+      paxBreakdown: formatPaxBreakdown(adultsCount, childrenCount),
+      durationDays: days,
+      marginPercentage,
+      baseSubtotal,
+      adultsSubtotal: pricingBreakdown.adultsSubtotal,
+      childrenSubtotal: pricingBreakdown.childrenSubtotal,
+      marginAmount,
+      totalPrice,
+      isCustomPriceEnabled,
+      customTotalPrice,
+      currency,
+      selectedItems: lineItems,
+      companyName,
+      companyLogo,
+      companyEmail,
+      companyPhone,
+      companyAddress,
+      companyWebsite,
+      welcomeMessage: `Dear ${guestName || 'Guest'}, thank you for your interest in our "${tourTitle}". We have tailored this proposal for your group.`,
+      itineraryNarrative: narrative.length > 0 ? narrative : Array.from({ length: days }, (_, i) => ({
+        dayNumber: i + 1,
+        title: `Day ${i + 1}: Exploration`,
+        summary: '',
+        activities: []
+      })),
+      inclusions: tour.inclusions || selectedInclusions,
+      exclusions: tour.exclusions || selectedExclusions,
+      termsAndConditions: masterTerms.slice(0, 5),
+      importantTips: [
+        "Private AC vehicle with dedicated driver-guide included throughout.",
+        "Pickup and drop-off coordinated directly via WhatsApp.",
+        "Comfortable clothing, walking shoes, and sunglasses recommended."
+      ],
+      closingNotes: `We look forward to hosting you! Reach out to us anytime on WhatsApp (${companyPhone}) to confirm your booking.`,
+      status: 'Draft'
+    };
+
+    setGeneratedProposal(draft);
+    setIsTourModalOpen(false);
+    setPickedNotification(`Loaded tour "${tourTitle}" into proposal!`);
+    setTimeout(() => setPickedNotification(null), 3000);
+  };
+
+  // Handle initialLead passed from parent (e.g., Inquiries table in Admin.tsx)
+  useEffect(() => {
+    if (initialLead) {
+      handleLoadInquiryLead(initialLead);
+      setActiveSubTab('create');
+    }
+  }, [initialLead]);
+
+  // Quick Add Custom Stop directly into Day
+  const handleQuickAddCustomStop = (day: number, name: string, type: string, price: number = 0) => {
+    const p = Number(price) || 0;
+    const newItem: ProposalLineItem = {
+      inventoryId: `custom_${day}_${Math.random().toString(36).substring(2, 7)}`,
+      name,
+      type: getCategoryKey(type),
+      price: p,
+      adultPrice: p,
+      childPrice: 0,
+      priceType: 'Per person',
+      quantity: 1,
+      subtotal: p * paxCount,
+      day,
+      description: `Custom ${type.toLowerCase()} stop`
+    };
+
+    setSelectedLineItems(prev => [...prev, newItem]);
+    setPickedNotification(`Added "${name}" to Day ${day}`);
+    setTimeout(() => setPickedNotification(null), 2000);
+  };
+
   // Manager Helper Handlers for Inclusions, Exclusions & Terms
   const handleOpenAddIncExc = (type: 'inclusions' | 'exclusions' | 'terms') => {
     setEditingIncExcItem({ type, text: '' });
@@ -869,6 +1209,65 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
   const baseSubtotal = pricingBreakdown.baseSubtotal;
   const marginAmount = pricingBreakdown.marginAmount;
   const totalPrice = pricingBreakdown.finalTotalPrice;
+
+  // Real-time Dynamic Proposal Document Builder for Live Studio Preview
+  const buildProposalFromCurrentState = (): Proposal => {
+    const currentNarrative: ItineraryDayNarrative[] = Array.from({ length: durationDays }, (_, idx) => {
+      const dayNum = idx + 1;
+      const itemsForDay = selectedLineItems.filter(i => i.day === dayNum);
+      const existing = generatedProposal?.itineraryNarrative?.find(n => n.dayNumber === dayNum);
+      const dayTitle = editingDayTitles[dayNum] || existing?.title || `Day ${dayNum}: Exploration & Activities`;
+      return {
+        dayNumber: dayNum,
+        title: dayTitle,
+        summary: existing?.summary || (itemsForDay.length > 0 ? itemsForDay.map(i => i.name).join(' • ') : 'Personalized private tour schedule and sightseeing program'),
+        activities: itemsForDay.map(i => i.name)
+      };
+    });
+
+    return {
+      proposalTitle: generatedProposal?.proposalTitle || `Custom Tour Proposal for ${guestName || 'Valued Guest'}`,
+      guestName: guestName || 'Valued Guest',
+      email,
+      phone,
+      nationality,
+      paxCount,
+      adultsCount,
+      childrenCount,
+      paxBreakdown: formatPaxBreakdown(adultsCount, childrenCount),
+      durationDays,
+      marginPercentage,
+      baseSubtotal,
+      adultsSubtotal: pricingBreakdown.adultsSubtotal,
+      childrenSubtotal: pricingBreakdown.childrenSubtotal,
+      marginAmount,
+      totalPrice,
+      isCustomPriceEnabled,
+      customTotalPrice,
+      currency,
+      selectedItems: selectedLineItems,
+      companyName,
+      companyLogo,
+      companyEmail,
+      companyPhone,
+      companyAddress,
+      companyWebsite,
+      welcomeMessage: generatedProposal?.welcomeMessage || `Dear ${guestName || 'Valued Guest'}, thank you for contacting us! We are delighted to present your tailored itinerary designed specifically for your travel dates and group preferences.`,
+      itineraryNarrative: generatedProposal?.itineraryNarrative || currentNarrative,
+      inclusions: selectedInclusions.length > 0 ? selectedInclusions : PRESET_INCLUSIONS.slice(0, 6),
+      exclusions: selectedExclusions.length > 0 ? selectedExclusions : PRESET_EXCLUSIONS.slice(0, 4),
+      termsAndConditions: selectedTerms.length > 0 ? selectedTerms : masterTerms.slice(0, 5),
+      importantTips: generatedProposal?.importantTips || [
+        "Private AC vehicle with dedicated driver-guide included throughout.",
+        "Comfortable clothing, walking shoes, and sunglasses recommended.",
+        "Pick-up timings confirmed directly via WhatsApp prior to tour dates."
+      ],
+      closingNotes: generatedProposal?.closingNotes || `We look forward to creating unforgettable memories with you! Reach out to us anytime on WhatsApp (${companyPhone}) to confirm your booking or request adjustments.`,
+      status: 'Draft'
+    };
+  };
+
+  const activeProposalDoc = generatedProposal || buildProposalFromCurrentState();
 
   // Inventory Item Management Functions
   const handleOpenAddInventory = () => {
@@ -1403,11 +1802,11 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
 
   // Save proposal to Firestore
   const handleSaveProposalToDb = async (): Promise<string | null> => {
-    if (!generatedProposal) return null;
+    const docToSave = activeProposalDoc;
     setIsSavingProposal(true);
     try {
       const docRef = await addDoc(collection(db, 'proposals'), {
-        ...generatedProposal,
+        ...docToSave,
         companyName,
         companyLogo,
         companyEmail,
@@ -1418,8 +1817,23 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
       });
       const newId = docRef.id;
       setActiveProposalId(newId);
-      setGeneratedProposal(prev => prev ? { ...prev, id: newId } : null);
-      alert("Proposal saved to history successfully!");
+      setGeneratedProposal(prev => ({ ...(prev || docToSave), id: newId }));
+
+      // If linked to an incoming lead from AI Trip Planner, mark inquiry updated
+      if (linkedInquiryId) {
+        try {
+          await updateDoc(doc(db, 'inquiries', linkedInquiryId), {
+            status: 'proposal_sent',
+            proposalId: newId,
+            updatedAt: serverTimestamp()
+          });
+        } catch (e) {
+          console.warn("Notice updating linked inquiry:", e);
+        }
+      }
+
+      setPickedNotification("Proposal saved to history successfully!");
+      setTimeout(() => setPickedNotification(null), 3000);
       return newId;
     } catch (err: any) {
       alert("Failed to save proposal: " + err.message);
@@ -1431,8 +1845,7 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
 
   // WhatsApp Message Generator
   const handleCopyWhatsAppMessage = () => {
-    if (!generatedProposal) return;
-    const p = generatedProposal;
+    const p = activeProposalDoc;
 
     let text = `✨ *${p.proposalTitle}* ✨\n\n`;
     text += `${p.welcomeMessage}\n\n`;
@@ -1474,6 +1887,15 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
     navigator.clipboard.writeText(text);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2500);
+  };
+
+  // Direct WhatsApp Share
+  const handleDirectWhatsAppShare = () => {
+    handleCopyWhatsAppMessage();
+    const p = activeProposalDoc;
+    const cleanPhone = (p.phone || phone || '').replace(/[^0-9]/g, '');
+    const url = cleanPhone ? `https://wa.me/${cleanPhone}` : `https://wa.me/`;
+    window.open(url, '_blank');
   };
 
   // Print PDF Trigger
@@ -1804,1488 +2226,110 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
         )}
       </div>
 
-      {/* SUB-TAB 1: CREATE PROPOSAL WORKSPACE */}
+      {/* SUB-TAB 1: 60-SECOND PROPOSAL STUDIO */}
       {activeSubTab === 'create' && (
-        <div className="space-y-8">
-          {/* Main Workspace Container */}
-          <div className="no-print space-y-6 max-w-5xl mx-auto">
-              
-              {/* Section 1: Guest & Trip Basic Configuration */}
-              <div className={`p-6 rounded-3xl border shadow-xs space-y-4 ${
-                isDarkMode ? 'bg-[#111928] border-slate-800' : 'bg-white border-gray-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800/80 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl font-extrabold text-xs">
-                      01
-                    </div>
-                    <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      Guest & Trip Configuration
-                    </h3>
-                  </div>
-                  <span className="text-xs font-medium text-gray-400">Step 1 of 3</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      Guest Name *
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="e.g. Mr. Alex Johnson"
-                        value={guestName}
-                        onChange={(e) => setGuestName(e.target.value)}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
-                      <span>Adult Guests *</span>
-                      <span className="text-[10px] text-orange-600 font-semibold">Adult Rate</span>
-                    </label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-orange-500" />
-                      <input
-                        type="number"
-                        min="1"
-                        value={adultsCount}
-                        onChange={(e) => {
-                          const val = Math.max(1, parseInt(e.target.value) || 1);
-                          setAdultsCount(val);
-                          setPaxCount(val + childrenCount);
-                        }}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center justify-between">
-                      <span>Children Guests</span>
-                      <span className="text-[10px] text-blue-600 font-semibold">Child Rate</span>
-                    </label>
-                    <div className="relative">
-                      <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500" />
-                      <input
-                        type="number"
-                        min="0"
-                        value={childrenCount}
-                        onChange={(e) => {
-                          const val = Math.max(0, parseInt(e.target.value) || 0);
-                          setChildrenCount(val);
-                          setPaxCount(adultsCount + val);
-                        }}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      Duration (Days)
-                    </label>
-                    <div className="relative">
-                      <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="number"
-                        min="1"
-                        max="30"
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      Contact Email
-                    </label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="email"
-                        placeholder="alex@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      Phone / WhatsApp
-                    </label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="+1 234 567 890"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                      Nationality / Origin
-                    </label>
-                    <div className="relative">
-                      <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="e.g. Australia"
-                        value={nationality}
-                        onChange={(e) => setNationality(e.target.value)}
-                        className={`w-full pl-9 pr-3.5 py-2.5 text-xs font-bold rounded-xl border focus:outline-none focus:ring-2 focus:ring-orange-500/30 ${
-                          isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                        }`}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 2: Day-by-Day Interactive Drag & Drop Itinerary Builder */}
-              <div className={`p-6 rounded-3xl border shadow-xs space-y-5 ${
-                isDarkMode ? 'bg-[#111928] border-slate-800' : 'bg-white border-gray-200'
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-slate-800/80 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl font-extrabold text-xs">
-                      02
-                    </div>
-                    <div>
-                      <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                        Day-by-Day Itinerary Builder
-                      </h3>
-                      <p className="text-[11px] text-gray-500">Click (+ Pick Attraction) on any day to select inventory items or move items up/down</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <button
-                      type="button"
-                      onClick={() => handleOpenPickerModal(1)}
-                      className="px-3.5 py-1.5 rounded-xl text-xs font-black bg-orange-600 text-white hover:bg-orange-700 flex items-center space-x-1 cursor-pointer transition-colors shadow-xs"
-                    >
-                      <Plus className="w-4 h-4" />
-                      <span>Pick Attraction / Item</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={expandAllBuilderDays}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center space-x-1 cursor-pointer transition-colors"
-                      title="Expand all days"
-                    >
-                      <ChevronsDown className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Expand All</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={collapseAllBuilderDays}
-                      className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 flex items-center space-x-1 cursor-pointer transition-colors"
-                      title="Collapse all days"
-                    >
-                      <ChevronsUp className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Collapse All</span>
-                    </button>
-                    <button
-                      onClick={() => setDurationDays(prev => prev + 1)}
-                      className="px-3 py-1.5 rounded-xl text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 hover:bg-orange-500/20 flex items-center space-x-1 cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add Day ({durationDays + 1})</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Render Days */}
-                <div className="space-y-6">
-                  {Array.from({ length: durationDays }, (_, idx) => {
-                    const dayNum = idx + 1;
-                    const itemsInThisDay = selectedLineItems.filter(i => i.day === dayNum);
-                    const daySubtotal = itemsInThisDay.reduce((sum, item) => sum + item.subtotal, 0);
-                    const isBuilderCollapsed = !!collapsedBuilderDays[dayNum];
-
-                    return (
-                      <div
-                        key={`day-builder-${dayNum}`}
-                        className={`p-5 rounded-3xl border-2 transition-all space-y-4 ${
-                          isDarkMode 
-                            ? 'bg-slate-900/60 border-slate-800' 
-                            : 'bg-slate-50/70 border-gray-200'
-                        }`}
-                      >
-                        {/* Day Header */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200/60 dark:border-slate-800 pb-3">
-                          <div className="flex items-center space-x-2.5">
-                            <span className="px-3 py-1 rounded-xl bg-orange-600 text-white font-black text-xs uppercase tracking-wider">
-                              DAY {dayNum}
-                            </span>
-                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                              {itemsInThisDay.length} itinerary item(s)
-                            </span>
-                          </div>
-
-                          <div className="flex items-center space-x-2 flex-wrap gap-y-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPickerModal(dayNum)}
-                              className="px-3 py-1 rounded-xl bg-orange-600 text-white font-black text-xs hover:bg-orange-700 flex items-center space-x-1 cursor-pointer shadow-xs transition-colors"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                              <span>Pick Attraction / Item</span>
-                            </button>
-
-                            <div className="flex items-center space-x-1 border-l border-r border-gray-200 dark:border-slate-800 px-1">
-                              <button
-                                type="button"
-                                onClick={() => handleMoveDay(dayNum, 'up')}
-                                disabled={dayNum === 1}
-                                className={`p-1 rounded-lg border text-xs ${
-                                  dayNum === 1
-                                    ? 'opacity-30 cursor-not-allowed border-gray-200 dark:border-slate-800 text-gray-400'
-                                    : 'border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 cursor-pointer'
-                                }`}
-                                title="Move Day Up"
-                              >
-                                <ArrowUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleMoveDay(dayNum, 'down')}
-                                disabled={dayNum === durationDays}
-                                className={`p-1 rounded-lg border text-xs ${
-                                  dayNum === durationDays
-                                    ? 'opacity-30 cursor-not-allowed border-gray-200 dark:border-slate-800 text-gray-400'
-                                    : 'border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300 cursor-pointer'
-                                }`}
-                                title="Move Day Down"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-
-                            <span className="text-xs font-extrabold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-3 py-1 rounded-xl">
-                              Subtotal: {currency} {daySubtotal.toLocaleString()}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleBuilderDayCollapse(dayNum)}
-                              className="px-2.5 py-1 rounded-xl bg-gray-200/80 dark:bg-slate-800 hover:bg-gray-300 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 transition-colors cursor-pointer flex items-center space-x-1 text-xs font-bold"
-                              title={isBuilderCollapsed ? "Expand Day" : "Collapse Day"}
-                            >
-                              <span>{isBuilderCollapsed ? "Expand" : "Collapse"}</span>
-                              {isBuilderCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        {!isBuilderCollapsed && (
-                          <div className="space-y-3 pt-1">
-                            {CATEGORY_SECTIONS.map((section) => {
-                              const SectionIcon = section.icon;
-                              const sectionKey = `d${dayNum}-${section.id}`;
-                              const isSectionCollapsed = !!collapsedDaySections[sectionKey];
-
-                              // Line item category sections (Attraction, Transportation, Accommodation, Meal, Other)
-                              const categoryItems = itemsInThisDay.filter(item => getCategoryKey(item.type) === section.id);
-
-                              return (
-                                <div
-                                  key={`day-${dayNum}-sec-${section.id}`}
-                                  onDragOver={(e) => {
-                                    e.preventDefault();
-                                    setActiveDropZone({ day: dayNum, target: section.id });
-                                  }}
-                                  onDragLeave={() => setActiveDropZone(null)}
-                                  onDrop={(e) => handleDropToDayZone(e, dayNum, section.id)}
-                                  className={`p-3.5 rounded-2xl border-2 transition-all space-y-2.5 ${
-                                    activeDropZone?.day === dayNum && activeDropZone.target === section.id
-                                      ? 'border-dashed border-orange-500 bg-orange-500/10 ring-2 ring-orange-500/30'
-                                      : isDarkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-white border-gray-200'
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => toggleDaySectionCollapse(dayNum, section.id)}
-                                        className="p-1 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-slate-700 cursor-pointer"
-                                      >
-                                        {isSectionCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                                      </button>
-                                      <span className="text-xs font-extrabold uppercase tracking-wider flex items-center space-x-1.5">
-                                        <SectionIcon className="w-3.5 h-3.5 text-gray-500" />
-                                        <span>{section.label} ({categoryItems.length})</span>
-                                      </span>
-                                    </div>
-                                    <span className="text-[10px] text-gray-400">Drag & Drop inventory here</span>
-                                  </div>
-
-                                  {!isSectionCollapsed && (
-                                    categoryItems.length === 0 ? (
-                                      <div className="p-3 border border-dashed border-gray-200 dark:border-slate-800 rounded-xl text-center text-gray-400">
-                                        <p className="text-[11px]">No {section.label} items assigned to Day {dayNum}</p>
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-2">
-                                        {categoryItems.map((item, lineIdx) => {
-                                          const globalIdx = selectedLineItems.findIndex(i => i === item);
-
-                                          return (
-                                            <div
-                                              key={`line-item-${dayNum}-${section.id}-${lineIdx}`}
-                                              className={`p-2.5 rounded-xl border flex items-center justify-between gap-3 ${
-                                                isDarkMode ? 'bg-slate-800/80 border-slate-700' : 'bg-slate-50 border-gray-200'
-                                              }`}
-                                            >
-                                              <div className="flex items-center space-x-2 shrink-0">
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center space-x-1 ${getCategoryBadgeClass(item.type)}`}>
-                                                  {getCategoryIcon(item.type)}
-                                                  <span>{item.type}</span>
-                                                </span>
-                                              </div>
-
-                                              <div className="flex-1 min-w-0">
-                                                <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                                                  {item.name}
-                                                </p>
-                                                <p className="text-[10px] text-gray-500">
-                                                  {currency} {Number(item.price).toLocaleString()} / {item.priceType}
-                                                </p>
-                                              </div>
-
-                                              {/* Qty Counter */}
-                                              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-slate-900 rounded-lg p-1 border border-gray-200 dark:border-slate-700">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleUpdateLineItemQty(globalIdx, item.quantity - 1)}
-                                                  className="w-5 h-5 flex items-center justify-center rounded text-xs font-bold bg-white dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700"
-                                                >
-                                                  -
-                                                </button>
-                                                <span className="w-5 text-center text-xs font-bold">
-                                                  {item.quantity}
-                                                </span>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleUpdateLineItemQty(globalIdx, item.quantity + 1)}
-                                                  className="w-5 h-5 flex items-center justify-center rounded text-xs font-bold bg-white dark:bg-slate-800 hover:bg-gray-200 dark:hover:bg-slate-700"
-                                                >
-                                                  +
-                                                </button>
-                                              </div>
-
-                                              <div className="text-right shrink-0">
-                                                <p className="text-xs font-black text-gray-900 dark:text-white">
-                                                  {currency} {item.subtotal.toLocaleString()}
-                                                </p>
-                                              </div>
-
-                                              <div className="flex items-center space-x-1 shrink-0">
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleMoveItemInDay(globalIdx, 'up')}
-                                                  className="p-1 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300 cursor-pointer transition-colors"
-                                                  title="Move Item Up"
-                                                >
-                                                  <ArrowUp className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleMoveItemInDay(globalIdx, 'down')}
-                                                  className="p-1 rounded-lg border border-gray-200 dark:border-slate-700 hover:bg-gray-200 dark:hover:bg-slate-700 text-gray-600 dark:text-gray-300 cursor-pointer transition-colors"
-                                                  title="Move Item Down"
-                                                >
-                                                  <ArrowDown className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                  type="button"
-                                                  onClick={() => handleRemoveLineItem(globalIdx)}
-                                                  className="p-1 rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
-                                                  title="Remove Item"
-                                                >
-                                                  <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    )
-                                  )}
-                                </div>
-                              );
-                            })}
-
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPickerModal(dayNum)}
-                              className="w-full py-2.5 rounded-2xl border-2 border-dashed border-orange-500/40 hover:border-orange-500 bg-orange-500/5 text-orange-600 dark:text-orange-400 font-bold text-xs flex items-center justify-center space-x-2 cursor-pointer transition-all shadow-xs"
-                            >
-                              <Plus className="w-4 h-4" />
-                              <span>Pick Attraction / Inventory Item for Day {dayNum}</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Section 3: Inclusions, Exclusions & Terms Customization */}
-              <div className={`p-6 rounded-3xl border shadow-xs space-y-6 ${
-                isDarkMode ? 'bg-[#111928] border-slate-800' : 'bg-white border-gray-200'
-              }`}>
-                <div className="flex items-center space-x-2 border-b border-gray-100 dark:border-slate-800/80 pb-3">
-                  <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl font-extrabold text-xs">
-                    03
-                  </div>
-                  <h3 className={`text-sm font-extrabold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    General Inclusions, Exclusions & Terms
-                  </h3>
-                </div>
-
-                {/* Inclusions Block */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      <span>Inclusions ({selectedInclusions.length})</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBankPickerModal('inclusions');
-                        setBankPickerSearch('');
-                      }}
-                      className="px-3 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 font-extrabold text-xs flex items-center space-x-1 cursor-pointer transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Pick from Inclusions Bank</span>
-                    </button>
-                  </div>
-
-                  {/* Selected Inclusions Tags */}
-                  <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 min-h-[60px]">
-                    {selectedInclusions.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No inclusions selected yet. Click "Pick from Inclusions Bank" or select below.</p>
-                    ) : (
-                      selectedInclusions.map((item, i) => (
-                        <span key={`inc-${i}`} className="px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-xs font-bold flex items-center space-x-1.5">
-                          <span>✓ {item}</span>
-                          <button onClick={() => toggleInclusionPreset(item)} className="hover:text-red-500 cursor-pointer">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Preset Inclusions Chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {masterInclusions.map((preset, i) => {
-                      const isSelected = selectedInclusions.includes(preset);
-                      return (
-                        <div
-                          key={`preset-inc-${i}`}
-                          className={`inline-flex items-center rounded-lg text-[11px] font-semibold border transition-all ${
-                            isSelected 
-                              ? 'bg-emerald-600 text-white border-emerald-600' 
-                              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-slate-700 hover:border-emerald-500'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleInclusionPreset(preset)}
-                            className="px-2.5 py-1 text-left cursor-pointer"
-                          >
-                            {isSelected ? '✓ ' : '+ '} {preset}
-                          </button>
-                          <button
-                            type="button"
-                            title="Edit prefilled inclusion"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updated = prompt("Edit prefilled inclusion item:", preset);
-                              if (updated && updated.trim()) {
-                                handleEditPresetInclusion(i, updated.trim());
-                              }
-                            }}
-                            className="px-1 py-1 opacity-70 hover:opacity-100 hover:text-amber-300 cursor-pointer"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete prefilled inclusion"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete prefilled inclusion "${preset}"?`)) {
-                                handleDeletePresetInclusion(i);
-                              }
-                            }}
-                            className="pr-2 py-1 opacity-70 hover:opacity-100 hover:text-red-300 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add Custom Inclusion */}
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Type custom inclusion item..."
-                      value={customInclusionInput}
-                      onChange={(e) => setCustomInclusionInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomInclusion()}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-xl border focus:outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomInclusion}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 cursor-pointer"
-                    >
-                      Add Custom
-                    </button>
-                  </div>
-                </div>
-
-                {/* Exclusions Block */}
-                <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-                      <X className="w-4 h-4 text-rose-500" />
-                      <span>Exclusions ({selectedExclusions.length})</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBankPickerModal('exclusions');
-                        setBankPickerSearch('');
-                      }}
-                      className="px-3 py-1 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 font-extrabold text-xs flex items-center space-x-1 cursor-pointer transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Pick from Exclusions Bank</span>
-                    </button>
-                  </div>
-
-                  {/* Selected Exclusions Tags */}
-                  <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800 min-h-[60px]">
-                    {selectedExclusions.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No exclusions selected. Click "Pick from Exclusions Bank" or select below.</p>
-                    ) : (
-                      selectedExclusions.map((item, i) => (
-                        <span key={`exc-${i}`} className="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-xs font-bold flex items-center space-x-1.5">
-                          <span>✕ {item}</span>
-                          <button onClick={() => toggleExclusionPreset(item)} className="hover:text-red-500 cursor-pointer">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </span>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Preset Exclusions Chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {masterExclusions.map((preset, i) => {
-                      const isSelected = selectedExclusions.includes(preset);
-                      return (
-                        <div
-                          key={`preset-exc-${i}`}
-                          className={`inline-flex items-center rounded-lg text-[11px] font-semibold border transition-all ${
-                            isSelected 
-                              ? 'bg-rose-600 text-white border-rose-600' 
-                              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-slate-700 hover:border-rose-500'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleExclusionPreset(preset)}
-                            className="px-2.5 py-1 text-left cursor-pointer"
-                          >
-                            {isSelected ? '✕ ' : '+ '} {preset}
-                          </button>
-                          <button
-                            type="button"
-                            title="Edit prefilled exclusion"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updated = prompt("Edit prefilled exclusion item:", preset);
-                              if (updated && updated.trim()) {
-                                handleEditPresetExclusion(i, updated.trim());
-                              }
-                            }}
-                            className="px-1 py-1 opacity-70 hover:opacity-100 hover:text-amber-300 cursor-pointer"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete prefilled exclusion"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete prefilled exclusion "${preset}"?`)) {
-                                handleDeletePresetExclusion(i);
-                              }
-                            }}
-                            className="pr-2 py-1 opacity-70 hover:opacity-100 hover:text-red-300 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add Custom Exclusion */}
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Type custom exclusion item..."
-                      value={customExclusionInput}
-                      onChange={(e) => setCustomExclusionInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomExclusion()}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-xl border focus:outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomExclusion}
-                      className="px-3 py-1.5 rounded-xl bg-rose-600 text-white font-bold text-xs hover:bg-rose-700 cursor-pointer"
-                    >
-                      Add Custom
-                    </button>
-                  </div>
-                </div>
-
-                {/* Terms & Conditions Block */}
-                <div className="space-y-3 pt-2 border-t border-gray-100 dark:border-slate-800">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center space-x-1.5">
-                      <FileCheck className="w-4 h-4 text-amber-500" />
-                      <span>Terms & Conditions ({selectedTerms.length})</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setBankPickerModal('terms');
-                        setBankPickerSearch('');
-                      }}
-                      className="px-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-extrabold text-xs flex items-center space-x-1 cursor-pointer transition-all"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Pick from Terms Bank</span>
-                    </button>
-                  </div>
-
-                  {/* Selected Terms List */}
-                  <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-800">
-                    {selectedTerms.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic">No terms specified. Click "Pick from Terms Bank" or select below.</p>
-                    ) : (
-                      selectedTerms.map((term, i) => (
-                        <div key={`term-${i}`} className="flex items-start justify-between gap-2 p-1.5 text-xs text-gray-700 dark:text-gray-300">
-                          <span className="font-semibold">{i + 1}. {term}</span>
-                          <button onClick={() => toggleTermsPreset(term)} className="text-red-500 hover:text-red-700 shrink-0 cursor-pointer">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Preset Terms Chips */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {masterTerms.map((preset, i) => {
-                      const isSelected = selectedTerms.includes(preset);
-                      return (
-                        <div
-                          key={`preset-term-${i}`}
-                          className={`inline-flex items-center rounded-lg text-[11px] font-semibold border transition-all ${
-                            isSelected 
-                              ? 'bg-amber-600 text-white border-amber-600' 
-                              : 'bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-slate-700 hover:border-amber-500'
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleTermsPreset(preset)}
-                            className="px-2.5 py-1 text-left cursor-pointer"
-                          >
-                            {isSelected ? '✓ ' : '+ '} {preset}
-                          </button>
-                          <button
-                            type="button"
-                            title="Edit prefilled term"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const updated = prompt("Edit prefilled term rule:", preset);
-                              if (updated && updated.trim()) {
-                                handleEditPresetTerm(i, updated.trim());
-                              }
-                            }}
-                            className="px-1 py-1 opacity-70 hover:opacity-100 hover:text-amber-300 cursor-pointer"
-                          >
-                            <Edit3 className="w-3 h-3" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Delete prefilled term"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm(`Delete prefilled term rule "${preset}"?`)) {
-                                handleDeletePresetTerm(i);
-                              }
-                            }}
-                            className="pr-2 py-1 opacity-70 hover:opacity-100 hover:text-red-300 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Add Custom Term */}
-                  <div className="flex space-x-2">
-                    <input
-                      type="text"
-                      placeholder="Type custom terms & conditions rule..."
-                      value={customTermsInput}
-                      onChange={(e) => setCustomTermsInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddCustomTerms()}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-xl border focus:outline-none ${
-                        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddCustomTerms}
-                      className="px-3 py-1.5 rounded-xl bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 cursor-pointer"
-                    >
-                      Add Term
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 4: Pricing, Margin & Total Investment */}
-              <div className={`p-6 rounded-3xl border shadow-xs space-y-4 ${
-                isDarkMode ? 'bg-[#111928] border-slate-800' : 'bg-white border-gray-200'
-              }`}>
-                <div className="flex items-center justify-between border-b border-gray-100 dark:border-slate-800/80 pb-3">
-                  <div className="flex items-center space-x-2">
-                    <div className="p-2 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-xl font-extrabold text-xs">
-                      04
-                    </div>
-                    <h3 className={`text-sm font-extrabold flex items-center space-x-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      <Calculator className="w-4 h-4 text-orange-500" />
-                      <span>Price & Margin Engine</span>
-                    </h3>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <label className="text-xs font-bold text-gray-500">Currency:</label>
-                    <select
-                      value={currency}
-                      onChange={(e) => setCurrency(e.target.value)}
-                      className={`px-2.5 py-1 text-xs font-bold rounded-xl border ${
-                        isDarkMode ? 'bg-slate-900 border-slate-700 text-white' : 'bg-gray-100 border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="IDR">IDR (Rp)</option>
-                      <option value="USD">USD ($)</option>
-                      <option value="EUR">EUR (€)</option>
-                      <option value="AUD">AUD ($)</option>
-                      <option value="SGD">SGD ($)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Price breakdown cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
-                  {/* Adults Subtotal */}
-                  <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-gray-200'}`}>
-                    <span className="text-xs text-gray-500 font-bold block mb-1">
-                      Adults Subtotal ({adultsCount} Adult{adultsCount !== 1 ? 's' : ''})
-                    </span>
-                    <span className="text-lg font-black text-gray-900 dark:text-white">
-                      {currency} {pricingBreakdown.adultsSubtotal.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">Calculated adult rates</span>
-                  </div>
-
-                  {/* Children Subtotal */}
-                  <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-gray-200'}`}>
-                    <span className="text-xs text-gray-500 font-bold block mb-1">
-                      Children Subtotal ({childrenCount} Child{childrenCount !== 1 ? 'ren' : ''})
-                    </span>
-                    <span className="text-lg font-black text-gray-900 dark:text-white">
-                      {currency} {pricingBreakdown.childrenSubtotal.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-gray-400 block mt-0.5">Calculated child rates</span>
-                  </div>
-
-                  {/* Agency Margin */}
-                  <div className={`p-4 rounded-2xl border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-50 border-gray-200'}`}>
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-500 font-bold">Margin / Markup</span>
-                      <div className="flex items-center space-x-1">
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={marginPercentage}
-                          onChange={(e) => setMarginPercentage(parseFloat(e.target.value) || 0)}
-                          className={`w-14 px-2 py-0.5 text-xs text-center font-black rounded-lg border ${
-                            isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-gray-300 text-gray-900'
-                          }`}
-                        />
-                        <span className="text-xs font-bold">%</span>
-                      </div>
-                    </div>
-                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                      + {currency} {pricingBreakdown.marginAmount.toLocaleString()}
-                    </span>
-                    <span className="text-[10px] text-emerald-500 block mt-0.5">Estimated Profit</span>
-                  </div>
-
-                  {/* Final Total Package Price with Override */}
-                  <div className="p-4 rounded-2xl bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-md flex flex-col justify-between">
-                    <div>
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] uppercase tracking-wider font-extrabold text-orange-100">Total Investment Price</p>
-                        <DollarSign className="w-5 h-5 opacity-80 shrink-0" />
-                      </div>
-                      <p className="text-xl font-black mt-1">{currency} {pricingBreakdown.finalTotalPrice.toLocaleString()}</p>
-                    </div>
-
-                    {/* Override Price Input */}
-                    <div className="mt-2 pt-2 border-t border-white/20">
-                      <label className="flex items-center space-x-2 text-[11px] text-orange-100 font-bold cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={isCustomPriceEnabled}
-                          onChange={(e) => {
-                            setIsCustomPriceEnabled(e.target.checked);
-                            if (e.target.checked && customTotalPrice === '') {
-                              setCustomTotalPrice(pricingBreakdown.calculatedTotalPrice);
-                            }
-                          }}
-                          className="rounded text-orange-600 focus:ring-0 cursor-pointer"
-                        />
-                        <span>Override Total Price</span>
-                      </label>
-                      {isCustomPriceEnabled && (
-                        <div className="mt-1 flex items-center space-x-1">
-                          <span className="text-xs font-black">{currency}</span>
-                          <input
-                            type="number"
-                            placeholder="Custom total..."
-                            value={customTotalPrice}
-                            onChange={(e) => setCustomTotalPrice(e.target.value)}
-                            className="w-full px-2 py-1 text-xs text-gray-900 font-extrabold bg-white rounded-lg border-0 focus:ring-2 focus:ring-orange-300"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Special Notes & Generate Trigger Button */}
-              <div className={`p-6 rounded-3xl border shadow-xs space-y-4 ${
-                isDarkMode ? 'bg-[#111928] border-slate-800' : 'bg-white border-gray-200'
-              }`}>
-                <div>
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Special Notes / Guest Preferences (Optional)
-                  </label>
-                  <textarea
-                    rows={2}
-                    placeholder="e.g. Guest prefers vegetarian meals, anniversary celebration setup..."
-                    value={specialNotes}
-                    onChange={(e) => setSpecialNotes(e.target.value)}
-                    className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-xl border focus:outline-none ${
-                      isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-slate-50 border-gray-200 text-gray-900'
-                    }`}
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGenerateAIProposal}
-                  disabled={isGeneratingAI}
-                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-orange-600 via-amber-600 to-orange-500 text-white font-black text-sm shadow-lg hover:shadow-orange-500/25 transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50"
-                >
-                  {isGeneratingAI ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Generating AI Proposal Narrative...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-5 h-5" />
-                      <span>Generate Professional Proposal Document</span>
-                    </>
-                  )}
-                </button>
-              </div>
+        <div className="space-y-6">
+          {/* Mobile Tab Switcher */}
+          <div className="flex lg:hidden items-center p-1 bg-gray-100 dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setMobileStudioTab('editor')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                mobileStudioTab === 'editor'
+                  ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              📝 Proposal Builder
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileStudioTab('preview')}
+              className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all ${
+                mobileStudioTab === 'preview'
+                  ? 'bg-white dark:bg-slate-900 text-orange-600 dark:text-orange-400 shadow-xs'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              👁️ Live Document Preview ({currency} {Number(totalPrice).toLocaleString()})
+            </button>
           </div>
 
-          {/* Generated Proposal Document Display & Revision Mode */}
-          {generatedProposal && (
-            <div className="space-y-6 pt-6 border-t border-gray-200 dark:border-slate-800">
-              {/* Document Header Controls */}
-              <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-slate-900 text-white shadow-lg">
-                <div className="flex items-center space-x-3">
-                  <div className="p-2 bg-orange-500 rounded-xl">
-                    <FileText className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-sm font-extrabold">Proposal Document Preview</h2>
-                    <p className="text-xs text-gray-400">Generated for {generatedProposal.guestName}</p>
-                  </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex items-center p-1 rounded-xl bg-slate-800 border border-slate-700">
-                    <button
-                      onClick={() => setPreviewViewMode('document')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
-                        previewViewMode === 'document' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Document Preview</span>
-                    </button>
-                    <button
-                      onClick={() => setPreviewViewMode('revise')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
-                        previewViewMode === 'revise' ? 'bg-orange-600 text-white' : 'text-gray-400 hover:text-white'
-                      }`}
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                      <span>Edit & Revise</span>
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setCustomerEmailInput(generatedProposal.email || email || '');
-                      setEmailSubjectInput(`Official Tour Proposal: ${generatedProposal.proposalTitle}`);
-                      setIsEmailModalOpen(true);
-                    }}
-                    className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shadow-md"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Send by Email</span>
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      let pId = activeProposalId || generatedProposal?.id;
-                      if (!pId) {
-                        pId = await handleSaveProposalToDb();
-                      }
-                      if (pId) {
-                        window.open(`/proposal/${pId}`, '_blank');
-                      }
-                    }}
-                    className="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shadow-md"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                    <span>View Live Link</span>
-                  </button>
-
-                  <button
-                    onClick={handleCopyWhatsAppMessage}
-                    className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shadow-md"
-                  >
-                    <Share2 className="w-3.5 h-3.5" />
-                    <span>{copySuccess ? 'Copied!' : 'WhatsApp Text'}</span>
-                  </button>
-
-                  <button
-                    onClick={handleSaveProposalToDb}
-                    disabled={isSavingProposal}
-                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shadow-md disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>{isSavingProposal ? 'Saving...' : 'Save Proposal'}</span>
-                  </button>
-
-                  <button
-                    onClick={handlePrintDocument}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs flex items-center space-x-1.5 cursor-pointer shadow-md"
-                  >
-                    <Printer className="w-4 h-4" />
-                    <span>Print / Export PDF</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* View Mode 1: Edit & Revise Editor Form */}
-              {previewViewMode === 'revise' && (
-                <div className="no-print p-6 rounded-3xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-[#111928] space-y-6">
-                  <div className="flex items-center space-x-2 border-b pb-3 border-gray-200 dark:border-slate-800">
-                    <Edit3 className="w-5 h-5 text-orange-500" />
-                    <h3 className="text-base font-extrabold text-gray-900 dark:text-white">Revise Proposal Content & Itinerary</h3>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Proposal Title</label>
-                      <input
-                        type="text"
-                        value={generatedProposal.proposalTitle}
-                        onChange={(e) => setGeneratedProposal({ ...generatedProposal, proposalTitle: e.target.value })}
-                        className="w-full px-3.5 py-2 text-xs font-bold rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Welcome Greeting Message</label>
-                      <textarea
-                        rows={3}
-                        value={generatedProposal.welcomeMessage}
-                        onChange={(e) => setGeneratedProposal({ ...generatedProposal, welcomeMessage: e.target.value })}
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900"
-                      />
-                    </div>
-
-                    {/* Revise Itinerary Days */}
-                    <div className="space-y-4">
-                      <h4 className="text-xs font-extrabold text-orange-600 dark:text-orange-400 uppercase tracking-wider">Itinerary Day Narratives & Item Descriptions</h4>
-                      {generatedProposal.itineraryNarrative.map((day, dIdx) => {
-                        const dayItems = generatedProposal.selectedItems.filter(i => i.day === day.dayNumber);
-                        return (
-                          <div key={`revise-day-${dIdx}`} className="p-4 rounded-2xl border border-gray-200 dark:border-slate-800 space-y-3 bg-slate-50/50 dark:bg-slate-900/50">
-                            <div className="flex items-center space-x-3">
-                              <span className="px-2 py-0.5 rounded bg-orange-600 text-white text-xs font-black">DAY {day.dayNumber}</span>
-                              <input
-                                type="text"
-                                value={day.title}
-                                onChange={(e) => {
-                                  const newNarrative = [...generatedProposal.itineraryNarrative];
-                                  newNarrative[dIdx].title = e.target.value;
-                                  setGeneratedProposal({ ...generatedProposal, itineraryNarrative: newNarrative });
-                                }}
-                                className="flex-1 px-3 py-1.5 text-xs font-bold rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                              />
-                            </div>
-                            <div>
-                              <textarea
-                                rows={2}
-                                value={day.summary}
-                                onChange={(e) => {
-                                  const newNarrative = [...generatedProposal.itineraryNarrative];
-                                  newNarrative[dIdx].summary = e.target.value;
-                                  setGeneratedProposal({ ...generatedProposal, itineraryNarrative: newNarrative });
-                                }}
-                                className="w-full px-3 py-2 text-xs rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                              />
-                            </div>
-
-                            {/* Item Descriptions for Day */}
-                            {dayItems.length > 0 && (
-                              <div className="space-y-2 pt-2 border-t border-gray-200 dark:border-slate-800">
-                                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 block">
-                                  Included Logistics Descriptions:
-                                </span>
-                                {dayItems.map((item, itemIdx) => (
-                                  <div key={`revise-item-${itemIdx}`} className="p-2.5 rounded-xl border border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-1">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-xs font-bold text-slate-900 dark:text-white">{item.name}</span>
-                                      <span className="text-[10px] font-medium text-slate-400">{item.type}</span>
-                                    </div>
-                                    <input
-                                      type="text"
-                                      value={item.description || getItemDescription(item)}
-                                      onChange={(e) => {
-                                        const newDesc = e.target.value;
-                                        const updatedItems = generatedProposal.selectedItems.map(si => {
-                                          if (si.name === item.name && si.day === item.day) {
-                                            return { ...si, description: newDesc };
-                                          }
-                                          return si;
-                                        });
-                                        setGeneratedProposal({ ...generatedProposal, selectedItems: updatedItems });
-                                      }}
-                                      className="w-full px-2.5 py-1 text-xs rounded-lg border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Closing Message</label>
-                      <textarea
-                        rows={2}
-                        value={generatedProposal.closingNotes}
-                        onChange={(e) => setGeneratedProposal({ ...generatedProposal, closingNotes: e.target.value })}
-                        className="w-full px-3.5 py-2 text-xs rounded-xl border border-gray-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* View Mode 2: High-Craft Print-Ready Proposal Document (Fits Standard Paper / A4) */}
-              <div className="print-container max-w-4xl mx-auto p-8 md:p-12 bg-white text-slate-900 rounded-3xl shadow-xl border border-gray-200 relative overflow-visible print:shadow-none print:border-none">
-                
-                {/* Print Branding Header */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border-b-2 border-amber-500/30 pb-6">
-                  <div className="flex items-center space-x-4">
-                    <img
-                      src={companyLogo}
-                      alt={companyName}
-                      className="w-16 h-16 rounded-2xl object-cover border border-gray-200 shadow-sm"
-                    />
-                    <div>
-                      <h1 className="text-xl font-black text-slate-900 tracking-tight">{companyName}</h1>
-                      <p className="text-xs text-slate-500 font-medium">{companyAddress}</p>
-                      <p className="text-xs text-slate-500 font-medium">Email: {companyEmail} | Phone: {companyPhone}</p>
-                      <p className="text-xs text-amber-600 font-bold">{companyWebsite}</p>
-                    </div>
-                  </div>
-
-                  <div className="text-left sm:text-right">
-                    <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-black text-xs uppercase tracking-wider">
-                      Official Tour Proposal
-                    </span>
-                    <p className="text-xs font-bold text-slate-400 mt-2">Ref ID: PRO-BALI-{(Math.floor(Math.random() * 8999) + 1000)}</p>
-                    <p className="text-xs font-medium text-slate-500">Date: {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                  </div>
-                </div>
-
-                {/* Client Metadata Block */}
-                <div className="my-6 p-6 rounded-2xl bg-slate-50 border border-slate-200/80 grid grid-cols-2 sm:grid-cols-4 gap-4 print-page-break">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Prepared For</span>
-                    <span className="text-sm font-black text-slate-900">{generatedProposal.guestName}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pax Count</span>
-                    <span className="text-sm font-black text-slate-900">{generatedProposal.paxCount} Guest(s)</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Duration</span>
-                    <span className="text-sm font-black text-slate-900">{generatedProposal.durationDays} Day(s)</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Package Investment</span>
-                    <span className="text-sm font-black text-orange-600">{generatedProposal.currency} {Number(generatedProposal.totalPrice).toLocaleString()}</span>
-                  </div>
-                </div>
-
-                {/* Title & Welcome Message */}
-                <div className="space-y-3 mb-8">
-                  <h2 className="text-2xl font-black text-slate-900 tracking-tight">{generatedProposal.proposalTitle}</h2>
-                  <p className="text-sm text-slate-600 leading-relaxed font-medium italic bg-amber-500/5 p-4 rounded-xl border-l-4 border-amber-500">
-                    "{generatedProposal.welcomeMessage}"
-                  </p>
-                </div>
-
-                {/* Day-by-Day Detailed Itinerary */}
-                <div className="space-y-6 mb-8">
-                  <div className="flex items-center justify-between border-b pb-2">
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center space-x-2">
-                      <Compass className="w-4 h-4 text-orange-500" />
-                      <span>Detailed Day-by-Day Itinerary & Logistics</span>
-                    </h3>
-
-                    <div className="no-print flex items-center space-x-2">
-                      <button
-                        type="button"
-                        onClick={expandAllDocDays}
-                        className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center space-x-1 cursor-pointer"
-                        title="Expand all days"
-                      >
-                        <ChevronsDown className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Expand All</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={collapseAllDocDays}
-                        className="px-2.5 py-1 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors flex items-center space-x-1 cursor-pointer"
-                        title="Collapse all days"
-                      >
-                        <ChevronsUp className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Collapse All</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-6">
-                    {generatedProposal.itineraryNarrative.map((day) => {
-                      const dayLogistics = generatedProposal.selectedItems.filter(i => i.day === day.dayNumber);
-                      const isDocCollapsed = !!collapsedDocDays[day.dayNumber];
-
-                      const dayItineraryItems = dayLogistics.filter(i => getCategoryKey(i.type) === 'Attraction');
-                      const dayTransportItems = dayLogistics.filter(i => getCategoryKey(i.type) === 'Transportation');
-                      const dayAccommodationItems = dayLogistics.filter(i => getCategoryKey(i.type) === 'Accommodation');
-                      const dayDiningItems = dayLogistics.filter(i => getCategoryKey(i.type) === 'Meal');
-                      const dayOtherItems = dayLogistics.filter(i => getCategoryKey(i.type) === 'Other');
-
-                      return (
-                        <div key={`doc-day-${day.dayNumber}`} className="p-5 rounded-2xl border border-slate-200 bg-white shadow-xs space-y-4 print-page-break">
-                          {/* Day Header & AI Generated Narrative Description */}
-                          <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
-                            <div className="space-y-1.5 min-w-0 flex-1">
-                              <div className="flex items-center space-x-2.5">
-                                <span className="px-3 py-1 rounded-xl bg-orange-600 text-white font-black text-xs uppercase tracking-wider">
-                                  Day {toRoman(day.dayNumber)}
-                                </span>
-                                <h4 className="text-base font-black text-slate-900 truncate">{day.title}</h4>
-                              </div>
-                              <p className="text-xs text-slate-600 leading-relaxed font-medium pt-1">
-                                {day.summary}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => toggleDocDayCollapse(day.dayNumber)}
-                              className="no-print p-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center space-x-1 shrink-0 cursor-pointer transition-colors"
-                              title={isDocCollapsed ? "Expand Day" : "Collapse Day"}
-                            >
-                              <span>{isDocCollapsed ? "Expand" : "Collapse"}</span>
-                              {isDocCollapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-
-                          {/* Collapsible Categorized Day Body */}
-                          <div className={isDocCollapsed ? "hidden print:block space-y-3.5" : "space-y-3.5"}>
-                            {/* 1. Itinerary */}
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-black uppercase tracking-wider text-orange-600 flex items-center space-x-1.5">
-                                <Compass className="w-3.5 h-3.5" />
-                                <span>Itinerary:</span>
-                              </span>
-                              {dayItineraryItems.length > 0 ? (
-                                <ul className="space-y-1 pl-2 text-xs font-medium text-slate-800">
-                                  {dayItineraryItems.map((item, lIdx) => (
-                                    <li key={`day-it-item-${lIdx}`} className="flex items-start space-x-1.5">
-                                      <span className="text-orange-500 font-bold">•</span>
-                                      <div>
-                                        <span className="font-bold">{item.name}</span>
-                                        {item.description && (
-                                          <p className="text-[11px] text-slate-500 font-normal leading-tight">{item.description}</p>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-slate-400 pl-2 italic">-</p>
-                              )}
-                            </div>
-
-                            {/* 2. Transportation Option */}
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-black uppercase tracking-wider text-blue-600 flex items-center space-x-1.5">
-                                <Car className="w-3.5 h-3.5" />
-                                <span>Transportation Option:</span>
-                              </span>
-                              {dayTransportItems.length > 0 ? (
-                                <ul className="space-y-1 pl-2 text-xs font-medium text-slate-800">
-                                  {dayTransportItems.map((item, lIdx) => (
-                                    <li key={`day-tr-item-${lIdx}`} className="flex items-start space-x-1.5">
-                                      <span className="text-blue-500 font-bold">•</span>
-                                      <div>
-                                        <span className="font-bold">{item.name}</span>
-                                        {item.description && (
-                                          <p className="text-[11px] text-slate-500 font-normal leading-tight">{item.description}</p>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-slate-400 pl-2 italic">-</p>
-                              )}
-                            </div>
-
-                            {/* 3. Accommodation */}
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-black uppercase tracking-wider text-purple-600 flex items-center space-x-1.5">
-                                <Hotel className="w-3.5 h-3.5" />
-                                <span>Accommodation:</span>
-                              </span>
-                              {dayAccommodationItems.length > 0 ? (
-                                <ul className="space-y-1 pl-2 text-xs font-medium text-slate-800">
-                                  {dayAccommodationItems.map((item, lIdx) => (
-                                    <li key={`day-ac-item-${lIdx}`} className="flex items-start space-x-1.5">
-                                      <span className="text-purple-500 font-bold">•</span>
-                                      <div>
-                                        <span className="font-bold">{item.name}</span>
-                                        {item.description && (
-                                          <p className="text-[11px] text-slate-500 font-normal leading-tight">{item.description}</p>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-slate-400 pl-2 italic">-</p>
-                              )}
-                            </div>
-
-                            {/* 4. Dining */}
-                            <div className="space-y-1">
-                              <span className="text-[11px] font-black uppercase tracking-wider text-amber-600 flex items-center space-x-1.5">
-                                <Utensils className="w-3.5 h-3.5" />
-                                <span>Dining:</span>
-                              </span>
-                              {dayDiningItems.length > 0 ? (
-                                <ul className="space-y-1 pl-2 text-xs font-medium text-slate-800">
-                                  {dayDiningItems.map((item, lIdx) => (
-                                    <li key={`day-fd-item-${lIdx}`} className="flex items-start space-x-1.5">
-                                      <span className="text-amber-500 font-bold">•</span>
-                                      <div>
-                                        <span className="font-bold">{item.name}</span>
-                                        {item.description && (
-                                          <p className="text-[11px] text-slate-500 font-normal leading-tight">{item.description}</p>
-                                        )}
-                                      </div>
-                                    </li>
-                                  ))}
-                                </ul>
-                              ) : (
-                                <p className="text-xs text-slate-400 pl-2 italic">-</p>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* What is included & What's not included Side-by-Side Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 my-8 print-page-break">
-                  <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/20 space-y-3">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-emerald-800 flex items-center space-x-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>What is included:</span>
-                    </h4>
-                    <ul className="space-y-1.5 text-xs font-medium text-slate-700">
-                      {generatedProposal.inclusions.map((inc, i) => (
-                        <li key={`doc-inc-${i}`} className="flex items-start space-x-2">
-                          <span className="text-emerald-600 font-bold">•</span>
-                          <span>{inc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 space-y-3">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-rose-800 flex items-center space-x-2">
-                      <XCircle className="w-4 h-4 text-rose-600" />
-                      <span>What's not included:</span>
-                    </h4>
-                    <ul className="space-y-1.5 text-xs font-medium text-slate-700">
-                      {generatedProposal.exclusions.map((exc, i) => (
-                        <li key={`doc-exc-${i}`} className="flex items-start space-x-2">
-                          <span className="text-rose-600 font-bold">•</span>
-                          <span>{exc}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-
-                {/* Terms & Conditions */}
-                {generatedProposal.termsAndConditions && generatedProposal.termsAndConditions.length > 0 && (
-                  <div className="my-8 p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3 print-page-break">
-                    <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center space-x-2">
-                      <FileCheck className="w-4 h-4 text-amber-500" />
-                      <span>Terms & Booking Conditions</span>
-                    </h4>
-                    <ol className="list-decimal list-inside space-y-1.5 text-xs font-medium text-slate-600">
-                      {generatedProposal.termsAndConditions.map((term, i) => (
-                        <li key={`doc-term-${i}`}>{term}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
-
-                {/* Financial Summary Box */}
-                <div className="my-8 p-6 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4 print-page-break">
-                  <div>
-                    <span className="text-[10px] font-bold text-orange-400 uppercase tracking-wider block">Total Agreed Price</span>
-                    <p className="text-2xl font-black">{generatedProposal.currency} {Number(generatedProposal.totalPrice).toLocaleString()}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">Includes all taxes, vehicle charters, tickets & guide services listed above</p>
-                  </div>
-                  <div className="text-right">
-                    <span className="px-3 py-1.5 rounded-xl bg-orange-600 text-white font-bold text-xs">
-                      All-Inclusive Package
-                    </span>
-                  </div>
-                </div>
-
-                {/* Closing & Dual Signatures Block */}
-                <div className="mt-12 pt-8 border-t border-slate-200 space-y-8 print-page-break">
-                  <p className="text-xs font-medium text-slate-600 text-center italic">
-                    "{generatedProposal.closingNotes}"
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-12 pt-6">
-                    <div className="text-center space-y-12">
-                      <div className="border-b-2 border-slate-300 pb-2">
-                        <p className="text-xs font-extrabold text-slate-900">{companyName}</p>
-                      </div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Authorized Tour Representative</p>
-                    </div>
-
-                    <div className="text-center space-y-12">
-                      <div className="border-b-2 border-slate-300 pb-2">
-                        <p className="text-xs font-extrabold text-slate-900">{generatedProposal.guestName}</p>
-                      </div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Client Acceptance & Approval</p>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
+          {/* Split-Screen Studio Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: Fast Action Editor Pane */}
+            <div className={`lg:col-span-6 xl:col-span-5 ${mobileStudioTab === 'preview' ? 'hidden lg:block' : ''}`}>
+              <ProposalEditorPane
+                guestName={guestName}
+                setGuestName={setGuestName}
+                email={email}
+                setEmail={setEmail}
+                phone={phone}
+                setPhone={setPhone}
+                nationality={nationality}
+                setNationality={setNationality}
+                adultsCount={adultsCount}
+                setAdultsCount={setAdultsCount}
+                childrenCount={childrenCount}
+                setChildrenCount={setChildrenCount}
+                durationDays={durationDays}
+                setDurationDays={setDurationDays}
+                currency={currency}
+                setCurrency={setCurrency}
+                marginPercentage={marginPercentage}
+                setMarginPercentage={setMarginPercentage}
+                isCustomPriceEnabled={isCustomPriceEnabled}
+                setIsCustomPriceEnabled={setIsCustomPriceEnabled}
+                customTotalPrice={customTotalPrice}
+                setCustomTotalPrice={setCustomTotalPrice}
+                specialNotes={specialNotes}
+                setSpecialNotes={setSpecialNotes}
+                selectedLineItems={selectedLineItems}
+                setSelectedLineItems={setSelectedLineItems}
+                selectedInclusions={selectedInclusions}
+                setSelectedInclusions={setSelectedInclusions}
+                selectedExclusions={selectedExclusions}
+                setSelectedExclusions={setSelectedExclusions}
+                masterInclusions={masterInclusions}
+                masterExclusions={masterExclusions}
+                pricingBreakdown={pricingBreakdown}
+                editingDayTitles={editingDayTitles}
+                setEditingDayTitles={setEditingDayTitles}
+                inlineStopInput={inlineStopInput}
+                setInlineStopInput={setInlineStopInput}
+                onQuickAddCustomStop={handleQuickAddCustomStop}
+                onMoveItemInDay={handleMoveItemInDay}
+                onRemoveLineItem={handleRemoveLineItem}
+                onOpenCatalogPicker={handleOpenPickerModal}
+                onGenerateAIProposal={handleGenerateAIProposal}
+                isGeneratingAI={isGeneratingAI}
+                incomingLeadsCount={incomingLeads.length}
+                onOpenIncomingLeads={() => setIsLeadsDrawerOpen(true)}
+                onOpenTourCatalog={() => setIsTourModalOpen(true)}
+                linkedInquiryId={linkedInquiryId}
+                onUnlinkInquiry={() => setLinkedInquiryId(null)}
+                isDarkMode={isDarkMode}
+              />
             </div>
-          )}
+
+            {/* Right Column: Live Document Preview Pane */}
+            <div className={`lg:col-span-6 xl:col-span-7 ${mobileStudioTab === 'editor' ? 'hidden lg:block' : ''}`}>
+              <ProposalPreviewPane
+                proposal={activeProposalDoc}
+                isSaving={isSavingProposal}
+                onSave={handleSaveProposalToDb}
+                onDirectWhatsApp={handleDirectWhatsAppShare}
+                onOpenEmailModal={() => {
+                  setCustomerEmailInput(email || '');
+                  setIsEmailModalOpen(true);
+                }}
+                onPrint={handlePrintDocument}
+                copySuccess={copySuccess}
+                activeProposalId={activeProposalId}
+                isDarkMode={isDarkMode}
+              />
+            </div>
+          </div>
         </div>
       )}
 
@@ -4460,6 +3504,26 @@ export default function ProposalGenerator({ isDarkMode = false, tenantId }: Prop
           </div>
         </div>
       )}
+
+      {/* Incoming Leads from AI Trip Planner Modal */}
+      <IncomingLeadsModal
+        isOpen={isLeadsDrawerOpen}
+        onClose={() => setIsLeadsDrawerOpen(false)}
+        leads={incomingLeads}
+        onSelectLead={handleLoadInquiryLead}
+        linkedInquiryId={linkedInquiryId}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Import Tour from Catalog Modal */}
+      <ImportTourModal
+        isOpen={isTourModalOpen}
+        onClose={() => setIsTourModalOpen(false)}
+        tours={availableTours}
+        onSelectTour={handleImportTour}
+        currency={currency}
+        isDarkMode={isDarkMode}
+      />
     </div>
   );
 }
