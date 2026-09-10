@@ -232,7 +232,7 @@ function AppContent() {
     }
 
     return (
-      <div className="flex min-h-screen flex-col font-sans antialiased text-gray-100 bg-[#070b13] w-full max-w-full overflow-x-hidden">
+      <div className="flex min-h-screen flex-col font-sans antialiased text-slate-900 bg-[#f8fafc] w-full max-w-full overflow-x-hidden">
         {isImpersonating && <ImpersonateBar />}
         <ChunkErrorBoundary>
           <Suspense fallback={<Loader />}>

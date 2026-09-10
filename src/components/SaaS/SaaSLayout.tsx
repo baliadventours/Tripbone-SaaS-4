@@ -74,7 +74,7 @@ export default function SaaSLayout() {
     }
   };
 
-  const isTransparent = isHome && !scrolled;
+  const isTransparent = false;
 
   return (
     <div className="min-h-screen font-sans selection-brand-color bg-[#f8fafc] text-slate-900 overflow-x-hidden relative flex flex-col">
@@ -88,14 +88,10 @@ export default function SaaSLayout() {
         .selection-brand-color::selection { background-color: ${brandColor} !important; color: white !important; }
       `}</style>
       
-      {/* Top Fixed Header with Dark Navigation Announcement Bar */}
+      {/* Top Fixed Header with Clean Light Navigation */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <TopAnnouncementBar />
-        <header className={`w-full transition-all duration-300 ${
-          isTransparent 
-            ? 'bg-slate-950/40 backdrop-blur-md border-b border-white/10 text-white' 
-            : 'bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.06)] text-slate-900'
-        }`}>
+        <header className="w-full transition-all duration-300 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-slate-900">
           <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
             
             {/* Logo + Primary Navigation */}
@@ -105,17 +101,17 @@ export default function SaaSLayout() {
                   <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[140px] object-contain" />
                 ) : (
                   <>
-                    <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform border border-slate-700/50">
+                    <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
                       <Compass className="h-5 w-5 text-teal-400" />
                     </div>
-                    <span className={`text-xl font-black tracking-tight ${isTransparent ? 'text-white' : 'text-slate-900'}`}>
+                    <span className="text-xl font-bold tracking-tight text-slate-900">
                       {globalBrand?.platformName || settings?.siteName || "Tripbone"}
                     </span>
                   </>
                 )}
               </Link>
 
-              <nav className={`hidden lg:flex items-center space-x-1.5 text-sm font-extrabold ${isTransparent ? 'text-slate-100' : 'text-slate-800'}`}>
+              <nav className="hidden lg:flex items-center space-x-1.5 text-sm font-semibold text-slate-700">
                 
                 {/* Features Mega Dropdown */}
                 <div 
@@ -123,11 +119,9 @@ export default function SaaSLayout() {
                   onMouseEnter={() => setIsFeaturesOpen(true)}
                   onMouseLeave={() => setIsFeaturesOpen(false)}
                 >
-                  <button className={`flex items-center space-x-1 px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
-                    isTransparent ? 'hover:text-white hover:bg-white/10' : 'hover:text-brand hover:bg-slate-100/90'
-                  }`}>
+                  <button className="flex items-center space-x-1 px-4 py-2.5 rounded-xl transition-all cursor-pointer hover:text-brand hover:bg-slate-100/90 text-slate-700">
                     <span>Features</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-brand' : isTransparent ? 'text-slate-300' : 'text-slate-400'}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-brand' : 'text-slate-400'}`} />
                   </button>
                   
                   {/* Mega Menu */}
@@ -236,9 +230,7 @@ export default function SaaSLayout() {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={handleLoginClick} 
-                className={`text-sm font-extrabold px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
-                  isTransparent ? 'text-slate-100 hover:text-white hover:bg-white/10' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
-                }`}
+                className="text-sm font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer text-slate-700 hover:text-slate-900 hover:bg-slate-100"
               >
                 {user ? 'Dashboard' : 'Log in'}
               </button>
@@ -246,10 +238,10 @@ export default function SaaSLayout() {
               {!user && (
                 <button 
                   onClick={handleSignupClick} 
-                  className="hidden sm:inline-flex items-center gap-2 text-white text-xs font-black px-5 py-2.5 rounded-xl transition-all shadow-md hover:brightness-110 active:scale-95 cursor-pointer text-center ring-2 ring-white/30"
+                  className="hidden sm:inline-flex items-center gap-2 text-white text-xs font-bold px-4.5 py-2.5 rounded-xl transition-all shadow-xs hover:opacity-95 active:scale-98 cursor-pointer text-center"
                   style={{ backgroundColor: brandColor }}
                 >
-                  <span>Start 7-Day Free Trial</span>
+                  <span>Start Free Trial</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               )}
@@ -257,12 +249,10 @@ export default function SaaSLayout() {
               {/* Mobile Hamburger Toggle */}
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className={`lg:hidden p-2 rounded-xl transition-colors ${
-                  isTransparent ? 'text-white hover:bg-white/10' : 'text-slate-700 hover:bg-slate-100'
-                }`}
+                className="lg:hidden p-2 rounded-xl transition-colors text-slate-700 hover:bg-slate-100 border border-slate-200"
                 aria-label="Toggle Navigation Menu"
               >
-                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+                {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
             </div>
 
@@ -336,102 +326,104 @@ export default function SaaSLayout() {
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 pt-20 pb-12 text-slate-400 border-t border-slate-800 mt-auto">
+      {/* Footer - Sleek Minimal Light Modern SaaS */}
+      <footer className="bg-slate-50 pt-16 pb-12 text-slate-600 border-t border-slate-200/80 mt-auto">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-14">
             
             {/* Column 1: Brand Info */}
             <div className="col-span-1 md:col-span-2 lg:col-span-1">
-              <div className="flex items-center space-x-2.5 mb-6">
+              <div className="flex items-center space-x-2.5 mb-5">
                 {globalBrand?.logoUrl || settings?.logoURL ? (
-                  <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-9 max-w-[150px] object-contain" />
+                  <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[140px] object-contain" />
                 ) : (
                   <>
-                    <Compass className="h-8 w-8 text-brand" />
-                    <span className="text-2xl font-bold tracking-tight text-white">
+                    <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs">
+                      <Compass className="h-4.5 w-4.5 text-teal-400" />
+                    </div>
+                    <span className="text-xl font-bold tracking-tight text-slate-900">
                       {globalBrand?.platformName || settings?.siteName || "Tripbone"}
                     </span>
                   </>
                 )}
               </div>
-              <p className="text-xs leading-relaxed mb-6 text-slate-400">
+              <p className="text-xs leading-relaxed mb-5 text-slate-500">
                 Your own booking website. Not a widget. Not complicated. Drive direct sales, automate WhatsApp dispatches, and eliminate booking commissions.
               </p>
-              <div className="text-xs text-slate-300 space-y-2 mt-4">
+              <div className="text-xs text-slate-600 space-y-1.5">
                 <p className="flex items-center gap-2">
-                  <span className="font-bold text-white">Support Email:</span>
-                  <a href="mailto:support@tripbone.com" className="text-brand hover:underline">support@tripbone.com</a>
+                  <span className="font-semibold text-slate-800">Support:</span>
+                  <a href="mailto:support@tripbone.com" className="text-teal-600 hover:underline">support@tripbone.com</a>
                 </p>
               </div>
             </div>
             
             {/* Column 2: Industries */}
             <div>
-              <h4 className="text-white font-bold text-sm mb-5 tracking-wide uppercase text-slate-200">Industries</h4>
-              <ul className="space-y-3 text-xs">
-                <li><Link to="/industries/day-tours" className="hover:text-white transition-colors">Day Tour Operator</Link></li>
-                <li><Link to="/industries/atv-offroad" className="hover:text-white transition-colors">ATV Operator</Link></li>
-                <li><Link to="/industries/rafting-outdoor" className="hover:text-white transition-colors">Rafting Operator</Link></li>
-                <li><Link to="/industries/boat-charters" className="hover:text-white transition-colors">Boat Charters & Cruises</Link></li>
-                <li><Link to="/industries/food-culinary" className="hover:text-white transition-colors">Food & Culinary Tours</Link></li>
-                <li><Link to="/industries/rentals" className="hover:text-white transition-colors">Equipment Rentals</Link></li>
+              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Industries</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
+                <li><Link to="/industries/day-tours" className="hover:text-slate-950 transition-colors">Day Tour Operator</Link></li>
+                <li><Link to="/industries/atv-offroad" className="hover:text-slate-950 transition-colors">ATV Operator</Link></li>
+                <li><Link to="/industries/rafting-outdoor" className="hover:text-slate-950 transition-colors">Rafting Operator</Link></li>
+                <li><Link to="/industries/boat-charters" className="hover:text-slate-950 transition-colors">Boat Charters & Cruises</Link></li>
+                <li><Link to="/industries/food-culinary" className="hover:text-slate-950 transition-colors">Food & Culinary Tours</Link></li>
+                <li><Link to="/industries/rentals" className="hover:text-slate-950 transition-colors">Equipment Rentals</Link></li>
               </ul>
             </div>
 
             {/* Column 3: Compare Us */}
             <div>
-              <h4 className="text-white font-bold text-sm mb-5 tracking-wide uppercase text-slate-200">Compare Us</h4>
-              <ul className="space-y-3 text-xs">
-                <li><Link to="/compare/bokun" className="hover:text-white transition-colors">Tripbone vs Bokun</Link></li>
-                <li><Link to="/compare/fareharbor" className="hover:text-white transition-colors">Tripbone vs FareHarbor</Link></li>
-                <li><Link to="/compare/rezdy" className="hover:text-white transition-colors">Tripbone vs Rezdy</Link></li>
-                <li><Link to="/compare/peek-pro" className="hover:text-white transition-colors">Tripbone vs Peek Pro</Link></li>
-                <li><Link to="/compare/regiondo" className="hover:text-white transition-colors">Tripbone vs Regiondo</Link></li>
-                <li><Link to="/compare/checkfront" className="hover:text-white transition-colors">Tripbone vs Checkfront</Link></li>
+              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Compare Us</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
+                <li><Link to="/compare/bokun" className="hover:text-slate-950 transition-colors">Tripbone vs Bokun</Link></li>
+                <li><Link to="/compare/fareharbor" className="hover:text-slate-950 transition-colors">Tripbone vs FareHarbor</Link></li>
+                <li><Link to="/compare/rezdy" className="hover:text-slate-950 transition-colors">Tripbone vs Rezdy</Link></li>
+                <li><Link to="/compare/peek-pro" className="hover:text-slate-950 transition-colors">Tripbone vs Peek Pro</Link></li>
+                <li><Link to="/compare/regiondo" className="hover:text-slate-950 transition-colors">Tripbone vs Regiondo</Link></li>
+                <li><Link to="/compare/checkfront" className="hover:text-slate-950 transition-colors">Tripbone vs Checkfront</Link></li>
               </ul>
             </div>
 
             {/* Column 4: Platform */}
             <div>
-              <h4 className="text-white font-bold text-sm mb-5 tracking-wide uppercase text-slate-200">Platform & Company</h4>
-              <ul className="space-y-3 text-xs">
-                <li><Link to="/features" className="hover:text-white transition-colors">Platform Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-white transition-colors">Pricing & Plans</Link></li>
-                <li><Link to="/directory" className="hover:text-white transition-colors">Live Store Demos</Link></li>
-                <li><Link to="/about" className="hover:text-white transition-colors">About Us</Link></li>
-                <li><Link to="/blog" className="hover:text-white transition-colors">Blog / Guides</Link></li>
-                <li><Link to="/contact" className="hover:text-white transition-colors">Contact Support</Link></li>
-                <li><button onClick={handleLoginClick} className="hover:text-white transition-colors">{user ? 'Dashboard' : 'Log In'}</button></li>
+              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Platform & Company</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
+                <li><Link to="/features" className="hover:text-slate-950 transition-colors">Platform Features</Link></li>
+                <li><Link to="/pricing" className="hover:text-slate-950 transition-colors">Pricing & Plans</Link></li>
+                <li><Link to="/directory" className="hover:text-slate-950 transition-colors">Live Store Demos</Link></li>
+                <li><Link to="/about" className="hover:text-slate-950 transition-colors">About Us</Link></li>
+                <li><Link to="/blog" className="hover:text-slate-950 transition-colors">Blog / Guides</Link></li>
+                <li><Link to="/contact" className="hover:text-slate-950 transition-colors">Contact Support</Link></li>
+                <li><button onClick={handleLoginClick} className="hover:text-slate-950 transition-colors cursor-pointer">{user ? 'Dashboard' : 'Log In'}</button></li>
               </ul>
             </div>
 
             {/* Column 5: Legal */}
             <div>
-              <h4 className="text-white font-bold text-sm mb-5 tracking-wide uppercase text-slate-200">Legal</h4>
-              <ul className="space-y-3 text-xs">
-                <li><Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
-                <li><Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/cookies" className="hover:text-white transition-colors">Cookie Policy</Link></li>
+              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Legal</h4>
+              <ul className="space-y-2.5 text-xs text-slate-600">
+                <li><Link to="/terms" className="hover:text-slate-950 transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy" className="hover:text-slate-950 transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/cookies" className="hover:text-slate-950 transition-colors">Cookie Policy</Link></li>
               </ul>
             </div>
 
           </div>
           
-          <div className="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between">
-            <p className="text-xs">&copy; {new Date().getFullYear()} {globalBrand?.platformName || "Tripbone"}. All rights reserved.</p>
+          <div className="border-t border-slate-200/80 pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
+            <p>&copy; {new Date().getFullYear()} {globalBrand?.platformName || "Tripbone"}. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {globalBrand?.twitterUrl && (
-                <a href={globalBrand.twitterUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:text-white transition-colors">Twitter</a>
+                <a href={globalBrand.twitterUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Twitter</a>
               )}
               {globalBrand?.linkedinUrl && (
-                <a href={globalBrand.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:text-white transition-colors">LinkedIn</a>
+                <a href={globalBrand.linkedinUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">LinkedIn</a>
               )}
               {globalBrand?.facebookUrl && (
-                <a href={globalBrand.facebookUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:text-white transition-colors">Facebook</a>
+                <a href={globalBrand.facebookUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Facebook</a>
               )}
               {globalBrand?.instagramUrl && (
-                <a href={globalBrand.instagramUrl} target="_blank" rel="noopener noreferrer" className="text-xs hover:text-white transition-colors">Instagram</a>
+                <a href={globalBrand.instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Instagram</a>
               )}
             </div>
           </div>

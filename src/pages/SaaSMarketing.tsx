@@ -192,101 +192,112 @@ export default function SaaSMarketing() {
       `}</style>
 
       <div className="bg-white min-h-screen">
-        {/* --- 1. HERO SECTION (WIX.COM MODEL - PREMIUM DARK) --- */}
+        {/* --- 1. HERO SECTION (SLEEK LIGHT MODERN SAAS) --- */}
         <section 
           id="hero" 
-          className="pt-28 pb-20 sm:pt-36 sm:pb-28 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-slate-950 text-white border-b border-slate-800/80"
+          className="pt-24 pb-16 sm:pt-32 sm:pb-24 px-4 sm:px-6 lg:px-8 relative overflow-hidden bg-gradient-to-b from-slate-50/90 via-white to-slate-50/50 text-slate-900 border-b border-slate-200/80"
         >
-          {/* Ambient glowing radial light flares */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-tr from-cyan-600/15 via-indigo-600/20 to-emerald-500/15 rounded-full blur-[120px] pointer-events-none -z-0"></div>
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b12_1px,transparent_1px),linear-gradient(to_bottom,#1e293b12_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
+          {/* Ambient subtle light gradient flares */}
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[400px] bg-gradient-to-tr from-cyan-100/40 via-sky-100/30 to-indigo-100/30 rounded-full blur-[100px] pointer-events-none -z-0"></div>
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000006_1px,transparent_1px),linear-gradient(to_bottom,#00000006_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
 
-          <div className="max-w-6xl mx-auto text-center relative z-10 space-y-8">
+          <div className="max-w-6xl mx-auto text-center relative z-10 space-y-6">
             
-            {/* Giant Wix-Style Centered Headline */}
+            {/* Minimal floating badge pill */}
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white border border-slate-200/90 shadow-2xs text-xs font-semibold text-slate-700"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Tripbone 3.8 • The Modern Operating System for Tour Operators</span>
+            </motion.div>
+
+            {/* Centered Modern Display Headline */}
             <motion.h1 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-white max-w-5xl mx-auto"
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.12] text-slate-950 max-w-4xl mx-auto"
             >
               Your Own Booking Website. <br />
-              <span className="bg-gradient-to-r from-cyan-400 via-sky-300 to-emerald-400 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-teal-600 via-sky-600 to-indigo-600 bg-clip-text text-transparent">
                 Not a Widget. Not Complicated.
               </span>
             </motion.h1>
 
-            {/* Centered Bullet/Badge Value Prop Line */}
+            {/* Value Prop Line */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-slate-300 font-semibold text-sm sm:text-lg max-w-4xl mx-auto leading-relaxed bg-slate-900/60 backdrop-blur-md px-6 py-3.5 rounded-2xl border border-slate-800/80 shadow-inner"
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-slate-600 font-semibold text-xs sm:text-base max-w-3xl mx-auto leading-relaxed bg-white/80 backdrop-blur-md px-5 py-3 rounded-2xl border border-slate-200/80 shadow-2xs"
             >
-              <span className="flex items-center gap-1.5 text-cyan-300 font-bold">
-                <Sparkles className="w-4 h-4 text-cyan-400 inline" /> Live in 2 minutes
+              <span className="flex items-center gap-1.5 text-teal-700 font-bold">
+                <Sparkles className="w-4 h-4 text-teal-600 inline" /> Live in 2 minutes
               </span>
-              <span className="hidden sm:inline text-slate-600">•</span>
-              <span className="text-emerald-300 font-bold">Zero commission or booking fees</span>
-              <span className="hidden sm:inline text-slate-600">•</span>
-              <span className="text-slate-200">No technical skill needed</span>
-              <span className="hidden sm:inline text-slate-600">•</span>
-              <span className="text-sky-300 font-bold">AI builds your tours in under 5 minutes</span>
+              <span className="hidden sm:inline text-slate-300">•</span>
+              <span className="text-slate-800 font-bold">Zero commission or booking fees</span>
+              <span className="hidden sm:inline text-slate-300">•</span>
+              <span className="text-slate-600">No technical skill needed</span>
+              <span className="hidden sm:inline text-slate-300">•</span>
+              <span className="text-sky-700 font-bold">AI builds your tours automatically</span>
             </motion.div>
 
             {/* Centered CTA Button Group */}
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2"
+              transition={{ duration: 0.5, delay: 0.3 }}
+              className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
             >
               <button
                 onClick={() => navigate('/signup')}
-                className="w-full sm:w-auto bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-black text-base sm:text-lg px-9 py-4 rounded-full shadow-2xl shadow-cyan-500/25 flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.03] active:scale-[0.98] group"
+                className="w-full sm:w-auto bg-slate-900 hover:bg-slate-850 text-white font-bold text-sm sm:text-base px-8 py-3.5 rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <span>Try it Free</span>
-                <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </button>
 
               <button
                 onClick={() => setShowDemoModal(true)}
-                className="w-full sm:w-auto bg-slate-800/90 hover:bg-slate-700/90 text-white font-bold text-base sm:text-lg px-8 py-4 rounded-full border border-slate-700 shadow-sm flex items-center justify-center gap-2.5 cursor-pointer transition-all hover:border-slate-600 hover:scale-[1.03] active:scale-[0.98] group"
+                className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm sm:text-base px-7 py-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer transition-all hover:border-slate-300 hover:scale-[1.02] active:scale-[0.98] group"
               >
-                <div className="h-6 w-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center font-bold text-xs group-hover:bg-cyan-500 group-hover:text-slate-950 transition-colors">
-                  <Play className="h-3 w-3 fill-current ml-0.5" />
+                <div className="h-5 w-5 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xs group-hover:bg-teal-100 transition-colors">
+                  <Play className="h-2.5 w-2.5 fill-current ml-0.5" />
                 </div>
-                <span>Try Demo</span>
+                <span>Watch Demo</span>
               </button>
             </motion.div>
 
-            <p className="text-xs font-semibold text-slate-400 pt-1">
-              7 Days Free. No credit card required.
+            <p className="text-xs font-semibold text-slate-500 pt-0.5">
+              7 Days Free • No credit card required • Cancel anytime
             </p>
 
-            {/* --- WIX-STYLE HORIZONTAL SLIDESHOW SHOWCASE --- */}
+            {/* --- SLIDESHOW SHOWCASE FRAME --- */}
             <motion.div 
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.4 }}
-              className="pt-8 relative max-w-6xl mx-auto"
+              transition={{ duration: 0.7, delay: 0.35 }}
+              className="pt-6 relative max-w-6xl mx-auto"
               onMouseEnter={() => setIsHovered(true)}
               onMouseLeave={() => setIsHovered(false)}
             >
               
               {/* SLIDESHOW STAGE CONTAINER */}
-              <div className="relative flex items-center justify-center min-h-[320px] sm:min-h-[460px] md:min-h-[520px] overflow-visible px-2">
+              <div className="relative flex items-center justify-center min-h-[300px] sm:min-h-[440px] md:min-h-[500px] overflow-visible px-2">
                 
                 {/* 1. PREVIOUS SLIDE (LEFT BACKGROUND RECTANGLE) */}
                 <div 
                   onClick={() => setActiveSlide((activeSlide - 1 + heroSlideshowImages.length) % heroSlideshowImages.length)}
-                  className="absolute left-2 sm:left-4 md:left-8 top-12 sm:top-16 z-10 w-[38%] sm:w-[35%] opacity-40 hover:opacity-80 scale-90 blur-[1px] hover:blur-0 rounded-2xl shadow-2xl border border-slate-800 bg-slate-900 overflow-hidden cursor-pointer transition-all duration-500 transform -rotate-3 hover:scale-95"
+                  className="absolute left-2 sm:left-4 md:left-8 top-12 sm:top-16 z-10 w-[38%] sm:w-[35%] opacity-40 hover:opacity-80 scale-90 blur-[1px] hover:blur-0 rounded-2xl shadow-lg border border-slate-200 bg-white overflow-hidden cursor-pointer transition-all duration-500 transform -rotate-3 hover:scale-95"
                 >
-                  <div className="bg-slate-900 px-3 py-1.5 border-b border-slate-800 flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <span className="text-[9px] font-mono text-slate-400 truncate ml-2">
+                  <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <span className="text-[9px] font-mono text-slate-500 truncate ml-2">
                       {heroSlideshowImages[(activeSlide - 1 + heroSlideshowImages.length) % heroSlideshowImages.length].domain}
                     </span>
                   </div>
@@ -301,13 +312,13 @@ export default function SaaSMarketing() {
                 {/* 2. NEXT SLIDE (RIGHT BACKGROUND RECTANGLE) */}
                 <div 
                   onClick={() => setActiveSlide((activeSlide + 1) % heroSlideshowImages.length)}
-                  className="absolute right-2 sm:right-4 md:right-8 top-12 sm:top-16 z-10 w-[38%] sm:w-[35%] opacity-40 hover:opacity-80 scale-90 blur-[1px] hover:blur-0 rounded-2xl shadow-2xl border border-slate-800 bg-slate-900 overflow-hidden cursor-pointer transition-all duration-500 transform rotate-3 hover:scale-95"
+                  className="absolute right-2 sm:right-4 md:right-8 top-12 sm:top-16 z-10 w-[38%] sm:w-[35%] opacity-40 hover:opacity-80 scale-90 blur-[1px] hover:blur-0 rounded-2xl shadow-lg border border-slate-200 bg-white overflow-hidden cursor-pointer transition-all duration-500 transform rotate-3 hover:scale-95"
                 >
-                  <div className="bg-slate-900 px-3 py-1.5 border-b border-slate-800 flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <div className="w-2 h-2 rounded-full bg-slate-700"></div>
-                    <span className="text-[9px] font-mono text-slate-400 truncate ml-2">
+                  <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                    <span className="text-[9px] font-mono text-slate-500 truncate ml-2">
                       {heroSlideshowImages[(activeSlide + 1) % heroSlideshowImages.length].domain}
                     </span>
                   </div>
@@ -319,33 +330,33 @@ export default function SaaSMarketing() {
                   />
                 </div>
 
-                {/* 3. CENTER ACTIVE SLIDE (WIX HERO FOCAL WINDOW) */}
-                <div className="relative z-20 w-[82%] sm:w-[75%] md:w-[70%] bg-slate-900 rounded-2xl shadow-[0_30px_90px_-15px_rgba(0,0,0,0.8)] border border-slate-700/80 overflow-hidden text-left transition-all duration-500 transform">
+                {/* 3. CENTER ACTIVE SLIDE */}
+                <div className="relative z-20 w-[86%] sm:w-[78%] md:w-[72%] bg-white rounded-2xl shadow-[0_20px_50px_-15px_rgba(0,0,0,0.1)] border border-slate-200/90 overflow-hidden text-left transition-all duration-500 transform">
                   
                   {/* Browser Chrome Navbar */}
-                  <div className="bg-slate-900/95 backdrop-blur-md px-3.5 sm:px-5 py-2.5 flex items-center justify-between border-b border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                  <div className="bg-slate-50/90 backdrop-blur-md px-3.5 sm:px-5 py-2.5 flex items-center justify-between border-b border-slate-200/80">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-slate-300"></div>
                     </div>
 
-                    <div className="bg-slate-800/90 text-slate-300 text-[10px] sm:text-xs font-mono px-3.5 py-1 rounded-md border border-slate-700/80 flex items-center gap-2 shadow-inner">
-                      <span className="text-emerald-400">🔒</span>
-                      <span className="font-semibold text-white">
+                    <div className="bg-white text-slate-700 text-[10px] sm:text-xs font-mono px-3.5 py-1 rounded-md border border-slate-200 shadow-2xs flex items-center gap-2">
+                      <span className="text-emerald-500 text-xs">🔒</span>
+                      <span className="font-semibold text-slate-900">
                         {heroSlideshowImages[activeSlide].domain}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 text-slate-400 text-xs font-bold">
-                      <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                    <div className="flex items-center gap-2 text-slate-600 text-xs font-bold">
+                      <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                         LIVE DEMO
                       </span>
                     </div>
                   </div>
 
                   {/* Active Screenshot Frame */}
-                  <div className="relative overflow-hidden bg-slate-950 min-h-[220px] sm:min-h-[340px]">
+                  <div className="relative overflow-hidden bg-slate-100 min-h-[220px] sm:min-h-[340px]">
                     <AnimatePresence mode="wait">
                       <motion.img 
                         key={activeSlide}
@@ -360,24 +371,24 @@ export default function SaaSMarketing() {
                       />
                     </AnimatePresence>
 
-                    {/* WIX-STYLE FLOATING AI CHAT PROMPT OVERLAY */}
+                    {/* FLOATING AI CHAT PROMPT OVERLAY */}
                     <motion.div 
                       initial={{ opacity: 0, y: 15 }}
                       animate={{ opacity: 1, y: 0 }}
                       key={`prompt-${activeSlide}`}
                       transition={{ duration: 0.5, delay: 0.2 }}
-                      className="absolute right-3 sm:right-6 bottom-3 sm:bottom-6 z-30 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-200/90 p-3.5 sm:p-4 max-w-[240px] sm:max-w-[300px] text-slate-900 hidden xs:block"
+                      className="absolute right-3 sm:right-6 bottom-3 sm:bottom-6 z-30 bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/90 p-3.5 sm:p-4 max-w-[240px] sm:max-w-[300px] text-slate-900 hidden xs:block"
                     >
                       <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                         <div className="flex items-center gap-2">
-                          <div className="h-5 w-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
+                          <div className="h-5 w-5 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
                             ✨
                           </div>
-                          <span className="font-extrabold text-xs text-slate-900">Ask Aria AI</span>
+                          <span className="font-bold text-xs text-slate-900">Ask Aria AI</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                          <span className="text-[9px] text-slate-400 font-bold uppercase">Ready</span>
+                          <span className="text-[9px] text-slate-500 font-bold uppercase">Ready</span>
                         </div>
                       </div>
 
@@ -385,9 +396,9 @@ export default function SaaSMarketing() {
                         "{heroSlideshowImages[activeSlide].prompt}"
                       </p>
 
-                      <div className="bg-slate-100 rounded-full px-3 py-1.5 flex items-center justify-between text-[10px] text-slate-400">
+                      <div className="bg-slate-100 rounded-full px-3 py-1.5 flex items-center justify-between text-[10px] text-slate-500">
                         <span>Generating layout...</span>
-                        <div className="h-4 w-4 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[9px]">
+                        <div className="h-4 w-4 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-[9px]">
                           ↑
                         </div>
                       </div>
@@ -400,7 +411,7 @@ export default function SaaSMarketing() {
                 {/* SLIDESHOW NAVIGATION ARROWS */}
                 <button 
                   onClick={() => setActiveSlide((activeSlide - 1 + heroSlideshowImages.length) % heroSlideshowImages.length)}
-                  className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-slate-800 p-2.5 sm:p-3 rounded-full shadow-lg border border-slate-200/80 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                  className="absolute left-1 sm:left-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white text-slate-700 p-2.5 sm:p-3 rounded-full shadow-md border border-slate-200/90 transition-all hover:scale-110 active:scale-95 cursor-pointer"
                   title="Previous Site"
                 >
                   <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -408,7 +419,7 @@ export default function SaaSMarketing() {
 
                 <button 
                   onClick={() => setActiveSlide((activeSlide + 1) % heroSlideshowImages.length)}
-                  className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-slate-800 p-2.5 sm:p-3 rounded-full shadow-lg border border-slate-200/80 transition-all hover:scale-110 active:scale-95 cursor-pointer"
+                  className="absolute right-1 sm:right-2 top-1/2 -translate-y-1/2 z-30 bg-white/95 hover:bg-white text-slate-700 p-2.5 sm:p-3 rounded-full shadow-md border border-slate-200/90 transition-all hover:scale-110 active:scale-95 cursor-pointer"
                   title="Next Site"
                 >
                   <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" />
@@ -676,89 +687,87 @@ export default function SaaSMarketing() {
           </div>
         </section>
 
-        {/* --- 4. EVERYTHING YOU NEED TO RUN YOUR TOUR BUSINESS (Features Grid - DARK THEME) --- */}
-        <section id="features" className="py-24 md:py-32 bg-slate-900 text-white relative overflow-hidden border-y border-slate-800">
-          {/* Ambient Lighting */}
-          <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none"></div>
-          <div className="absolute bottom-0 left-1/4 w-[500px] h-[500px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none"></div>
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b15_1px,transparent_1px),linear-gradient(to_bottom,#1e293b15_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)]"></div>
-
+        {/* --- 4. EVERYTHING YOU NEED TO RUN YOUR TOUR BUSINESS (Features Grid - SLEEK LIGHT MODERN) --- */}
+        <section id="features" className="py-20 md:py-28 bg-slate-50/70 text-slate-900 relative overflow-hidden border-y border-slate-200/80">
           <div className="max-w-7xl mx-auto px-6 relative z-10">
             
-            <div className="text-center max-w-3xl mx-auto mb-20">
-              <span className="text-xs font-black text-cyan-400 uppercase tracking-widest bg-cyan-500/10 border border-cyan-500/30 px-3.5 py-1.5 rounded-full mb-4 inline-block">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <span className="text-xs font-bold text-teal-700 uppercase tracking-widest bg-teal-50 border border-teal-200 px-3.5 py-1.5 rounded-full mb-3 inline-block">
                 ALL-IN-ONE PLATFORM
               </span>
-              <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-tight mb-4">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-950 tracking-tight leading-tight mb-4">
                 Everything You Need to Run <br />Your Tour Business
               </h2>
+              <p className="text-sm sm:text-base text-slate-600 max-w-2xl mx-auto leading-relaxed">
+                Purpose-built modules that eliminate fragmented software, reduce manual admin work, and maximize direct bookings.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
               {[
                 { 
                   icon: Layout, 
-                  color: "text-cyan-400", 
-                  bg: "bg-cyan-500/10 border border-cyan-500/20", 
+                  color: "text-teal-600", 
+                  bg: "bg-teal-50 border border-teal-100", 
                   title: "AI Website Builder", 
                   desc: "Generate your complete website in minutes with zero code." 
                 },
                 { 
                   icon: Map, 
-                  color: "text-indigo-400", 
-                  bg: "bg-indigo-500/10 border border-indigo-500/20", 
+                  color: "text-indigo-600", 
+                  bg: "bg-indigo-50 border border-indigo-100", 
                   title: "AI Tour Creator", 
                   desc: "Create professional tour pages instantly with AI-generated content." 
                 },
                 { 
                   icon: Sparkles, 
-                  color: "text-amber-400", 
-                  bg: "bg-amber-500/10 border border-amber-500/20", 
+                  color: "text-amber-600", 
+                  bg: "bg-amber-50 border border-amber-100", 
                   title: "Booking Engine", 
                   desc: "Online bookings with real-time availability management." 
                 },
                 { 
                   icon: CreditCard, 
-                  color: "text-emerald-400", 
-                  bg: "bg-emerald-500/10 border border-emerald-500/20", 
+                  color: "text-emerald-600", 
+                  bg: "bg-emerald-50 border border-emerald-100", 
                   title: "Online Payments", 
                   desc: "Stripe, PayPal, Bank Transfer and more payment options." 
                 },
                 { 
                   icon: MessageCircle, 
-                  color: "text-emerald-400", 
-                  bg: "bg-emerald-500/10 border border-emerald-500/20", 
+                  color: "text-emerald-600", 
+                  bg: "bg-emerald-50 border border-emerald-100", 
                   title: "WhatsApp Automation", 
                   desc: "Automatically notify customers and deliver tickets via WhatsApp." 
                 },
                 { 
                   icon: Mail, 
-                  color: "text-rose-400", 
-                  bg: "bg-rose-500/10 border border-rose-500/20", 
+                  color: "text-rose-600", 
+                  bg: "bg-rose-50 border border-rose-100", 
                   title: "Email Automation", 
                   desc: "Booking confirmations and reminders sent automatically." 
                 },
                 { 
                   icon: FileText, 
-                  color: "text-purple-400", 
-                  bg: "bg-purple-500/10 border border-purple-500/20", 
+                  color: "text-purple-600", 
+                  bg: "bg-purple-50 border border-purple-100", 
                   title: "SEO Content Generator", 
                   desc: "AI writes SEO blogs that attract organic traffic automatically." 
                 },
                 { 
                   icon: BarChart, 
-                  color: "text-sky-400", 
-                  bg: "bg-sky-500/10 border border-sky-500/20", 
+                  color: "text-sky-600", 
+                  bg: "bg-sky-50 border border-sky-100", 
                   title: "Dashboard & Reports", 
                   desc: "Track bookings, revenue and customers in one place." 
                 },
               ].map((feature, i) => (
-                <div key={i} className="bg-slate-800/80 p-8 rounded-2xl border border-slate-700/80 shadow-md hover:shadow-2xl hover:border-slate-600 hover:-translate-y-1 transition-all duration-300">
-                  <div className={`w-12 h-12 rounded-xl ${feature.bg} flex items-center justify-center mb-6`}>
-                    <feature.icon className={`w-6 h-6 ${feature.color}`} />
+                <div key={i} className="bg-white p-6 sm:p-7 rounded-2xl border border-slate-200/80 shadow-2xs hover:shadow-md hover:border-slate-300 hover:-translate-y-1 transition-all duration-300">
+                  <div className={`w-11 h-11 rounded-xl ${feature.bg} flex items-center justify-center mb-5`}>
+                    <feature.icon className={`w-5 h-5 ${feature.color}`} />
                   </div>
-                  <h3 className="text-lg font-black text-white mb-2 tracking-tight">{feature.title}</h3>
-                  <p className="text-slate-400 text-xs leading-relaxed">{feature.desc}</p>
+                  <h3 className="text-base font-bold text-slate-900 mb-2 tracking-tight">{feature.title}</h3>
+                  <p className="text-slate-600 text-xs leading-relaxed">{feature.desc}</p>
                 </div>
               ))}
             </div>
@@ -1242,38 +1251,38 @@ export default function SaaSMarketing() {
           </div>
         </section>
 
-        {/* --- 11. FINAL CTA BLOCK --- */}
-        <section className="py-24 md:py-32 bg-slate-950 text-white relative overflow-hidden text-center px-6">
-          <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: `radial-gradient(circle at center, ${brandColor}25, transparent 70%)` }} />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#05c46b]/5 rounded-full blur-[100px] pointer-events-none mix-blend-screen" />
-          <div className="absolute bottom-0 left-0 w-96 h-96 rounded-full blur-[100px] pointer-events-none mix-blend-screen" style={{ backgroundColor: `${brandColor}05` }} />
-          
-          <div className="max-w-4xl mx-auto relative z-10 space-y-8">
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight">
+        {/* --- 11. FINAL CTA BLOCK (SLEEK LIGHT MODERN) --- */}
+        <section className="py-20 md:py-28 bg-slate-50/70 border-t border-slate-200/80 text-center px-6">
+          <div className="max-w-4xl mx-auto bg-white rounded-3xl border border-slate-200/90 shadow-2xs p-8 sm:p-14 space-y-6 relative overflow-hidden">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-50 border border-teal-200 text-teal-700 text-xs font-bold uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Get Started Today</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-950 leading-tight">
               Ready to elevate your <br />tour business?
             </h2>
-            <p className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-              Join thousands of tour operators who have transformed their business with Tripbone. Start your free trial today.
+            <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
+              Join forward-thinking tour operators worldwide running direct bookings with zero commissions and automated dispatches.
             </p>
             
             {/* CTA controls */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto pt-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto pt-2">
               <button 
-                onClick={() => navigate('/pricing')} 
-                className="w-full sm:w-auto px-8 py-4 bg-white hover:bg-slate-100 text-slate-950 text-base font-extrabold rounded-xl shadow-xl transition-all hover:-translate-y-0.5 cursor-pointer"
+                onClick={() => navigate('/signup')} 
+                className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-slate-850 text-white text-sm sm:text-base font-bold rounded-xl shadow-xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
-                Try it Free
+                Start 7-Day Free Trial
               </button>
               <button 
                 onClick={() => setShowDemoModal(true)} 
-                className="w-full sm:w-auto px-8 py-4 bg-transparent border border-slate-750 hover:bg-slate-900 text-white text-base font-extrabold rounded-xl transition-all cursor-pointer"
+                className="w-full sm:w-auto px-7 py-3.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-sm sm:text-base font-semibold rounded-xl transition-all hover:border-slate-300 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
               >
                 Watch Demo
               </button>
             </div>
 
             {/* Trial terms list */}
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-slate-500 font-medium pt-1">
               No credit card required • Free 7-day trial • Cancel anytime
             </p>
           </div>
