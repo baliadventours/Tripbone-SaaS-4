@@ -69,7 +69,7 @@ export default function SaaSLayout() {
     trackPostHogCookieConsent({ decision: 'declined' });
   };
 
-  const brandColor = globalBrand?.brandColor || '#1db3cd';
+  const brandColor = globalBrand?.brandColor || '#00aa13';
 
   const handleLoginClick = () => {
     trackPostHogMarketingCTA({
@@ -110,7 +110,7 @@ export default function SaaSLayout() {
   const isTransparent = false;
 
   return (
-    <div className="min-h-screen font-sans selection-brand-color bg-[#f8fafc] text-slate-900 overflow-x-hidden relative flex flex-col">
+    <div className="min-h-screen font-sans selection-brand-color bg-[#f6f8f6] text-[#1a1d1b] overflow-x-hidden relative flex flex-col">
       <style>{`
         .text-brand { color: ${brandColor} !important; }
         .bg-brand { background-color: ${brandColor} !important; }
@@ -124,27 +124,27 @@ export default function SaaSLayout() {
       {/* Top Fixed Header with Clean Light Navigation */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <TopAnnouncementBar />
-        <header className="w-full transition-all duration-300 bg-white/95 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-slate-900">
+        <header className="w-full transition-all duration-300 bg-white/95 backdrop-blur-xl border-b border-[#dce1dc] shadow-[0_1px_2px_rgba(6,30,10,0.05)] text-[#1a1d1b]">
           <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
             
             {/* Logo + Primary Navigation */}
-            <div className="flex items-center space-x-10">
+            <div className="flex items-center space-x-8">
               <Link to="/" className="flex items-center space-x-2.5 cursor-pointer group">
                 {globalBrand?.logoUrl || settings?.logoURL ? (
                   <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[140px] object-contain" />
                 ) : (
                   <>
-                    <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform">
-                      <Compass className="h-5 w-5 text-teal-400" />
+                    <div className="w-9 h-9 rounded-xl bg-[#00aa13] flex items-center justify-center text-white shadow-[0_4px_12px_rgba(0,170,19,0.3)] group-hover:scale-105 transition-transform">
+                      <Compass className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-slate-900">
+                    <span className="text-xl font-extrabold tracking-tight text-[#1a1d1b]">
                       {globalBrand?.platformName || settings?.siteName || "Tripbone"}
                     </span>
                   </>
                 )}
               </Link>
 
-              <nav className="hidden lg:flex items-center space-x-1.5 text-sm font-semibold text-slate-700">
+              <nav className="hidden lg:flex items-center space-x-1 text-sm font-semibold text-[#4b4f4c]">
                 
                 {/* Features Mega Dropdown */}
                 <div 
@@ -152,76 +152,70 @@ export default function SaaSLayout() {
                   onMouseEnter={() => setIsFeaturesOpen(true)}
                   onMouseLeave={() => setIsFeaturesOpen(false)}
                 >
-                  <button className="flex items-center space-x-1 px-4 py-2.5 rounded-xl transition-all cursor-pointer hover:text-brand hover:bg-slate-100/90 text-slate-700">
+                  <button className="flex items-center space-x-1 px-3.5 py-2 rounded-full transition-all cursor-pointer hover:text-[#00790d] hover:bg-[#e6f7e6] text-[#4b4f4c]">
                     <span>Features</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-brand' : 'text-slate-400'}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-[#00aa13]' : 'text-slate-400'}`} />
                   </button>
                   
                   {/* Mega Menu */}
-                  <div className={`absolute top-full left-0 w-[600px] bg-white rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.22)] border border-slate-200/90 p-5 grid grid-cols-2 gap-3 transition-all duration-200 origin-top-left text-slate-900 ${isFeaturesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
+                  <div className={`absolute top-full left-0 w-[600px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(6,30,10,0.12)] border border-[#dce1dc] p-5 grid grid-cols-2 gap-3 transition-all duration-200 origin-top-left text-slate-900 ${isFeaturesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
                     
-                    <Link to="/features/ai" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-cyan-50 border border-cyan-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-cyan-100 transition-colors">
-                        <Sparkles className="w-4.5 h-4.5 text-cyan-600" />
+                    <Link to="/features/ai" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
+                      <div className="w-9 h-9 rounded-xl bg-[#e6f7e6] border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#00aa13] group-hover/item:text-white text-[#00790d] transition-colors">
+                        <Sparkles className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm mb-0.5 group-hover/item:text-brand transition-colors">AI Tour Builder</h4>
-                        <p className="text-xs text-slate-500 leading-snug">Auto-generate tour pages, copy, and multi-language translation.</p>
+                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">AI Tour Builder</h4>
+                        <p className="text-xs text-[#6f746f] leading-snug">Auto-generate tour pages, copy, and multi-language translation.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/operations" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-orange-50 border border-orange-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-orange-100 transition-colors">
-                        <Navigation className="w-4.5 h-4.5 text-orange-600" />
+                    <Link to="/features/operations" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
+                      <div className="w-9 h-9 rounded-xl bg-[#fef3eb] border border-[#f37c20]/20 flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#f37c20] group-hover/item:text-white text-[#f37c20] transition-colors">
+                        <Navigation className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm mb-0.5 group-hover/item:text-brand transition-colors">WhatsApp & Dispatches</h4>
-                        <p className="text-xs text-slate-500 leading-snug">Automated driver alerts, pickup drop-pins, and manifest logs.</p>
+                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">WhatsApp & Dispatches</h4>
+                        <p className="text-xs text-[#6f746f] leading-snug">Automated driver alerts, pickup drop-pins, and manifest logs.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/sales" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-emerald-100 transition-colors">
-                        <BriefcaseBusiness className="w-4.5 h-4.5 text-emerald-600" />
+                    <Link to="/features/sales" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
+                      <div className="w-9 h-9 rounded-xl bg-[#e6f7e6] border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#00aa13] group-hover/item:text-white text-[#00790d] transition-colors">
+                        <BriefcaseBusiness className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm mb-0.5 group-hover/item:text-brand transition-colors">Integrated Booking Engine</h4>
-                        <p className="text-xs text-slate-500 leading-snug">Mobile-first checkout, instant card payments, and deposits.</p>
+                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">Integrated Booking Engine</h4>
+                        <p className="text-xs text-[#6f746f] leading-snug">Mobile-first checkout, instant card payments, and deposits.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/design" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
-                      <div className="w-9 h-9 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-purple-100 transition-colors">
-                        <LayoutTemplate className="w-4.5 h-4.5 text-purple-600" />
+                    <Link to="/features/design" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
+                      <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-purple-600 group-hover/item:text-white text-purple-600 transition-colors">
+                        <LayoutTemplate className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm mb-0.5 group-hover/item:text-brand transition-colors">High-Converting Layouts</h4>
-                        <p className="text-xs text-slate-500 leading-snug">Swiss typography, custom domains, and mobile speed.</p>
+                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">High-Converting Layouts</h4>
+                        <p className="text-xs text-[#6f746f] leading-snug">Swiss typography, custom domains, and mobile speed.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/infrastructure" className="group/item col-span-2 flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors border-t border-slate-100 mt-1 pt-3">
-                      <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0 group-hover/item:bg-slate-200 transition-colors">
-                        <ShieldCheck className="w-4.5 h-4.5 text-slate-700" />
+                    <Link to="/features/infrastructure" className="group/item col-span-2 flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors border-t border-[#dce1dc] mt-1 pt-3">
+                      <div className="w-9 h-9 rounded-xl bg-slate-100 border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-slate-800 group-hover/item:text-white text-slate-700 transition-colors">
+                        <ShieldCheck className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-slate-900 text-sm mb-0.5 group-hover/item:text-brand transition-colors">Zero Commission Infrastructure</h4>
-                        <p className="text-xs text-slate-500 leading-snug">Self-hosted custom domains, role permissions, and zero hidden platform cuts.</p>
+                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">Zero Commission Infrastructure</h4>
+                        <p className="text-xs text-[#6f746f] leading-snug">Self-hosted custom domains, role permissions, and zero hidden platform cuts.</p>
                       </div>
                     </Link>
 
                   </div>
                 </div>
 
-                <Link to="/industries" className={`px-4 py-2.5 rounded-xl transition-all ${
-                  isTransparent ? 'hover:text-white hover:bg-white/10' : 'hover:text-brand hover:bg-slate-100/90'
-                }`}>Industries</Link>
-                <Link to="/compare" className={`px-4 py-2.5 rounded-xl transition-all ${
-                  isTransparent ? 'hover:text-white hover:bg-white/10' : 'hover:text-brand hover:bg-slate-100/90'
-                }`}>Compare</Link>
-                <Link to="/pricing" className={`px-4 py-2.5 rounded-xl transition-all ${
-                  isTransparent ? 'hover:text-white hover:bg-white/10' : 'hover:text-brand hover:bg-slate-100/90'
-                }`}>Pricing</Link>
+                <Link to="/industries" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Industries</Link>
+                <Link to="/compare" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Compare</Link>
+                <Link to="/pricing" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Pricing</Link>
                 
                 {/* Resources Dropdown */}
                 <div 
@@ -229,28 +223,26 @@ export default function SaaSLayout() {
                   onMouseEnter={() => setIsResourcesOpen(true)}
                   onMouseLeave={() => setIsResourcesOpen(false)}
                 >
-                  <button className={`flex items-center space-x-1 px-4 py-2.5 rounded-xl transition-all cursor-pointer ${
-                    isTransparent ? 'hover:text-white hover:bg-white/10' : 'hover:text-brand hover:bg-slate-100/90'
-                  }`}>
+                  <button className="flex items-center space-x-1 px-3.5 py-2 rounded-full transition-all cursor-pointer hover:text-[#00790d] hover:bg-[#e6f7e6]">
                     <span>Resources</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isResourcesOpen ? 'rotate-180 text-brand' : isTransparent ? 'text-slate-300' : 'text-slate-400'}`} />
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isResourcesOpen ? 'rotate-180 text-[#00aa13]' : 'text-slate-400'}`} />
                   </button>
 
-                  <div className={`absolute top-full left-0 w-64 bg-white rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.22)] border border-slate-200/90 p-2 space-y-1 transition-all duration-200 origin-top-left text-slate-900 ${isResourcesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
-                    <Link to="/directory" className="flex items-center space-x-3 px-3.5 py-3 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 hover:text-brand transition-colors">
-                      <Store className="w-4 h-4 text-slate-500" />
+                  <div className={`absolute top-full left-0 w-64 bg-white rounded-3xl shadow-[0_20px_50px_rgba(6,30,10,0.12)] border border-[#dce1dc] p-2 space-y-1 transition-all duration-200 origin-top-left text-slate-900 ${isResourcesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
+                    <Link to="/directory" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
+                      <Store className="w-4 h-4 text-[#00aa13]" />
                       <span>Live Storefront Demos</span>
                     </Link>
-                    <Link to="/blog" className="flex items-center space-x-3 px-3.5 py-3 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 hover:text-brand transition-colors">
-                      <BookOpen className="w-4 h-4 text-slate-500" />
+                    <Link to="/blog" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
+                      <BookOpen className="w-4 h-4 text-[#00aa13]" />
                       <span>Blog & Operator Guides</span>
                     </Link>
-                    <Link to="/about" className="flex items-center space-x-3 px-3.5 py-3 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 hover:text-brand transition-colors">
-                      <Building2 className="w-4 h-4 text-slate-500" />
+                    <Link to="/about" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
+                      <Building2 className="w-4 h-4 text-[#00aa13]" />
                       <span>Company & Story</span>
                     </Link>
-                    <Link to="/contact" className="flex items-center space-x-3 px-3.5 py-3 rounded-xl hover:bg-slate-50 text-xs font-bold text-slate-800 hover:text-brand transition-colors">
-                      <HelpCircle className="w-4 h-4 text-slate-500" />
+                    <Link to="/contact" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
+                      <HelpCircle className="w-4 h-4 text-[#00aa13]" />
                       <span>Contact Support</span>
                     </Link>
                   </div>
@@ -263,7 +255,7 @@ export default function SaaSLayout() {
             <div className="flex items-center space-x-3">
               <button 
                 onClick={handleLoginClick} 
-                className="text-sm font-semibold px-4 py-2 rounded-xl transition-all cursor-pointer text-slate-700 hover:text-slate-900 hover:bg-slate-100"
+                className="text-sm font-semibold px-4 py-2 rounded-full transition-all cursor-pointer text-[#1a1d1b] hover:text-[#00aa13] hover:bg-[#e6f7e6]"
               >
                 {user ? 'Dashboard' : 'Log in'}
               </button>
@@ -271,8 +263,7 @@ export default function SaaSLayout() {
               {!user && (
                 <button 
                   onClick={handleSignupClick} 
-                  className="hidden sm:inline-flex items-center gap-2 text-white text-xs font-bold px-4.5 py-2.5 rounded-xl transition-all shadow-xs hover:opacity-95 active:scale-98 cursor-pointer text-center"
-                  style={{ backgroundColor: brandColor }}
+                  className="btn-kelola-primary hidden sm:inline-flex items-center gap-1.5 text-white text-xs font-bold px-5 py-2.5 rounded-full cursor-pointer text-center"
                 >
                   <span>Start Free Trial</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -282,7 +273,7 @@ export default function SaaSLayout() {
               {/* Mobile Hamburger Toggle */}
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-xl transition-colors text-slate-700 hover:bg-slate-100 border border-slate-200"
+                className="lg:hidden p-2 rounded-full transition-colors text-slate-700 hover:bg-slate-100 border border-[#dce1dc]"
                 aria-label="Toggle Navigation Menu"
               >
                 {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -293,57 +284,56 @@ export default function SaaSLayout() {
 
           {/* Mobile Drawer */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden bg-white text-slate-900 border-b border-slate-200 px-6 pt-4 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-xl">
+            <div className="lg:hidden bg-white text-slate-900 border-b border-[#dce1dc] px-6 pt-4 pb-6 space-y-4 animate-in slide-in-from-top-2 duration-200 shadow-xl">
               <div className="space-y-1">
                 <Link 
                   to="/features/ai" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   AI Tour Builder
                 </Link>
                 <Link 
                   to="/industries" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   Industry Solutions
                 </Link>
                 <Link 
                   to="/compare" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   Compare Platforms
                 </Link>
                 <Link 
                   to="/pricing" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   Pricing
                 </Link>
                 <Link 
                   to="/directory" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   Live Storefront Demos
                 </Link>
                 <Link 
                   to="/contact" 
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-slate-800 hover:bg-slate-100"
+                  className="block px-3 py-2.5 rounded-xl text-sm font-bold text-[#1a1d1b] hover:bg-[#f1f4f1]"
                 >
                   Contact Support
                 </Link>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+              <div className="pt-3 border-t border-[#dce1dc] flex flex-col gap-2">
                 <button 
                   onClick={handleSignupClick}
-                  className="w-full py-3 rounded-xl text-white text-xs font-black text-center shadow-md"
-                  style={{ backgroundColor: brandColor }}
+                  className="btn-kelola-primary w-full py-3 rounded-full text-white text-xs font-bold text-center"
                 >
                   Start 7-Day Free Trial
                 </button>
@@ -359,8 +349,8 @@ export default function SaaSLayout() {
         <Outlet />
       </main>
 
-      {/* Footer - Sleek Minimal Light Modern SaaS */}
-      <footer className="bg-slate-50 pt-16 pb-12 text-slate-600 border-t border-slate-200/80 mt-auto">
+      {/* Footer - Sleek Light Modern SaaS (Kelola style) */}
+      <footer className="bg-[#e7ebe7] pt-16 pb-12 text-[#4b4f4c] border-t border-[#dce1dc] mt-auto">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-14">
             
@@ -371,92 +361,92 @@ export default function SaaSLayout() {
                   <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[140px] object-contain" />
                 ) : (
                   <>
-                    <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-xs">
-                      <Compass className="h-4.5 w-4.5 text-teal-400" />
+                    <div className="w-8 h-8 rounded-xl bg-[#00aa13] flex items-center justify-center text-white shadow-[0_4px_12px_rgba(0,170,19,0.3)]">
+                      <Compass className="h-4.5 w-4.5 text-white" />
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-slate-900">
+                    <span className="text-xl font-extrabold tracking-tight text-[#1a1d1b]">
                       {globalBrand?.platformName || settings?.siteName || "Tripbone"}
                     </span>
                   </>
                 )}
               </div>
-              <p className="text-xs leading-relaxed mb-5 text-slate-500">
+              <p className="text-xs leading-relaxed mb-5 text-[#6f746f]">
                 Your own booking website. Not a widget. Not complicated. Drive direct sales, automate WhatsApp dispatches, and eliminate booking commissions.
               </p>
-              <div className="text-xs text-slate-600 space-y-1.5">
+              <div className="text-xs text-[#4b4f4c] space-y-1.5">
                 <p className="flex items-center gap-2">
-                  <span className="font-semibold text-slate-800">Support:</span>
-                  <a href="mailto:support@tripbone.com" className="text-teal-600 hover:underline">support@tripbone.com</a>
+                  <span className="font-bold text-[#1a1d1b]">Support:</span>
+                  <a href="mailto:support@tripbone.com" className="text-[#00790d] hover:underline">support@tripbone.com</a>
                 </p>
               </div>
             </div>
             
             {/* Column 2: Industries */}
             <div>
-              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Industries</h4>
-              <ul className="space-y-2.5 text-xs text-slate-600">
-                <li><Link to="/industries/day-tours" className="hover:text-slate-950 transition-colors">Day Tour Operator</Link></li>
-                <li><Link to="/industries/atv-offroad" className="hover:text-slate-950 transition-colors">ATV Operator</Link></li>
-                <li><Link to="/industries/rafting-outdoor" className="hover:text-slate-950 transition-colors">Rafting Operator</Link></li>
-                <li><Link to="/industries/boat-charters" className="hover:text-slate-950 transition-colors">Boat Charters & Cruises</Link></li>
-                <li><Link to="/industries/food-culinary" className="hover:text-slate-950 transition-colors">Food & Culinary Tours</Link></li>
-                <li><Link to="/industries/rentals" className="hover:text-slate-950 transition-colors">Equipment Rentals</Link></li>
+              <h4 className="text-[#1a1d1b] font-bold text-xs mb-4 tracking-wider uppercase">Industries</h4>
+              <ul className="space-y-2.5 text-xs text-[#4b4f4c]">
+                <li><Link to="/industries/day-tours" className="hover:text-[#00790d] transition-colors">Day Tour Operator</Link></li>
+                <li><Link to="/industries/atv-offroad" className="hover:text-[#00790d] transition-colors">ATV Operator</Link></li>
+                <li><Link to="/industries/rafting-outdoor" className="hover:text-[#00790d] transition-colors">Rafting Operator</Link></li>
+                <li><Link to="/industries/boat-charters" className="hover:text-[#00790d] transition-colors">Boat Charters & Cruises</Link></li>
+                <li><Link to="/industries/food-culinary" className="hover:text-[#00790d] transition-colors">Food & Culinary Tours</Link></li>
+                <li><Link to="/industries/rentals" className="hover:text-[#00790d] transition-colors">Equipment Rentals</Link></li>
               </ul>
             </div>
 
             {/* Column 3: Compare Us */}
             <div>
-              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Compare Us</h4>
-              <ul className="space-y-2.5 text-xs text-slate-600">
-                <li><Link to="/compare/bokun" className="hover:text-slate-950 transition-colors">Tripbone vs Bokun</Link></li>
-                <li><Link to="/compare/fareharbor" className="hover:text-slate-950 transition-colors">Tripbone vs FareHarbor</Link></li>
-                <li><Link to="/compare/rezdy" className="hover:text-slate-950 transition-colors">Tripbone vs Rezdy</Link></li>
-                <li><Link to="/compare/peek-pro" className="hover:text-slate-950 transition-colors">Tripbone vs Peek Pro</Link></li>
-                <li><Link to="/compare/regiondo" className="hover:text-slate-950 transition-colors">Tripbone vs Regiondo</Link></li>
-                <li><Link to="/compare/checkfront" className="hover:text-slate-950 transition-colors">Tripbone vs Checkfront</Link></li>
+              <h4 className="text-[#1a1d1b] font-bold text-xs mb-4 tracking-wider uppercase">Compare Us</h4>
+              <ul className="space-y-2.5 text-xs text-[#4b4f4c]">
+                <li><Link to="/compare/bokun" className="hover:text-[#00790d] transition-colors">Tripbone vs Bokun</Link></li>
+                <li><Link to="/compare/fareharbor" className="hover:text-[#00790d] transition-colors">Tripbone vs FareHarbor</Link></li>
+                <li><Link to="/compare/rezdy" className="hover:text-[#00790d] transition-colors">Tripbone vs Rezdy</Link></li>
+                <li><Link to="/compare/peek-pro" className="hover:text-[#00790d] transition-colors">Tripbone vs Peek Pro</Link></li>
+                <li><Link to="/compare/regiondo" className="hover:text-[#00790d] transition-colors">Tripbone vs Regiondo</Link></li>
+                <li><Link to="/compare/checkfront" className="hover:text-[#00790d] transition-colors">Tripbone vs Checkfront</Link></li>
               </ul>
             </div>
 
             {/* Column 4: Platform */}
             <div>
-              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Platform & Company</h4>
-              <ul className="space-y-2.5 text-xs text-slate-600">
-                <li><Link to="/features" className="hover:text-slate-950 transition-colors">Platform Features</Link></li>
-                <li><Link to="/pricing" className="hover:text-slate-950 transition-colors">Pricing & Plans</Link></li>
-                <li><Link to="/directory" className="hover:text-slate-950 transition-colors">Live Store Demos</Link></li>
-                <li><Link to="/about" className="hover:text-slate-950 transition-colors">About Us</Link></li>
-                <li><Link to="/blog" className="hover:text-slate-950 transition-colors">Blog / Guides</Link></li>
-                <li><Link to="/contact" className="hover:text-slate-950 transition-colors">Contact Support</Link></li>
-                <li><button onClick={handleLoginClick} className="hover:text-slate-950 transition-colors cursor-pointer">{user ? 'Dashboard' : 'Log In'}</button></li>
+              <h4 className="text-[#1a1d1b] font-bold text-xs mb-4 tracking-wider uppercase">Platform & Company</h4>
+              <ul className="space-y-2.5 text-xs text-[#4b4f4c]">
+                <li><Link to="/features" className="hover:text-[#00790d] transition-colors">Platform Features</Link></li>
+                <li><Link to="/pricing" className="hover:text-[#00790d] transition-colors">Pricing & Plans</Link></li>
+                <li><Link to="/directory" className="hover:text-[#00790d] transition-colors">Live Store Demos</Link></li>
+                <li><Link to="/about" className="hover:text-[#00790d] transition-colors">About Us</Link></li>
+                <li><Link to="/blog" className="hover:text-[#00790d] transition-colors">Blog / Guides</Link></li>
+                <li><Link to="/contact" className="hover:text-[#00790d] transition-colors">Contact Support</Link></li>
+                <li><button onClick={handleLoginClick} className="hover:text-[#00790d] transition-colors cursor-pointer">{user ? 'Dashboard' : 'Log In'}</button></li>
               </ul>
             </div>
 
             {/* Column 5: Legal */}
             <div>
-              <h4 className="text-slate-900 font-bold text-xs mb-4 tracking-wider uppercase">Legal</h4>
-              <ul className="space-y-2.5 text-xs text-slate-600">
-                <li><Link to="/terms" className="hover:text-slate-950 transition-colors">Terms of Service</Link></li>
-                <li><Link to="/privacy" className="hover:text-slate-950 transition-colors">Privacy Policy</Link></li>
-                <li><Link to="/cookies" className="hover:text-slate-950 transition-colors">Cookie Policy</Link></li>
+              <h4 className="text-[#1a1d1b] font-bold text-xs mb-4 tracking-wider uppercase">Legal</h4>
+              <ul className="space-y-2.5 text-xs text-[#4b4f4c]">
+                <li><Link to="/terms" className="hover:text-[#00790d] transition-colors">Terms of Service</Link></li>
+                <li><Link to="/privacy" className="hover:text-[#00790d] transition-colors">Privacy Policy</Link></li>
+                <li><Link to="/cookies" className="hover:text-[#00790d] transition-colors">Cookie Policy</Link></li>
               </ul>
             </div>
 
           </div>
           
-          <div className="border-t border-slate-200/80 pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500">
+          <div className="border-t border-[#dce1dc] pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#6f746f]">
             <p>&copy; {new Date().getFullYear()} {globalBrand?.platformName || "Tripbone"}. All rights reserved.</p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {globalBrand?.twitterUrl && (
-                <a href={globalBrand.twitterUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Twitter</a>
+                <a href={globalBrand.twitterUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#1a1d1b] transition-colors">Twitter</a>
               )}
               {globalBrand?.linkedinUrl && (
-                <a href={globalBrand.linkedinUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">LinkedIn</a>
+                <a href={globalBrand.linkedinUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#1a1d1b] transition-colors">LinkedIn</a>
               )}
               {globalBrand?.facebookUrl && (
-                <a href={globalBrand.facebookUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Facebook</a>
+                <a href={globalBrand.facebookUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#1a1d1b] transition-colors">Facebook</a>
               )}
               {globalBrand?.instagramUrl && (
-                <a href={globalBrand.instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition-colors">Instagram</a>
+                <a href={globalBrand.instagramUrl} target="_blank" rel="noopener noreferrer" className="hover:text-[#1a1d1b] transition-colors">Instagram</a>
               )}
             </div>
           </div>
@@ -465,32 +455,31 @@ export default function SaaSLayout() {
 
       {/* Cookie Consent Banner */}
       {showCookieBanner && (
-        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:max-w-md bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-5 rounded-2xl shadow-2xl z-[9999]">
+        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:max-w-md bg-white border border-[#dce1dc] p-5 rounded-3xl shadow-[0_18px_44px_rgba(6,30,10,0.12)] z-[9999]">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1.5 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brandColor }}></span>
+              <h3 className="text-sm font-bold text-[#1a1d1b] mb-1.5 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00aa13]"></span>
                 Cookie Preference
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                We use cookies to optimize your platform experience, analyze traffic, and support personalized marketing for your tour business. Refer to our <Link to="/cookies" className="underline text-brand hover:brightness-115">Cookie Policy</Link>.
+              <p className="text-xs text-[#4b4f4c] leading-relaxed">
+                We use cookies to optimize your platform experience, analyze traffic, and support personalized marketing for your tour business. Refer to our <Link to="/cookies" className="underline text-[#00790d] hover:text-[#00aa13]">Cookie Policy</Link>.
               </p>
             </div>
-            <button onClick={() => setShowCookieBanner(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+            <button onClick={() => setShowCookieBanner(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
               <X className="w-4 h-4" />
             </button>
           </div>
           <div className="flex items-center gap-2.5 mt-4 justify-end">
             <button 
               onClick={handleDeclineCookies}
-              className="px-3.5 py-1.5 text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all"
+              className="px-3.5 py-1.5 text-xs font-bold text-[#6f746f] hover:text-[#1a1d1b] hover:bg-[#f1f4f1] rounded-full transition-all"
             >
               Decline
             </button>
             <button 
               onClick={handleAcceptCookies}
-              className="px-4 py-2 text-xs font-bold text-white rounded-lg shadow-sm hover:opacity-90 transition-all cursor-pointer"
-              style={{ backgroundColor: brandColor }}
+              className="btn-kelola-primary px-4 py-2 text-xs font-bold text-white rounded-full cursor-pointer"
             >
               Accept Cookies
             </button>

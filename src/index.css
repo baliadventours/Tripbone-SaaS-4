@@ -390,5 +390,125 @@ body {
   box-shadow: 0 4px 14px rgba(255, 56, 92, 0.25) !important;
 }
 
+/* ==========================================================================
+   KELOLA.PRO DESIGN SYSTEM STYLING TOKENS & UTILITIES
+   ========================================================================== */
+:root {
+  --kelola-background: #f1f4f1;
+  --kelola-foreground: #1a1d1b;
+  --kelola-card: #ffffff;
+  --kelola-primary: #00aa13;
+  --kelola-primary-hover: #009910;
+  --kelola-primary-dark: #00790d;
+  --kelola-primary-light: #e6f7e6;
+  --kelola-primary-subtle: #f0faf0;
+  --kelola-primary-deep: #063d0f;
+  --kelola-accent: #f37c20;
+  --kelola-accent-light: #fef3eb;
+  --kelola-muted: #e7ebe7;
+  --kelola-border: #dce1dc;
+  --kelola-surface: #f1f4f1;
+  --kelola-surface-soft: #e7ebe7;
+  --kelola-text-primary: #1a1d1b;
+  --kelola-text-secondary: #4b4f4c;
+  --kelola-text-muted: #6f746f;
+  --kelola-shadow-sm: 0 2px 10px rgba(6, 30, 10, 0.06);
+  --kelola-shadow-md: 0 10px 28px rgba(6, 30, 10, 0.08);
+  --kelola-shadow-lg: 0 18px 44px rgba(6, 30, 10, 0.12);
+  --kelola-shadow-green: 0 16px 36px rgba(0, 170, 19, 0.25);
+  --kelola-shadow-green-lg: 0 24px 56px rgba(0, 170, 19, 0.35);
+}
+
+.kelola-card {
+  background-color: #ffffff;
+  border: 1px solid #dce1dc;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 10px rgba(6, 30, 10, 0.06);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kelola-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 3px;
+  width: 0;
+  background: linear-gradient(90deg, #00aa13, #009910);
+  transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10;
+}
+
+.kelola-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(0, 170, 19, 0.35);
+  box-shadow: 0 18px 44px rgba(6, 30, 10, 0.12);
+}
+
+.kelola-card:hover::before {
+  width: 100%;
+}
+
+.btn-kelola-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: #00aa13;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 14px 32px rgba(0, 170, 19, 0.28);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-kelola-primary:hover {
+  background-color: #009910;
+  box-shadow: 0 18px 40px rgba(0, 170, 19, 0.36);
+  transform: scale(1.02);
+}
+
+.btn-kelola-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-kelola-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background-color: #ffffff;
+  color: #1a1d1b;
+  border: 1px solid #dce1dc;
+  font-weight: 600;
+  box-shadow: 0 2px 10px rgba(6, 30, 10, 0.05);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-kelola-secondary:hover {
+  background-color: #f0faf0;
+  border-color: #00aa13;
+  color: #00790d;
+  transform: scale(1.02);
+}
+
+.kelola-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 9999px;
+  background-color: #e6f7e6;
+  color: #00790d;
+  border: 1px solid rgba(220, 225, 220, 0.8);
+  font-weight: 700;
+}
+
+.kelola-dots-bg {
+  background-image: radial-gradient(#dce1dc 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
+
 
 
