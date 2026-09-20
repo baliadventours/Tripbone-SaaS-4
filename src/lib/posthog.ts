@@ -59,11 +59,29 @@ const logToDebuggerStream = (
 };
 
 /**
+ * Resolves PostHog API Key from supported environment variable aliases
+ */
+export const getEnvPostHogKey = (): string =>
+  (import.meta.env.VITE_POSTHOG_PROJECT_TOKEN as string | undefined) ||
+  (import.meta.env.VITE_POSTHOG_KEY as string | undefined) ||
+  (import.meta.env.VITE_POSTHOG_API_KEY as string | undefined) ||
+  (import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined) ||
+  '';
+
+/**
+ * Resolves PostHog Ingestion Host from supported environment variable aliases
+ */
+export const getEnvPostHogHost = (): string =>
+  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ||
+  (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined) ||
+  'https://us.i.posthog.com';
+
+/**
  * Returns active PostHog configuration
  */
 export const getPostHogConfig = (): PostHogConfig => ({
-  apiKey: activeConfig.apiKey || (import.meta.env.VITE_POSTHOG_KEY as string | undefined) || '',
-  apiHost: activeConfig.apiHost || (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
+  apiKey: activeConfig.apiKey || getEnvPostHogKey(),
+  apiHost: activeConfig.apiHost || getEnvPostHogHost(),
   enabled: activeConfig.enabled !== false,
   autocapture: activeConfig.autocapture !== false,
   disableSessionRecording: activeConfig.disableSessionRecording === true,
@@ -89,8 +107,8 @@ export const initPostHog = async (tenantId?: string | null, customConfig?: PostH
   activeTenantId = currentTenant;
 
   let configToUse: PostHogConfig = {
-    apiKey: (import.meta.env.VITE_POSTHOG_KEY as string | undefined) || '',
-    apiHost: (import.meta.env.VITE_POSTHOG_HOST as string | undefined) || 'https://us.i.posthog.com',
+    apiKey: getEnvPostHogKey(),
+    apiHost: getEnvPostHogHost(),
     enabled: true,
     autocapture: true,
     disableSessionRecording: false,
@@ -158,9 +176,10 @@ export const initPostHog = async (tenantId?: string | null, customConfig?: PostH
 
     posthog.init(configToUse.apiKey.trim(), {
       api_host: host,
-      // We manage pageview capture manually via React Router useLocation
-      capture_pageview: false,
+      // Automatically captures initial pageview and subsequent SPA route changes via History API
+      capture_pageview: 'history_change',
       capture_pageleave: true,
+      person_profiles: 'identified_only',
       autocapture: configToUse.autocapture !== false,
       disable_session_recording: configToUse.disableSessionRecording === true,
       session_recording: {
@@ -192,6 +211,18 @@ export const initPostHog = async (tenantId?: string | null, customConfig?: PostH
           domain: window.location.hostname,
           app_name: 'Tripbone SaaS'
         });
+
+        // Ensure pageview is captured immediately for the current page upon initial load
+        try {
+          ph.capture('$pageview', {
+            $current_url: window.location.href,
+            title: document.title,
+            tenant_id: currentTenant || 'tripbone_main',
+            site_type: isMainPlatform ? 'tripbone_main_site' : 'tenant_portal'
+          });
+        } catch (pageviewErr) {
+          console.warn('PostHog initial pageview error:', pageviewErr);
+        }
       }
     });
 
@@ -227,6 +258,9 @@ export const isPostHogReady = (): boolean => {
   return isInitialized && !!activeConfig.apiKey;
 };
 
+let lastTrackedUrl = '';
+let lastTrackedTime = 0;
+
 /**
  * Track route changes and pageviews in PostHog
  */
@@ -235,6 +269,7 @@ export const trackPostHogPageView = (url?: string, properties: Record<string, an
 
   const currentUrl = url || window.location.pathname + window.location.search;
   const currentTitle = document.title;
+  const now = Date.now();
 
   logToDebuggerStream('pageview', '$pageview', {
     $current_url: currentUrl,
@@ -244,6 +279,14 @@ export const trackPostHogPageView = (url?: string, properties: Record<string, an
   });
 
   if (isPostHogReady()) {
+    // Prevent double-capturing if history_change or another event listener just captured this URL within 800ms
+    if (lastTrackedUrl === currentUrl && now - lastTrackedTime < 800 && Object.keys(properties).length === 0) {
+      return;
+    }
+
+    lastTrackedUrl = currentUrl;
+    lastTrackedTime = now;
+
     try {
       posthog.capture('$pageview', {
         $current_url: currentUrl,

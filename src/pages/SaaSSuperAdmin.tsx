@@ -80,6 +80,7 @@ import { sanitizeFirestoreData } from '../services/payment/PaymentService';
 import { 
   updateTenantPostHog, 
   trackPostHogEvent, 
+  trackPostHogPageView,
   recordedPostHogEvents, 
   isPostHogReady 
 } from '../lib/posthog';
@@ -300,7 +301,11 @@ export default function SaaSSuperAdmin() {
         current_hostname: window.location.hostname,
         test_timestamp: new Date().toISOString()
       });
-      setPosthogTestStatus('✅ Test event sent! Captured in debugger stream and transmitted to PostHog.');
+      trackPostHogPageView(window.location.pathname + window.location.search, {
+        is_test_ping: true,
+        triggered_by: 'superadmin_test_button'
+      });
+      setPosthogTestStatus('✅ Test event & $pageview sent! Transmitted directly to PostHog.');
       setTimeout(() => setPosthogTestStatus(null), 5000);
     } catch (err: any) {
       setPosthogTestStatus('❌ Failed to trigger test event: ' + err.message);
