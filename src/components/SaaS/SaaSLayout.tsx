@@ -7,6 +7,12 @@ import {
 import { useSettings } from '../../lib/SettingsContext';
 import { useAuth } from '../../lib/AuthContext';
 import TopAnnouncementBar from '../TopAnnouncementBar';
+import { 
+  initPostHog, 
+  trackPostHogPageView, 
+  trackPostHogMarketingCTA, 
+  trackPostHogCookieConsent 
+} from '../../lib/posthog';
 
 export default function SaaSLayout() {
   const { settings, globalBrand } = useSettings();
@@ -19,6 +25,19 @@ export default function SaaSLayout() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showCookieBanner, setShowCookieBanner] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+
+  // Initialize PostHog for Tripbone.com main site platform
+  useEffect(() => {
+    initPostHog(null);
+  }, []);
+
+  // Track pageviews whenever route changes on main site
+  useEffect(() => {
+    trackPostHogPageView(location.pathname + location.search, {
+      site_section: isHome ? 'marketing_home' : location.pathname.replace('/', '') || 'root',
+      platform_scope: 'tripbone_main_site'
+    });
+  }, [location.pathname, location.search, isHome]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,16 +60,24 @@ export default function SaaSLayout() {
   const handleAcceptCookies = () => {
     localStorage.setItem('tripbone-cookie-consent', 'accepted');
     setShowCookieBanner(false);
+    trackPostHogCookieConsent({ decision: 'accepted' });
   };
 
   const handleDeclineCookies = () => {
     localStorage.setItem('tripbone-cookie-consent', 'declined');
     setShowCookieBanner(false);
+    trackPostHogCookieConsent({ decision: 'declined' });
   };
 
   const brandColor = globalBrand?.brandColor || '#1db3cd';
 
   const handleLoginClick = () => {
+    trackPostHogMarketingCTA({
+      ctaName: 'Log in',
+      location: 'navbar_top',
+      destination: '/login',
+      section: 'main_header'
+    });
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
     if (hostname.includes('run.app')) {
@@ -63,6 +90,12 @@ export default function SaaSLayout() {
   };
 
   const handleSignupClick = () => {
+    trackPostHogMarketingCTA({
+      ctaName: 'Start Free Trial',
+      location: 'navbar_top',
+      destination: '/signup',
+      section: 'main_header'
+    });
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
     if (hostname.includes('run.app')) {

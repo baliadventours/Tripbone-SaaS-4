@@ -19,6 +19,7 @@ import { cn } from './lib/utils';
 import Loader from './components/Loader';
 import { ShieldAlert, Globe } from 'lucide-react';
 import { initGA, trackGAPageview } from './lib/googleAnalytics';
+import { initPostHog, trackPostHogPageView } from './lib/posthog';
 import { logSimplePageView } from './lib/simpleAnalytics';
 import ChunkErrorBoundary from './components/ChunkErrorBoundary';
 import { lazyWithRetry } from './lib/lazyWithRetry';
@@ -126,10 +127,11 @@ function AppContent() {
     }
   }, [isMaster, tenant]);
 
-  // Track Google Analytics pageviews on route modifications
+  // Track Google Analytics & PostHog pageviews on route modifications
   useEffect(() => {
     if (!tenantLoading) {
       initGA(tenantId);
+      initPostHog(tenantId);
     }
   }, [tenantId, tenantLoading]);
 
@@ -137,6 +139,7 @@ function AppContent() {
     const fullPath = location.pathname + location.search;
     trackGAPageview(fullPath);
     logSimplePageView(fullPath);
+    trackPostHogPageView(fullPath);
   }, [location.pathname, location.search]);
 
   // Prevent mobile zooming (pinch zoom & double tap auto-zoom)

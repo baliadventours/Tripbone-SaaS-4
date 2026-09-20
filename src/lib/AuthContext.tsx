@@ -3,6 +3,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, onSnapshot, getDocs, query, collection, where, setDoc, deleteDoc, serverTimestamp } from '@/src/lib/firebase';
 import { auth, db } from './firebase';
 import { UserProfile } from '../types';
+import { identifyPostHogUser, resetPostHogUser } from './posthog';
 
 interface AuthContextType {
   user: User | null;
@@ -33,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setWishlist([]);
         setLoading(false);
+        resetPostHogUser();
       }
     });
 
@@ -80,6 +82,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setProfile(data);
         setWishlist(data.wishlist || []);
+        identifyPostHogUser(user.uid, {
+          email: user.email,
+          name: data.displayName || user.displayName,
+          role: data.role || 'customer'
+        });
       } else {
         // Document does not exist yet; check for existing staff placeholder by email
         if (userEmail) {

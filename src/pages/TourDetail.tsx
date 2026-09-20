@@ -27,6 +27,7 @@ import { useSettings } from '../lib/SettingsContext';
 
 import { generateTourSchema } from '../lib/seoUtils';
 import { trackGAViewItem } from '../lib/googleAnalytics';
+import { trackPostHogTourView } from '../lib/posthog';
 
 export default function TourDetail() {
   const { slug } = useParams();
@@ -102,6 +103,13 @@ export default function TourDetail() {
             title: fetchedTour.title,
             price: fetchedTour.regularPrice,
             category: fetchedTour.categoryId
+          });
+          trackPostHogTourView({
+            id: fetchedTour.id,
+            title: fetchedTour.title,
+            price: fetchedTour.regularPrice,
+            category: fetchedTour.categoryId,
+            location: fetchedTour.location
           });
           
           // Fetch similar tours logic

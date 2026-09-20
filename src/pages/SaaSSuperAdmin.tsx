@@ -14,6 +14,7 @@ import {
   Layers, 
   Power, 
   Eye, 
+  EyeOff,
   Plus, 
   HelpCircle, 
   Megaphone, 
@@ -75,6 +76,13 @@ import DocManager from '../components/Docs/DocManager';
 import { MailjetTester } from '../components/Admin/MailjetTester';
 import ForbiddenSuperAdmin from '../components/Admin/ForbiddenSuperAdmin';
 import { ResponsiveContainer, AreaChart, Area, Tooltip, XAxis, YAxis } from 'recharts';
+import { sanitizeFirestoreData } from '../services/payment/PaymentService';
+import { 
+  updateTenantPostHog, 
+  trackPostHogEvent, 
+  recordedPostHogEvents, 
+  isPostHogReady 
+} from '../lib/posthog';
 
 export default function SaaSSuperAdmin() {
   const { tenant, isMaster, isImpersonating, setPreviewTenant, impersonateTenant } = useTenant();
@@ -261,11 +269,43 @@ export default function SaaSSuperAdmin() {
     topBarBadge: 'PROMO 🚀',
     topBarText: 'Build Your Tour Booking Website in 2 Minutes — AI-Powered & Zero Code!',
     topBarLink: '/signup',
-    topBarLinkText: 'Get Started'
+    topBarLinkText: 'Get Started',
+    posthogKey: '',
+    posthogHost: 'https://us.i.posthog.com',
+    posthogEnabled: true,
+    posthogAutocapture: true,
+    posthogSessionRecording: true,
+    posthogMaskAllInputs: true
   });
   const [savingBrand, setSavingBrand] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingFavicon, setUploadingFavicon] = useState(false);
+  const [showPosthogKey, setShowPosthogKey] = useState(false);
+  const [posthogTestStatus, setPosthogTestStatus] = useState<string | null>(null);
+  const [posthogEventList, setPosthogEventList] = useState(recordedPostHogEvents);
+
+  useEffect(() => {
+    const handleLog = () => {
+      setPosthogEventList([...recordedPostHogEvents]);
+    };
+    window.addEventListener('posthog-event-logged', handleLog);
+    return () => window.removeEventListener('posthog-event-logged', handleLog);
+  }, []);
+
+  const handleSendPostHogTestEvent = () => {
+    try {
+      trackPostHogEvent('superadmin_tripbone_test_ping', {
+        triggered_by: 'platform_owner',
+        admin_email: 'baliadventours@gmail.com',
+        current_hostname: window.location.hostname,
+        test_timestamp: new Date().toISOString()
+      });
+      setPosthogTestStatus('✅ Test event sent! Captured in debugger stream and transmitted to PostHog.');
+      setTimeout(() => setPosthogTestStatus(null), 5000);
+    } catch (err: any) {
+      setPosthogTestStatus('❌ Failed to trigger test event: ' + err.message);
+    }
+  };
 
   // Bookings list
   const [bookings, setBookings] = useState<any[]>([]);
@@ -678,12 +718,31 @@ export default function SaaSSuperAdmin() {
         // Load Brand Settings
         try {
           const brandSnap = await getDoc(doc(db, 'settings', 'globalBrand'));
-          if (brandSnap.exists()) {
-            setGlobalBrand((prev: any) => ({
-              ...prev,
-              ...brandSnap.data()
-            }));
+          let brandData = brandSnap.exists() ? brandSnap.data() : {};
+          
+          // Also check general doc for posthog settings fallback
+          try {
+            const generalSnap = await getDoc(doc(db, 'settings', 'general'));
+            if (generalSnap.exists()) {
+              const genData = generalSnap.data();
+              brandData = {
+                posthogKey: genData.posthogKey,
+                posthogHost: genData.posthogHost,
+                posthogEnabled: genData.posthogEnabled,
+                posthogAutocapture: genData.posthogAutocapture,
+                posthogSessionRecording: genData.posthogSessionRecording,
+                posthogMaskAllInputs: genData.posthogMaskAllInputs,
+                ...brandData
+              };
+            }
+          } catch (e) {
+            // ignore
           }
+
+          setGlobalBrand((prev: any) => ({
+            ...prev,
+            ...brandData
+          }));
         } catch (brandErr) {
           console.error("Error loading brand settings:", brandErr);
         }
@@ -4979,9 +5038,29 @@ export default function SaaSSuperAdmin() {
                   e.preventDefault();
                   setSavingBrand(true);
                   try {
-                    await setDoc(doc(db, 'settings', 'globalBrand'), globalBrand, { merge: true });
+                    const sanitizedBrand = sanitizeFirestoreData({
+                      ...globalBrand,
+                      updatedAt: new Date().toISOString()
+                    });
+                    await setDoc(doc(db, 'settings', 'globalBrand'), sanitizedBrand, { merge: true });
+
+                    // Also sync posthog configuration to settings/general for system-wide fallback
                     try {
-                      await setDoc(doc(db, 'settings', 'globalSEO'), {
+                      await setDoc(doc(db, 'settings', 'general'), sanitizeFirestoreData({
+                        posthogKey: globalBrand.posthogKey || '',
+                        posthogHost: globalBrand.posthogHost || 'https://us.i.posthog.com',
+                        posthogEnabled: globalBrand.posthogEnabled !== false,
+                        posthogAutocapture: globalBrand.posthogAutocapture !== false,
+                        posthogSessionRecording: globalBrand.posthogSessionRecording !== false,
+                        posthogMaskAllInputs: globalBrand.posthogMaskAllInputs !== false,
+                        updatedAt: new Date().toISOString()
+                      }), { merge: true });
+                    } catch (genErr) {
+                      console.warn('Failed to sync general doc:', genErr);
+                    }
+
+                    try {
+                      await setDoc(doc(db, 'settings', 'globalSEO'), sanitizeFirestoreData({
                         title: globalBrand.platformName ? `${globalBrand.platformName} - All-in-One AI Tour Operator Software & Website Builder` : 'Tripbone.com - All-in-One AI Tour Operator Software & Website Builder',
                         description: globalBrand.tagline || 'Modern Tour & Travel Website Builder',
                         image: globalBrand.logoUrl || 'https://i.ibb.co.com/pvLCVYkM/ALAS-HARUM8-optimized.webp',
@@ -4989,11 +5068,22 @@ export default function SaaSSuperAdmin() {
                         favicon: globalBrand.faviconUrl,
                         faviconUrl: globalBrand.faviconUrl,
                         updatedAt: new Date().toISOString()
-                      }, { merge: true });
+                      }), { merge: true });
                     } catch (seoErr) {
                       console.warn('Failed to sync globalSEO doc:', seoErr);
                     }
-                    setSuccess('🎉 Platform branding configuration saved successfully!');
+
+                    // Re-initialize active PostHog instance in-memory for tripbone.com
+                    updateTenantPostHog(null, {
+                      apiKey: globalBrand.posthogKey,
+                      apiHost: globalBrand.posthogHost,
+                      enabled: globalBrand.posthogEnabled !== false,
+                      autocapture: globalBrand.posthogAutocapture !== false,
+                      disableSessionRecording: globalBrand.posthogSessionRecording === false,
+                      maskAllInputs: globalBrand.posthogMaskAllInputs !== false
+                    });
+
+                    setSuccess('🎉 Platform branding and PostHog analytics saved successfully!');
                   } catch (err: any) {
                     setError('Failed to save branding: ' + err.message);
                   } finally {
@@ -5280,6 +5370,284 @@ export default function SaaSSuperAdmin() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* PostHog Main Site Growth Analytics */}
+                  <div className={`p-5 rounded-2xl border ${isDarkMode ? 'bg-[#0b101b] border-gray-800' : 'bg-slate-50/80 border-slate-200'}`}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800 mb-5">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2.5 rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                          <Activity className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              Tripbone Main Site Analytics (PostHog)
+                            </h4>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                              tripbone.com
+                            </span>
+                          </div>
+                          <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                            Track conversion effectiveness, demo requests, pricing interval selections, and trial workspace signups.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        {globalBrand.posthogKey?.trim() ? (
+                          isPostHogReady() ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                              Active & Recording
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                              Key Configured
+                            </span>
+                          )
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            Key Missing
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Master Enablement */}
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-slate-900/60">
+                        <div>
+                          <p className={`text-xs font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Enable PostHog Telemetry on tripbone.com
+                          </p>
+                          <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            When active, user journeys and conversion events on the marketing site are automatically captured.
+                          </p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={globalBrand.posthogEnabled !== false}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogEnabled: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                        </label>
+                      </div>
+
+                      {/* API Key and Host Inputs */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className={`block text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              PostHog Project API Key
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setShowPosthogKey(!showPosthogKey)}
+                              className="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer"
+                            >
+                              {showPosthogKey ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                              <span>{showPosthogKey ? 'Hide' : 'Reveal'}</span>
+                            </button>
+                          </div>
+                          <input
+                            type={showPosthogKey ? 'text' : 'password'}
+                            value={globalBrand.posthogKey || ''}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogKey: e.target.value.trim() })}
+                            placeholder="phc_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all ${isDarkMode ? 'bg-slate-950/80 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                          />
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                            Found in your PostHog Dashboard under Project Settings → Project API Key.
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <label className={`block text-xs font-bold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                              PostHog Ingestion Host
+                            </label>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setGlobalBrand({ ...globalBrand, posthogHost: 'https://us.i.posthog.com' })}
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border cursor-pointer ${
+                                  globalBrand.posthogHost === 'https://us.i.posthog.com'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 border-indigo-200 dark:border-indigo-800'
+                                    : 'text-gray-500 border-transparent hover:border-gray-300'
+                                }`}
+                              >
+                                US Cloud
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setGlobalBrand({ ...globalBrand, posthogHost: 'https://eu.i.posthog.com' })}
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border cursor-pointer ${
+                                  globalBrand.posthogHost === 'https://eu.i.posthog.com'
+                                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 border-indigo-200 dark:border-indigo-800'
+                                    : 'text-gray-500 border-transparent hover:border-gray-300'
+                                }`}
+                              >
+                                EU Cloud
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            value={globalBrand.posthogHost || 'https://us.i.posthog.com'}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogHost: e.target.value.trim() })}
+                            placeholder="https://us.i.posthog.com"
+                            className={`w-full px-3.5 py-2.5 rounded-xl text-xs font-mono border focus:outline-none focus:ring-2 focus:ring-indigo-500/30 transition-all ${isDarkMode ? 'bg-slate-950/80 border-gray-800 text-white' : 'bg-white border-gray-200 text-gray-900'}`}
+                          />
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1">
+                            Standard PostHog Cloud US or EU endpoint.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* PostHog Feature Switches */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2">
+                        <label className={`p-3 rounded-xl border flex items-start space-x-2.5 cursor-pointer transition-all ${
+                          globalBrand.posthogAutocapture !== false
+                            ? 'bg-indigo-500/5 border-indigo-500/30'
+                            : isDarkMode ? 'bg-slate-900/40 border-gray-800' : 'bg-white border-gray-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={globalBrand.posthogAutocapture !== false}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogAutocapture: e.target.checked })}
+                            className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <span className={`block text-xs font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                              Autocapture Clicks
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed block mt-0.5">
+                              Record all button clicks and link interactions automatically.
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className={`p-3 rounded-xl border flex items-start space-x-2.5 cursor-pointer transition-all ${
+                          globalBrand.posthogSessionRecording !== false
+                            ? 'bg-indigo-500/5 border-indigo-500/30'
+                            : isDarkMode ? 'bg-slate-900/40 border-gray-800' : 'bg-white border-gray-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={globalBrand.posthogSessionRecording !== false}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogSessionRecording: e.target.checked })}
+                            className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <span className={`block text-xs font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                              Session Recordings
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed block mt-0.5">
+                              Replay visitor sessions to see drop-offs and rage-clicks.
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className={`p-3 rounded-xl border flex items-start space-x-2.5 cursor-pointer transition-all ${
+                          globalBrand.posthogMaskAllInputs !== false
+                            ? 'bg-indigo-500/5 border-indigo-500/30'
+                            : isDarkMode ? 'bg-slate-900/40 border-gray-800' : 'bg-white border-gray-200'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={globalBrand.posthogMaskAllInputs !== false}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, posthogMaskAllInputs: e.target.checked })}
+                            className="mt-0.5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <div>
+                            <span className={`block text-xs font-bold ${isDarkMode ? 'text-gray-200' : 'text-gray-900'}`}>
+                              Mask Input Values
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed block mt-0.5">
+                              Protect privacy by masking passwords and sensitive form inputs.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Connection Test & Event Inspector */}
+                      <div className="pt-3 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="button"
+                            onClick={handleSendPostHogTestEvent}
+                            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all flex items-center space-x-1.5 cursor-pointer"
+                          >
+                            <Zap className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Send Live Test Event</span>
+                          </button>
+                          {posthogTestStatus && (
+                            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 animate-fadeIn">
+                              {posthogTestStatus}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <a
+                            href={globalBrand.posthogHost?.includes('eu.') ? 'https://eu.posthog.com/insights' : 'https://us.posthog.com/insights'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] font-semibold text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 flex items-center gap-1"
+                          >
+                            <span>Open PostHog Dashboard</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* Live In-Session Captured Telemetry Stream */}
+                      {posthogEventList.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-800">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Live Session Event Stream ({posthogEventList.length})
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              Captured in current browser session
+                            </span>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto space-y-1.5 pr-1">
+                            {posthogEventList.slice(0, 8).map((evt, idx) => (
+                              <div
+                                key={idx}
+                                className={`text-[11px] font-mono px-3 py-1.5 rounded-lg border flex items-center justify-between ${
+                                  isDarkMode ? 'bg-slate-950/70 border-gray-800 text-gray-300' : 'bg-white border-gray-200 text-gray-700'
+                                }`}
+                              >
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                    {evt.name}
+                                  </span>
+                                  {evt.properties?.site_type && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                                      {evt.properties.site_type}
+                                    </span>
+                                  )}
+                                  {evt.properties?.action && (
+                                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                      {evt.properties.action}
+                                    </span>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-gray-400">
+                                  {new Date(evt.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 

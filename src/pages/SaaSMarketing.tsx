@@ -15,6 +15,12 @@ import {
   CheckCircle2, ShieldAlert, Database, Triangle,
   Search, Bell, MapPin, Filter, ChevronLeft
 } from 'lucide-react';
+import { 
+  trackPostHogMarketingCTA, 
+  trackPostHogDemoModalOpen, 
+  trackPostHogDemoLeadSubmit, 
+  trackPostHogShowcaseClick 
+} from '../lib/posthog';
 
 export default function SaaSMarketing() {
   const { settings, globalBrand } = useSettings();
@@ -33,6 +39,11 @@ export default function SaaSMarketing() {
     if (!demoLead.name || !demoLead.email) return;
     setSubmittingLead(true);
     try {
+      trackPostHogDemoLeadSubmit({
+        name: demoLead.name,
+        email: demoLead.email,
+        source: 'main_hero_modal'
+      });
       await addDoc(collection(db, 'demoLeads'), {
         name: demoLead.name,
         email: demoLead.email,
@@ -110,6 +121,12 @@ export default function SaaSMarketing() {
   }, [isHovered, heroSlideshowImages.length]);
 
   const handleGetStarted = () => {
+    trackPostHogMarketingCTA({
+      ctaName: 'Start Saving Today',
+      location: 'bottom_comparison_banner',
+      destination: '/signup',
+      section: 'savings_calculator'
+    });
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
     if (hostname.includes('run.app')) {
@@ -253,7 +270,15 @@ export default function SaaSMarketing() {
               className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2"
             >
               <button
-                onClick={() => navigate('/signup')}
+                onClick={() => {
+                  trackPostHogMarketingCTA({
+                    ctaName: 'Try it Free (Hero)',
+                    location: 'hero_top',
+                    destination: '/signup',
+                    section: 'hero'
+                  });
+                  navigate('/signup');
+                }}
                 className="w-full sm:w-auto bg-slate-900 hover:bg-slate-850 text-white font-bold text-sm sm:text-base px-8 py-3.5 rounded-xl shadow-xs flex items-center justify-center gap-2 cursor-pointer transition-all hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <span>Try it Free</span>
@@ -261,7 +286,10 @@ export default function SaaSMarketing() {
               </button>
 
               <button
-                onClick={() => setShowDemoModal(true)}
+                onClick={() => {
+                  trackPostHogDemoModalOpen({ source: 'hero_top_button' });
+                  setShowDemoModal(true);
+                }}
                 className="w-full sm:w-auto bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm sm:text-base px-7 py-3.5 rounded-xl border border-slate-200 shadow-2xs flex items-center justify-center gap-2 cursor-pointer transition-all hover:border-slate-300 hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <div className="h-5 w-5 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xs group-hover:bg-teal-100 transition-colors">

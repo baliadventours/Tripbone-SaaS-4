@@ -16,10 +16,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import SimpleAnalyticsDashboard from './SimpleAnalyticsDashboard';
 import ConversionFunnelTracker from './ConversionFunnelTracker';
 import GoogleAnalytics from '../../pages/Dashboard/GoogleAnalytics';
+import PostHogManager from './PostHogManager';
 import { Booking } from '../../types';
+import { Video } from 'lucide-react';
 
 interface AnalyticsManagerProps {
-  initialTab?: 'traffic' | 'funnel' | 'ga4';
+  initialTab?: 'traffic' | 'funnel' | 'ga4' | 'posthog';
   bookings?: Booking[];
 }
 
@@ -27,7 +29,7 @@ export default function AnalyticsManager({
   initialTab = 'traffic',
   bookings = []
 }: AnalyticsManagerProps) {
-  const [activeTab, setActiveTab] = useState<'traffic' | 'funnel' | 'ga4'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'traffic' | 'funnel' | 'ga4' | 'posthog'>(initialTab);
 
   useEffect(() => {
     if (initialTab) {
@@ -62,6 +64,15 @@ export default function AnalyticsManager({
       badge: 'Enterprise',
       badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
       description: 'GA4 Measurement ID, GTM Container, Google Ads conversion & live event stream'
+    },
+    {
+      id: 'posthog' as const,
+      label: 'PostHog Product Analytics & Session Replay',
+      shortLabel: 'PostHog Replays',
+      icon: Video,
+      badge: 'Heatmaps',
+      badgeColor: 'bg-orange-50 text-orange-700 border-orange-200',
+      description: 'Session replay videos, live heatmaps, autocapture & funnel drop-off analytics'
     }
   ];
 
@@ -95,7 +106,7 @@ export default function AnalyticsManager({
         </div>
 
         {/* Tab Pills */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-4">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isSelected = activeTab === tab.id;
@@ -149,6 +160,12 @@ export default function AnalyticsManager({
         {activeTab === 'ga4' && (
           <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
             <GoogleAnalytics />
+          </div>
+        )}
+
+        {activeTab === 'posthog' && (
+          <div className="motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2">
+            <PostHogManager />
           </div>
         )}
       </div>

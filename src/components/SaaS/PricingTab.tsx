@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db, collection, getDocs } from '../../lib/firebase';
 import { Check } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { trackPostHogPricingSelect, trackPostHogBillingIntervalChange } from '../../lib/posthog';
 
 export default function PricingTab() {
   const [plans, setPlans] = useState<any[]>([]);
@@ -28,7 +29,21 @@ export default function PricingTab() {
     fetchPlans();
   }, []);
 
+  const handlePeriodChange = (newPeriod: 'monthly' | 'annual' | 'lifetime') => {
+    setPeriod(newPeriod);
+    trackPostHogBillingIntervalChange({ interval: newPeriod });
+  };
+
   const handleGetNow = (planSlug: string) => {
+    const selectedPlan = plans.find(p => p.slug === planSlug || p.id === planSlug);
+    trackPostHogPricingSelect({
+      planSlug,
+      planName: selectedPlan?.name,
+      period,
+      price: selectedPlan?.price || selectedPlan?.monthlyPrice,
+      currency: selectedPlan?.currency || 'USD'
+    });
+
     const host = window.location.host;
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
@@ -60,7 +75,7 @@ export default function PricingTab() {
         {/* Tab Selector */}
         <div className="inline-flex items-center p-1 bg-white rounded-full border border-slate-200 shadow-sm">
           <button
-            onClick={() => setPeriod('monthly')}
+            onClick={() => handlePeriodChange('monthly')}
             className={`px-8 py-3 rounded-full text-sm font-semibold tracking-wider transition-all duration-300 ${
               period === 'monthly' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
             }`}
@@ -68,7 +83,7 @@ export default function PricingTab() {
             MONTHLY
           </button>
           <button
-            onClick={() => setPeriod('annual')}
+            onClick={() => handlePeriodChange('annual')}
             className={`px-8 py-3 rounded-full text-sm font-semibold tracking-wider transition-all duration-300 ${
               period === 'annual' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
             }`}
@@ -76,7 +91,7 @@ export default function PricingTab() {
             ANNUAL
           </button>
           <button
-            onClick={() => setPeriod('lifetime')}
+            onClick={() => handlePeriodChange('lifetime')}
             className={`px-8 py-3 rounded-full text-sm font-semibold tracking-wider transition-all duration-300 ${
               period === 'lifetime' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:text-slate-900'
             }`}

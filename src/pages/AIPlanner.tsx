@@ -41,6 +41,7 @@ import { useSettings } from '../lib/SettingsContext';
 import { Link } from 'react-router-dom';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from '@/src/lib/firebase';
 import { auth, db } from '../lib/firebase';
+import { trackPostHogAIPlanGenerated } from '../lib/posthog';
 
 const STAGES = [
   { id: 'essentials', title: 'Arrival & Contact', subtitle: 'Who are you?', icon: User },
@@ -134,6 +135,18 @@ export default function AIPlanner() {
       const result = await generateItinerary(formattedData, apiKey);
       setItinerary(result);
       setActiveDayIdx(0);
+
+      try {
+        trackPostHogAIPlanGenerated({
+          title: result.planTitle || 'Custom Trip Plan',
+          days: result.dailyPlans?.length || 3,
+          destination: 'Bali',
+          pax: formData.persons,
+          pace: formData.experience
+        });
+      } catch (trackErr) {
+        console.warn("PostHog plan tracking error:", trackErr);
+      }
 
       // Automatically save to inquiries for admin follow-up
       try {

@@ -23,6 +23,10 @@ import {
 } from 'lucide-react';
 import { Tenant } from '../types';
 import { createCreemCheckoutSession } from '../services/creemService';
+import { 
+  trackPostHogSignupStep, 
+  trackPostHogWorkspaceProvisioned 
+} from '../lib/posthog';
 
 export default function SaaSHome() {
   const { setPreviewTenant } = useTenant();
@@ -653,6 +657,14 @@ export default function SaaSHome() {
         adminPassword: loginPassword
       }));
       
+      // Track signup funnel step 1 in PostHog
+      trackPostHogSignupStep({
+        step: 1,
+        email: loginEmail,
+        plan: formData.plan || 'starter',
+        method: 'email_password'
+      });
+
       // Bypass OTP on brand new registration
       sessionStorage.setItem('otp_verified', 'true');
       setOtpVerified(true);
@@ -764,6 +776,14 @@ export default function SaaSHome() {
       }
 
       // Automatically activate 0 payment 7-day trial!
+      trackPostHogWorkspaceProvisioned({
+        slug: formData.slug,
+        companyName: formData.companyName,
+        plan: formData.plan || 'starter',
+        billingInterval,
+        currency: formData.currency || 'USD'
+      });
+
       setSuccess(null);
       setTrialActivated(true);
       setIsProvisioning(false);

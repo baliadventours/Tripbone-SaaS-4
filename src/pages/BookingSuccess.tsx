@@ -13,6 +13,7 @@ import { getWhatsAppLink, generateBookingMessage } from '../lib/whatsappService'
 import { collection, onSnapshot, query, where, limit } from '@/src/lib/firebase';
 import { parseMeetingPoint } from '../lib/utils';
 import { trackGAPurchase } from '../lib/googleAnalytics';
+import { trackPostHogPurchase } from '../lib/posthog';
 
 export default function BookingSuccess() {
   const { settings } = useSettings();
@@ -56,6 +57,14 @@ export default function BookingSuccess() {
                 currency: (bookingData as any).currency || 'USD',
                 participants: ((bookingData as any).adults || 0) + ((bookingData as any).children || 0) || (bookingData as any).participants || 1,
                 customerEmail: (bookingData as any).customerDetails?.email || (bookingData as any).customerData?.email || (bookingData as any).userEmail
+              });
+              trackPostHogPurchase({
+                bookingId: bookingData.id,
+                totalAmount: Number(bookingData.totalAmount || (bookingData as any).totalPrice) || 0,
+                currency: (bookingData as any).currency || 'USD',
+                tourTitle: bookingData.tourTitle || 'Tour Booking',
+                customerEmail: (bookingData as any).customerDetails?.email || (bookingData as any).customerData?.email || (bookingData as any).userEmail,
+                paymentMethod: bookingData.paymentMethod || 'online'
               });
               sessionStorage.setItem(sessionKey, '1');
             }

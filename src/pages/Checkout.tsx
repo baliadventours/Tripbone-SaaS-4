@@ -75,6 +75,7 @@ import {
   trackGAAddPaymentInfo, 
   trackGASelectPromotion 
 } from "../lib/googleAnalytics";
+import { trackPostHogBeginCheckout } from "../lib/posthog";
 
 type CheckoutStep = "selection" | "customer" | "payment";
 type PaymentMethod = "stripe" | "midtrans" | "xendit" | "razorpay" | "adyen" | "wise" | "card" | "paypal" | "bank_transfer" | "pay_on_arrival";
@@ -362,6 +363,14 @@ export default function Checkout() {
             totalAmount: summary?.amountToPay || summary?.grandTotal || 0,
             participants: (adults || 0) + (children || 0) || 1,
             currency: selectedCurrency || "USD"
+          });
+          trackPostHogBeginCheckout({
+            tourId: tour.id,
+            tourTitle: tour.title,
+            totalPrice: summary?.amountToPay || summary?.grandTotal || 0,
+            currency: selectedCurrency || "USD",
+            paxCount: (adults || 0) + (children || 0) || 1,
+            step: 3
           });
         }
       } catch (trackErr) {
