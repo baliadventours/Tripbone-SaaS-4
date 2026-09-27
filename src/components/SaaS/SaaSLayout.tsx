@@ -7,6 +7,7 @@ import {
 import { useSettings } from '../../lib/SettingsContext';
 import { useAuth } from '../../lib/AuthContext';
 import TopAnnouncementBar from '../TopAnnouncementBar';
+import CustomFooterEmbed from '../CustomFooterEmbed';
 import { 
   initPostHog, 
   trackPostHogPageView, 
@@ -70,6 +71,10 @@ export default function SaaSLayout() {
   };
 
   const brandColor = globalBrand?.brandColor || '#00aa13';
+  const saasFooterEmbed = (
+    (globalBrand?.footerEmbedEnabled !== false && globalBrand?.footerEmbedCode) ||
+    (settings?.footerEmbedEnabled !== false && settings?.footerEmbedCode)
+  )?.trim() || null;
 
   const handleLoginClick = () => {
     trackPostHogMarketingCTA({
@@ -432,6 +437,12 @@ export default function SaaSLayout() {
             </div>
 
           </div>
+
+          {saasFooterEmbed && (
+            <div className="border-t border-[#dce1dc] pt-6 pb-2 flex justify-center items-center">
+              <CustomFooterEmbed html={saasFooterEmbed} />
+            </div>
+          )}
           
           <div className="border-t border-[#dce1dc] pt-8 flex flex-col md:flex-row items-center justify-between text-xs text-[#6f746f]">
             <p>&copy; {new Date().getFullYear()} {globalBrand?.platformName || "Tripbone"}. All rights reserved.</p>

@@ -1,16 +1,21 @@
 import { Plane, Instagram, Facebook, Twitter } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useSettings } from '../lib/SettingsContext';
+import CustomFooterEmbed from './CustomFooterEmbed';
 
 export default function Footer() {
   const { settings, builderSettings } = useSettings();
   
-  if (builderSettings) {
-    const footerBlock = builderSettings.blocks?.find(b => b.id === 'footer');
-    if (footerBlock && footerBlock.active === false) {
-      return null;
-    }
+  const footerBlock = builderSettings?.blocks?.find(b => b.id === 'footer');
+  if (footerBlock && footerBlock.active === false) {
+    return null;
   }
+
+  const embedCode = (
+    (footerBlock?.embedEnabled !== false && footerBlock?.embedCode) ||
+    (builderSettings?.footerEmbedEnabled !== false && builderSettings?.footerEmbedCode) ||
+    (settings?.footerEmbedEnabled !== false && settings?.footerEmbedCode)
+  )?.trim() || null;
 
   const getFooterLinks = () => {
     const block = builderSettings?.blocks?.find(b => b.id === 'footer');
@@ -134,6 +139,13 @@ export default function Footer() {
           <footer className="bg-gray-50 pt-8 md:pt-16 pb-24 text-gray-950 border-t border-gray-200/60 font-sans">
             <div className="container mx-auto px-4 lg:px-8">
                {renderLinkColumns()}
+
+               {embedCode && (
+                 <div className="pt-8 pb-2 flex justify-center items-center border-b border-gray-200/40">
+                   <CustomFooterEmbed html={embedCode} />
+                 </div>
+               )}
+
                <div className="pt-8 flex flex-col md:flex-row justify-between items-center gap-6 text-sm font-semibold text-gray-400">
                   <div className="flex flex-wrap justify-center md:justify-start gap-3 items-center">
                      <span className="font-bold text-gray-800">© {new Date().getFullYear()} {settings?.siteName || 'Tripbone'}.</span>

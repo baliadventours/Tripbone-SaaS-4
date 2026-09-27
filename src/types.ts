@@ -810,6 +810,10 @@ export interface SiteSettings {
   elfsightEnabled?: boolean;
   elfsightEmbedCode?: string;
 
+  // Footer Embed Code (Directory Listing Badges, Row.so, Product Hunt, Verification Badges & Custom Scripts)
+  footerEmbedEnabled?: boolean;
+  footerEmbedCode?: string;
+
   // SEO & AI Crawler & Analytics & Conversion Tracking Settings
   gaMeasurementId?: string;
   gtmId?: string;

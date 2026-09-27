@@ -65,8 +65,10 @@ import {
   Printer,
   FileText,
   ArrowUpDown,
-  LifeBuoy
+  LifeBuoy,
+  Code
 } from 'lucide-react';
+import CustomFooterEmbed from '../components/CustomFooterEmbed';
 import { Tenant } from '../types';
 import { createCreemCheckoutSession } from '../services/creemService';
 import SaaSBlogManager from '../components/SaaS/SaaSBlogManager';
@@ -276,7 +278,9 @@ export default function SaaSSuperAdmin() {
     posthogEnabled: true,
     posthogAutocapture: true,
     posthogSessionRecording: true,
-    posthogMaskAllInputs: true
+    posthogMaskAllInputs: true,
+    footerEmbedCode: '',
+    footerEmbedEnabled: true
   });
   const [savingBrand, setSavingBrand] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -5058,6 +5062,8 @@ export default function SaaSSuperAdmin() {
                         posthogAutocapture: globalBrand.posthogAutocapture !== false,
                         posthogSessionRecording: globalBrand.posthogSessionRecording !== false,
                         posthogMaskAllInputs: globalBrand.posthogMaskAllInputs !== false,
+                        footerEmbedCode: globalBrand.footerEmbedCode || '',
+                        footerEmbedEnabled: globalBrand.footerEmbedEnabled !== false,
                         updatedAt: new Date().toISOString()
                       }), { merge: true });
                     } catch (genErr) {
@@ -5650,6 +5656,125 @@ export default function SaaSSuperAdmin() {
                                 </span>
                               </div>
                             ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Platform Footer Embedded Code & Directory Badges */}
+                  <div className={`p-5 rounded-2xl border ${isDarkMode ? 'bg-[#0b101b] border-gray-800' : 'bg-slate-50/80 border-slate-200'}`}>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-4 border-b border-gray-200 dark:border-gray-800 mb-5">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                          <Code className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                              Platform Footer Embedded Code & Directory Badges
+                            </h4>
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                              Marketing Footer
+                            </span>
+                          </div>
+                          <p className={`text-[11px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                            Paste embedded HTML, directory listing verification badges (e.g. Row.so, Product Hunt, BetaList), or custom scripts to show in the footer of Tripbone.com.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={globalBrand.footerEmbedEnabled ?? true}
+                            onChange={(e) => setGlobalBrand({ ...globalBrand, footerEmbedEnabled: e.target.checked })}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        </label>
+                        <span className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                          {(globalBrand.footerEmbedEnabled ?? true) ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Badge Presets */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs font-semibold text-gray-500">Quick Snippets:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const snippet = '<a href="https://row.so" target="_blank" rel="noopener noreferrer"><img src="https://row.so/badge.svg" alt="Featured on Row.so Directory" height="40" /></a>';
+                            setGlobalBrand({ ...globalBrand, footerEmbedCode: snippet, footerEmbedEnabled: true });
+                          }}
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors"
+                        >
+                          + Row.so Directory Badge
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const snippet = '<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer"><img src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=tripbone&theme=light" alt="Tripbone on Product Hunt" height="40" /></a>';
+                            setGlobalBrand({ ...globalBrand, footerEmbedCode: snippet, footerEmbedEnabled: true });
+                          }}
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 transition-colors"
+                        >
+                          + Product Hunt Badge
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const snippet = '<a href="https://tripbone.com" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 transition-all"><span>⚡ Verified Directory Partner</span></a>';
+                            setGlobalBrand({ ...globalBrand, footerEmbedCode: snippet, footerEmbedEnabled: true });
+                          }}
+                          className="px-2.5 py-1 text-xs font-medium rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-colors"
+                        >
+                          + Custom Badge Link
+                        </button>
+                        {globalBrand.footerEmbedCode && (
+                          <button
+                            type="button"
+                            onClick={() => setGlobalBrand({ ...globalBrand, footerEmbedCode: '' })}
+                            className="px-2 py-1 text-xs text-red-500 hover:text-red-700 font-medium transition-colors ml-auto"
+                          >
+                            Clear
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Code Textarea */}
+                      <div>
+                        <textarea
+                          rows={4}
+                          value={globalBrand.footerEmbedCode || ''}
+                          onChange={(e) => setGlobalBrand({ ...globalBrand, footerEmbedCode: e.target.value })}
+                          placeholder={'<!-- Paste directory badge HTML, <iframe>, or <script> embed code here -->\n<a href="https://row.so" target="_blank"><img src="https://row.so/badge.svg" alt="Row.so" height="40" /></a>'}
+                          className={`w-full p-3 font-mono text-xs border rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all ${
+                            isDarkMode ? 'bg-slate-950/80 border-gray-800 text-gray-100' : 'bg-white border-gray-200 text-gray-900'
+                          }`}
+                        />
+                        <p className="text-[11px] text-gray-500 mt-1">
+                          HTML tags, image badges, directory links, and widgets placed here will automatically render centered in the SaaS marketing footer just above the copyright notice.
+                        </p>
+                      </div>
+
+                      {/* Live Preview */}
+                      {globalBrand.footerEmbedCode?.trim() && (
+                        <div className={`p-4 border rounded-xl ${isDarkMode ? 'bg-slate-900/60 border-gray-800' : 'bg-white border-gray-200'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              Live Footer Embed Preview
+                            </span>
+                            <span className="text-[10px] text-gray-400">
+                              {(globalBrand.footerEmbedEnabled ?? true) ? 'Visible on footer' : 'Disabled / Hidden'}
+                            </span>
+                          </div>
+                          <div className="p-4 rounded-lg bg-gray-50/80 dark:bg-slate-950/40 border border-gray-100 dark:border-gray-800 flex justify-center items-center min-h-[60px]">
+                            <CustomFooterEmbed html={globalBrand.footerEmbedCode} />
                           </div>
                         </div>
                       )}

@@ -45,10 +45,14 @@ import {
   Star,
   ShieldCheck,
   Award,
-  Smartphone
+  Smartphone,
+  Code,
+  Eye
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { updateTenantGA, extractMeasurementId } from '../../lib/googleAnalytics';
+import CustomFooterEmbed from '../CustomFooterEmbed';
+import { sanitizeFirestoreData } from '../../services/payment/PaymentService';
 
 const TOP_NAV_OPTIONS = [
   { id: 'default', name: 'Classic Dark Bar (Phone, Support Email, Currency)', category: 'TopBar' },
@@ -171,7 +175,9 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
     headingFont: 'Space Grotesk',
     currency: 'USD',
     customDomain: tenant?.customDomain || '',
-    brandingPreset: 'default'
+    brandingPreset: 'default',
+    footerEmbedCode: '',
+    footerEmbedEnabled: true
   };
 
   useEffect(() => {
@@ -198,7 +204,23 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
 
     try {
       const settingsId = tenantId || 'general';
-      await setDoc(doc(db, 'settings', settingsId), settings);
+      await setDoc(doc(db, 'settings', settingsId), sanitizeFirestoreData(settings));
+
+      // Sync footer embed code to website_builder if tenantId exists
+      if (tenantId) {
+        try {
+          const wbRef = doc(db, 'website_builder', tenantId);
+          const wbSnap = await getDoc(wbRef);
+          if (wbSnap.exists()) {
+            await setDoc(wbRef, sanitizeFirestoreData({
+              footerEmbedCode: settings.footerEmbedCode || '',
+              footerEmbedEnabled: settings.footerEmbedEnabled ?? true
+            }), { merge: true });
+          }
+        } catch (wbErr) {
+          console.warn("Failed to sync embed code to website_builder:", wbErr);
+        }
+      }
 
       // Sync GA4 settings live for this tenant
       let cleanGaId = (settings.gaMeasurementId || '').trim().toUpperCase();
@@ -1774,6 +1796,92 @@ export default function GeneralSettings({ activeTab = 'all' }: { activeTab?: 'co
                       className="w-full bg-white border border-gray-200 rounded-[12px] px-3.5 py-2 text-[10px] font-mono text-gray-800 placeholder:text-gray-300 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
                     />
                   </div>
+                </div>
+
+                {/* Footer Embedded Code (Directory Badges & Custom Scripts) */}
+                <div className="pt-6 border-t border-gray-100 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Code className="h-4 w-4 text-emerald-600" />
+                      <label className="text-xs font-black uppercase tracking-wider text-gray-900">
+                        Footer Embedded Code & Directory Badges
+                      </label>
+                      <span className="px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full">
+                        Row.so • Product Hunt • SaaSHub
+                      </span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings?.footerEmbedEnabled ?? true}
+                        onChange={(e) => setSettings(s => s ? { ...s, footerEmbedEnabled: e.target.checked } : null)}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+                      <span className="ml-2 text-[11px] font-bold text-gray-600">
+                        {(settings?.footerEmbedEnabled ?? true) ? 'Active' : 'Disabled'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <p className="text-[11px] text-gray-500">
+                    Paste embed codes or badges required by directory websites (e.g. Row.so, Product Hunt, SaaSHub, Microlaunch, Uneed) to verify your listing and display badges in your footer.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] text-gray-400 font-semibold mr-1">Quick badge presets:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const snippet = `<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`;
+                        setSettings(s => s ? { ...s, footerEmbedCode: snippet, footerEmbedEnabled: true } : null);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                    >
+                      + Row.so Badge
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const snippet = `<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://api.producthunt.com/widgets/embed.image?post_id=tripbone&theme=light" alt="Featured on Product Hunt" width="180" height="40" />\n</a>`;
+                        setSettings(s => s ? { ...s, footerEmbedCode: snippet, footerEmbedEnabled: true } : null);
+                      }}
+                      className="px-2.5 py-1 text-[10px] font-bold bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition"
+                    >
+                      + Product Hunt
+                    </button>
+                    {settings?.footerEmbedCode && (
+                      <button
+                        type="button"
+                        onClick={() => setSettings(s => s ? { ...s, footerEmbedCode: '' } : null)}
+                        className="px-2 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg transition"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  <textarea
+                    rows={4}
+                    value={settings?.footerEmbedCode || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSettings(s => s ? { ...s, footerEmbedCode: val } : null);
+                    }}
+                    placeholder={`<!-- Paste directory embed code or verification badge here -->\n<a href="https://row.so" target="_blank">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" />\n</a>`}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs font-mono text-emerald-400 placeholder:text-gray-600 focus:ring-2 focus:ring-emerald-500/30"
+                  />
+
+                  {settings?.footerEmbedCode?.trim() && (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-gray-400 flex items-center gap-1">
+                          <Eye className="w-3 h-3 text-emerald-600" /> Live Footer Preview
+                        </span>
+                      </div>
+                      <CustomFooterEmbed html={settings.footerEmbedCode} />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

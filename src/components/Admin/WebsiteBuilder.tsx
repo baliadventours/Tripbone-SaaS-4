@@ -6,13 +6,14 @@ import {
   LayoutTemplate, Menu, Save, Loader2, Image as ImageIcon, Plus, Trash2, X, 
   AlertCircle, Upload, LayoutGrid, Star, Heart, ArrowUp, ArrowDown, Search, 
   Check, Sparkles, Mail, CheckCircle, Smartphone, Compass, Eye, Monitor, 
-  Palette, Sliders, Layers
+  Palette, Sliders, Layers, Code, ExternalLink, ShieldCheck
 } from 'lucide-react';
 import { uploadImage } from '../../lib/imgbb';
 import { cn } from '../../lib/utils';
 import JoyTimeCustomizer, { JoyTimeCustomization } from './JoyTimeCustomizer';
 import AndroidAppBuilder, { AndroidAppSettings } from './AndroidAppBuilder';
 import { sanitizeFirestoreData } from '../../services/payment/PaymentService';
+import CustomFooterEmbed from '../CustomFooterEmbed';
 
 export interface BlockConfig {
   id: string;
@@ -36,6 +37,8 @@ export interface BlockConfig {
   heroBullets?: string[];
   menuId?: string;
   tourIds?: string[];
+  embedCode?: string;
+  embedEnabled?: boolean;
 }
 
 export interface CustomMenu {
@@ -53,6 +56,8 @@ export interface WebsiteBuilderSettings {
   mobileHookSubtitle?: string;
   joytimeCustomization?: JoyTimeCustomization;
   androidAppSettings?: AndroidAppSettings;
+  footerEmbedCode?: string;
+  footerEmbedEnabled?: boolean;
 }
 
 interface WebsiteBuilderProps {
@@ -67,7 +72,7 @@ const DEFAULT_BLOCKS: BlockConfig[] = [
   { id: 'guestFavorites', active: true, design: 'default', tourIds: [], headline: 'Guest Favorites', subheadline: 'Overwhelmingly positive guest expeditions' },
   { id: 'reviews', active: true, design: 'slider' },
   { id: 'blog', active: true, design: 'carousel' },
-  { id: 'footer', active: true, design: 'default' }
+  { id: 'footer', active: true, design: 'default', embedCode: '', embedEnabled: true }
 ];
 
 function TourPickerManager({
@@ -512,12 +517,35 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
         const generalRef = doc(db, 'settings', tenantId);
         const generalSnap = await getDoc(generalRef);
         const generalData = generalSnap.exists() ? generalSnap.data() : {};
+        const generalEmbed = generalData.footerEmbedCode || '';
+        const generalEmbedEnabled = generalData.footerEmbedEnabled !== false;
+
+        setBrandingSettings((prev: any) => ({
+          ...prev,
+          businessName: generalData.siteName || prev.businessName || '',
+          logoUrl: generalData.logoURL || prev.logoUrl || '',
+          primaryColor: generalData.primaryColor || prev.primaryColor || '#c2410c',
+          secondaryColor: generalData.secondaryColor || prev.secondaryColor || '#ea580c',
+          brandingPreset: generalData.brandingPreset || prev.brandingPreset || 'default',
+          footerEmbedCode: generalEmbed,
+          footerEmbedEnabled: generalEmbedEnabled,
+        }));
 
         if (snap.exists()) {
           const data = snap.data() as WebsiteBuilderSettings;
+          const resolvedFooterEmbed = (data.footerEmbedCode !== undefined ? data.footerEmbedCode : generalEmbed) || '';
+          const resolvedFooterEnabled = data.footerEmbedEnabled !== undefined ? data.footerEmbedEnabled : generalEmbedEnabled;
+
           // Merge defaults if missing blocks
           const mergedBlocks = DEFAULT_BLOCKS.map(dbk => {
             const existing = data.blocks?.find(b => b.id === dbk.id);
+            if (dbk.id === 'footer' && existing) {
+              return {
+                ...existing,
+                embedCode: existing.embedCode !== undefined ? existing.embedCode : resolvedFooterEmbed,
+                embedEnabled: existing.embedEnabled !== undefined ? existing.embedEnabled : resolvedFooterEnabled
+              };
+            }
             return existing || dbk;
           });
           setSettings({ 
@@ -527,17 +555,27 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
             mobileHookTitle: data.mobileHookTitle || generalData.mobileHookTitle || '',
             mobileHookSubtitle: data.mobileHookSubtitle || generalData.mobileHookSubtitle || '',
             joytimeCustomization: data.joytimeCustomization || generalData.joytimeCustomization,
-            androidAppSettings: data.androidAppSettings || generalData.androidAppSettings
+            androidAppSettings: data.androidAppSettings || generalData.androidAppSettings,
+            footerEmbedCode: resolvedFooterEmbed,
+            footerEmbedEnabled: resolvedFooterEnabled
           });
         } else {
+          const mergedBlocks = DEFAULT_BLOCKS.map(dbk => {
+            if (dbk.id === 'footer') {
+              return { ...dbk, embedCode: generalEmbed, embedEnabled: generalEmbedEnabled };
+            }
+            return dbk;
+          });
           setSettings({ 
-            blocks: DEFAULT_BLOCKS, 
+            blocks: mergedBlocks, 
             menus: [], 
             mobilePreset: generalData.mobilePreset || 'joytime-special',
             mobileHookTitle: generalData.mobileHookTitle || 'Book Your Bali Tour',
             mobileHookSubtitle: generalData.mobileHookSubtitle || 'Verified Local Partner',
             joytimeCustomization: generalData.joytimeCustomization,
-            androidAppSettings: generalData.androidAppSettings
+            androidAppSettings: generalData.androidAppSettings,
+            footerEmbedCode: generalEmbed,
+            footerEmbedEnabled: generalEmbedEnabled
           });
         }
       } catch (err) {
@@ -553,9 +591,20 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
     if (!tenantId || !settings) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, 'website_builder', tenantId), sanitizeFirestoreData(settings));
+      const footerBlock = settings.blocks?.find(b => b.id === 'footer');
+      const footerEmbed = (settings.footerEmbedCode !== undefined ? settings.footerEmbedCode : footerBlock?.embedCode) || '';
+      const footerEnabled = (settings.footerEmbedEnabled !== undefined ? settings.footerEmbedEnabled : footerBlock?.embedEnabled) ?? true;
 
-      // Sync topNav, mainNav presets, mobilePreset, joytimeCustomization, and androidAppSettings to general settings
+      const syncedSettings: WebsiteBuilderSettings = {
+        ...settings,
+        footerEmbedCode: footerEmbed,
+        footerEmbedEnabled: footerEnabled,
+        blocks: settings.blocks.map(b => b.id === 'footer' ? { ...b, embedCode: footerEmbed, embedEnabled: footerEnabled } : b)
+      };
+
+      await setDoc(doc(db, 'website_builder', tenantId), sanitizeFirestoreData(syncedSettings));
+
+      // Sync topNav, mainNav presets, mobilePreset, joytimeCustomization, androidAppSettings, and footer embed to general settings
       const topNavBlock = settings.blocks?.find(b => b.id === 'topNav');
       const mainNavBlock = settings.blocks?.find(b => b.id === 'mainNav');
       
@@ -575,7 +624,9 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
         mobileHookTitle: settings.mobileHookTitle || '',
         mobileHookSubtitle: settings.mobileHookSubtitle || '',
         joytimeCustomization: settings.joytimeCustomization || existingGen.joytimeCustomization,
-        androidAppSettings: settings.androidAppSettings || existingGen.androidAppSettings
+        androidAppSettings: settings.androidAppSettings || existingGen.androidAppSettings,
+        footerEmbedCode: footerEmbed,
+        footerEmbedEnabled: footerEnabled
       }), { merge: true });
 
       alert('Website Builder settings saved successfully!');
@@ -858,7 +909,7 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
                 onClick={async () => {
                   if (!tenantId) return;
                   try {
-                    await setDoc(doc(db, 'settings', tenantId), brandingSettings, { merge: true });
+                    await setDoc(doc(db, 'settings', tenantId), sanitizeFirestoreData(brandingSettings), { merge: true });
                     alert('Site Branding Settings updated successfully!');
                   } catch (err) {
                     console.error(err);
@@ -869,6 +920,161 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
               >
                 Apply Site Style
               </button>
+            </div>
+          </div>
+
+          {/* Footer Embedded Code Card (Directory Badges & Custom Scripts) */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
+                  <Code className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-gray-900">Footer Embedded Code & Directory Badges</h3>
+                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full">
+                      Build Setting
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Embed custom HTML, directory badges (e.g. Row.so, Product Hunt, SaaSHub, Uneed, Microlaunch), verification badges, or custom scripts into your website footer.
+                  </p>
+                </div>
+              </div>
+
+              {/* Master Toggle */}
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-xs font-bold text-gray-700">
+                  {(settings?.footerEmbedEnabled ?? true) ? 'Enabled' : 'Disabled'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !(settings?.footerEmbedEnabled ?? true);
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedEnabled: nextVal }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedEnabled: nextVal }));
+                    updateBlock('footer', { embedEnabled: nextVal });
+                  }}
+                  className={cn(
+                    "w-12 h-6 rounded-full transition-colors relative cursor-pointer",
+                    (settings?.footerEmbedEnabled ?? true) ? 'bg-primary' : 'bg-gray-300'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform",
+                      (settings?.footerEmbedEnabled ?? true) ? 'left-6' : 'left-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Templates Buttons */}
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Embedded HTML / Script Snippet
+                </label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[10px] text-gray-400 font-semibold mr-1">Quick presets:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snippet = `<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`;
+                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                  >
+                    + Row.so Badge
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snippet = `<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://api.producthunt.com/widgets/embed.image?post_id=tripbone&theme=light" alt="Featured on Product Hunt" width="180" height="40" />\n</a>`;
+                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition"
+                  >
+                    + Product Hunt
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const snippet = `<a href="https://www.saashub.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://www.saashub.com/images/badges/badge-featured.png" alt="Featured on SaaSHub" width="150" height="40" />\n</a>`;
+                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    }}
+                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
+                  >
+                    + SaaSHub
+                  </button>
+                  {(settings?.footerEmbedCode || brandingSettings.footerEmbedCode) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSettings(prev => prev ? ({ ...prev, footerEmbedCode: '' }) : null);
+                        setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: '' }));
+                        updateBlock('footer', { embedCode: '' });
+                      }}
+                      className="px-2 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg transition"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <textarea
+                rows={5}
+                value={settings?.footerEmbedCode ?? brandingSettings.footerEmbedCode ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setSettings(prev => prev ? ({ ...prev, footerEmbedCode: val }) : null);
+                  setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: val }));
+                  updateBlock('footer', { embedCode: val });
+                }}
+                placeholder={`<!-- Paste directory embed code or verification badges here, e.g.: -->\n<a href="https://row.so" target="_blank">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" />\n</a>`}
+                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed"
+              />
+              <p className="text-[11px] text-gray-500 leading-normal">
+                Supported: Standard HTML links, image badges, SVG badges, and script widgets. Directory websites require this code on your footer to verify and approve your directory listing.
+              </p>
+            </div>
+
+            {/* Live Visual Preview */}
+            <div className="space-y-2 pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-primary" />
+                  Footer Live Preview
+                </label>
+                <span className="text-[10px] text-gray-400">Previewing how it appears in the footer</span>
+              </div>
+
+              <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col items-center justify-center min-h-[90px] text-center">
+                {(settings?.footerEmbedCode?.trim() || brandingSettings.footerEmbedCode?.trim()) ? (
+                  <div className="w-full">
+                    <p className="text-[10px] uppercase tracking-widest font-mono text-gray-400 mb-2">Rendered Output:</p>
+                    <CustomFooterEmbed html={settings?.footerEmbedCode || brandingSettings.footerEmbedCode} />
+                  </div>
+                ) : (
+                  <div className="text-gray-400 text-xs italic flex flex-col items-center gap-1">
+                    <Code className="w-5 h-5 text-gray-300" />
+                    <span>No embed code provided yet. Paste your directory badge snippet above to preview it here.</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-2 flex items-center justify-between">
+              <span className="text-xs text-gray-400">Click <strong>SAVE CHANGES</strong> at the top to publish changes to your live site.</span>
             </div>
           </div>
         </div>
@@ -1296,6 +1502,93 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
                            <option key={m.id} value={m.id}>{m.name}</option>
                          ))}
                        </select>
+                    </div>
+                  )}
+
+                  {/* Custom Footer Embed Code & Directory Badges (Footer block only) */}
+                  {block.id === 'footer' && (
+                    <div className="pt-4 border-t border-gray-100 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Code className="w-4 h-4 text-emerald-600" />
+                          <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            Footer Embedded Code & Directory Badges
+                          </label>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold text-gray-500">
+                            {(block.embedEnabled ?? settings.footerEmbedEnabled ?? true) ? 'Active' : 'Disabled'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextVal = !(block.embedEnabled ?? settings.footerEmbedEnabled ?? true);
+                              updateBlock('footer', { embedEnabled: nextVal });
+                              setSettings(prev => prev ? ({ ...prev, footerEmbedEnabled: nextVal }) : null);
+                              setBrandingSettings((prev: any) => ({ ...prev, footerEmbedEnabled: nextVal }));
+                            }}
+                            className={cn(
+                              "w-10 h-5 rounded-full transition-colors relative cursor-pointer",
+                              (block.embedEnabled ?? settings.footerEmbedEnabled ?? true) ? 'bg-primary' : 'bg-gray-300'
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform",
+                                (block.embedEnabled ?? settings.footerEmbedEnabled ?? true) ? 'left-5' : 'left-0.5'
+                              )}
+                            />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] text-gray-400 font-semibold mr-1">Presets:</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const snippet = `<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`;
+                            updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                            setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                            setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                        >
+                          + Row.so Badge
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const snippet = `<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://api.producthunt.com/widgets/embed.image?post_id=tripbone&theme=light" alt="Featured on Product Hunt" width="180" height="40" />\n</a>`;
+                            updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                            setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                            setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                          }}
+                          className="px-2 py-0.5 text-[10px] font-bold bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition"
+                        >
+                          + Product Hunt
+                        </button>
+                      </div>
+
+                      <textarea
+                        rows={4}
+                        value={block.embedCode ?? settings.footerEmbedCode ?? ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateBlock('footer', { embedCode: val });
+                          setSettings(prev => prev ? ({ ...prev, footerEmbedCode: val }) : null);
+                          setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: val }));
+                        }}
+                        placeholder={`<a href="https://row.so" target="_blank">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" />\n</a>`}
+                        className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed"
+                      />
+
+                      {(block.embedCode || settings.footerEmbedCode) && (
+                        <div className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-center">
+                          <p className="text-[10px] uppercase font-mono text-gray-400 mb-1">Live Badge Preview:</p>
+                          <CustomFooterEmbed html={block.embedCode || settings.footerEmbedCode} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
