@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { Plus, Copy, Edit2, Trash2, LayoutGrid, List, FileDown, FileUp, Loader2, X, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Copy, Edit2, Trash2, LayoutGrid, List, FileDown, FileUp, Loader2, X, AlertCircle, CheckCircle2, Clock, Sparkles } from 'lucide-react';
 import { Tour, Category, UserProfile } from '../../types';
 import { cn } from '../../lib/utils';
+import { TinyFishTourImportModal } from './Modals/TinyFishTourImportModal';
 
 interface TourListingProps {
   tours: Tour[];
@@ -34,6 +35,7 @@ const TourListing = ({
 
   // State for Import Preview Modal
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [tinyFishModalOpen, setTinyFishModalOpen] = useState(false);
   const [importCandidateTours, setImportCandidateTours] = useState<Partial<Tour>[]>([]);
   const [importFileName, setImportFileName] = useState('');
   const [isImporting, setIsImporting] = useState(false);
@@ -195,6 +197,15 @@ const TourListing = ({
               className="hidden" 
             />
           </label>
+
+          {/* Import from OTA via TinyFish */}
+          <button 
+            onClick={() => setTinyFishModalOpen(true)}
+            className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white px-4 py-3 rounded-[10px] font-black text-xs flex items-center gap-2 transition-all shadow-sm shadow-orange-300 hover:scale-[1.02] active:scale-[0.98]"
+            title="Import from Viator, GetYourGuide, Airbnb or direct link using TinyFish AI"
+          >
+            <Sparkles className="h-4 w-4" /> Import from OTA
+          </button>
 
           {/* Add New Tour Button */}
           <button 
@@ -438,6 +449,24 @@ const TourListing = ({
           </div>
         </div>
       )}
+
+      {/* TinyFish 1-Click Tour Importer Modal */}
+      <TinyFishTourImportModal
+        isOpen={tinyFishModalOpen}
+        onClose={() => setTinyFishModalOpen(false)}
+        onImportComplete={async (tourData) => {
+          if (handleImportTours) {
+            await handleImportTours([tourData]);
+          } else {
+            handleEdit(tourData as Tour);
+            setActiveMenu('tours');
+          }
+        }}
+        onEditInForm={(tourData) => {
+          handleEdit(tourData as Tour);
+          setActiveMenu('tours');
+        }}
+      />
     </div>
   );
 };

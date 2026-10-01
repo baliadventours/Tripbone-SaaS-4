@@ -25,6 +25,7 @@ import { fallbackHtmlTemplate } from "./src/indexHtmlFallback.js";
 import { createCreemCheckoutSession, moderateCreemContent } from "./src/services/creemService.js";
 import { sendWelcomeEmail, sendVerificationEmail, sendPaymentSuccessEmail, sendPaymentDueEmail, sendEmail } from "./src/services/mailjetService.js";
 import { getEffectiveInterval, formatPlanName, getPlanPrice } from "./src/lib/planUtils.js";
+import { extractTourFromUrl, extractCompetitorPrice } from "./src/services/tinyfishService.js";
 import crypto from "crypto";
 
 dotenv.config();
@@ -91,6 +92,42 @@ export async function createServer() {
   // Health check endpoint
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // TinyFish API Routes: Extract tour catalog from live travel URLs (Viator, GetYourGuide, Airbnb, TripAdvisor, etc.)
+  app.post("/api/tinyfish/extract-tour", async (req: any, res: any) => {
+    try {
+      const { url, apiKey } = req.body || {};
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "Missing or invalid 'url' parameter" });
+      }
+
+      const result = await extractTourFromUrl(url.trim(), apiKey);
+      if (!result.success) {
+        return res.status(422).json({ error: result.error || "Failed to extract tour from provided URL" });
+      }
+
+      return res.json(result);
+    } catch (err: any) {
+      console.error("[Server] /api/tinyfish/extract-tour error:", err);
+      return res.status(500).json({ error: err.message || "Internal server error during tour extraction" });
+    }
+  });
+
+  // TinyFish API Routes: Live OTA Competitor Rate Extraction
+  app.post("/api/tinyfish/competitor-price", async (req: any, res: any) => {
+    try {
+      const { url, apiKey } = req.body || {};
+      if (!url || typeof url !== 'string') {
+        return res.status(400).json({ error: "Missing or invalid 'url' parameter" });
+      }
+
+      const result = await extractCompetitorPrice(url.trim(), apiKey);
+      return res.json(result);
+    } catch (err: any) {
+      console.error("[Server] /api/tinyfish/competitor-price error:", err);
+      return res.status(500).json({ error: err.message || "Failed to fetch competitor pricing" });
+    }
   });
 
   // Redirect /index.html and /app.html to / for SEO duplicate content prevention
