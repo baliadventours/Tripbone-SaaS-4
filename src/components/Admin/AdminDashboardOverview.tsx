@@ -3,7 +3,7 @@ import {
   Zap, Download, PlusCircle, Calendar, CreditCard, Users, 
   MapPin, Clock, MessageSquare, ArrowRight, 
   FileText, ShieldCheck, CheckCircle2, TrendingUp, Briefcase, ChevronRight,
-  UserCheck, AlertCircle, ArrowUpRight, Search, Car, HelpCircle
+  UserCheck, AlertCircle, ArrowUpRight, Search, Car, HelpCircle, Rocket
 } from "lucide-react";
 import { cn, formatPrice } from "../../lib/utils";
 import StatsDashboard from "./StatsDashboard";
@@ -83,6 +83,17 @@ export const AdminDashboardOverview: React.FC<AdminDashboardOverviewProps> = ({
 
         {/* Action button / Status */}
         <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="/docs/fundamental-setup"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 border border-orange-200/80 rounded-lg text-xs font-bold text-orange-900 shadow-xs transition"
+            title="Read Complete Fundamental Onboarding Documentation"
+          >
+            <Rocket className="h-3.5 w-3.5 text-primary" />
+            <span>Onboarding Guide</span>
+          </a>
+
           {isInstallable && (
             <button
               onClick={installApp}

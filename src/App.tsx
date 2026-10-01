@@ -248,6 +248,8 @@ function AppContent() {
               <Route path="/appsumo" element={<AppSumoRedeem />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/docs/:slug" element={<DocsPage />} />
+              <Route path="/fundamental-setup" element={<Navigate to="/docs/fundamental-setup" replace />} />
+              <Route path="/onboarding" element={<Navigate to="/docs/fundamental-setup" replace />} />
               
               {/* SaaS App Gate (Legacy Mode) */}
               {isAppGate && (
@@ -485,6 +487,8 @@ function AppContent() {
               <Route path="/admin/guide" element={<GuideView />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/docs/:slug" element={<DocsPage />} />
+              <Route path="/fundamental-setup" element={<Navigate to="/docs/fundamental-setup" replace />} />
+              <Route path="/onboarding" element={<Navigate to="/docs/fundamental-setup" replace />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/privacy" element={<Privacy />} />
               <Route path="/page/:slug" element={<CustomPageView />} />

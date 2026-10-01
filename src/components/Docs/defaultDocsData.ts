@@ -19,6 +19,213 @@ export const DEFAULT_DOC_CATEGORIES: DocCategory[] = [
 ];
 
 export const DEFAULT_DOC_ARTICLES: DocArticle[] = [
+  // 0. FUNDAMENTAL ONBOARDING
+  {
+    id: 'fundamental-setup',
+    slug: 'fundamental-setup',
+    title: 'Fundamental Onboarding Checklist: Make Your Tenant Website Working',
+    subTitle: 'Production Launchpad',
+    subSubTitle: '8 Mandatory Steps for Live Bookings, Payments & Automated Operations',
+    category: 'Getting Started',
+    categoryOrder: 1,
+    description: 'The master step-by-step checklist to turn your Tripbone tenant workspace into a fully functioning, white-label, live booking engine.',
+    content: `
+      <h2>The 8 Fundamentals to Make Your Website Working</h2>
+      <p>Welcome to Tripbone! To transform your workspace from a draft sandbox into a fully operational, revenue-generating travel website that processes live customer payments and automated dispatches, complete these 8 core fundamentals.</p>
+
+      <div style="background: linear-gradient(135deg, rgba(255, 122, 0, 0.08), rgba(251, 191, 36, 0.08)); border: 1px solid rgba(255, 122, 0, 0.25); border-radius: 12px; padding: 1.25rem; margin: 1.5rem 0;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #ea580c; font-weight: 800; display: flex; items-center; gap: 8px;">
+          🚀 Quick Summary Checklist
+        </h4>
+        <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.7; font-size: 0.95rem;">
+          <li><strong>1. Email for Notification:</strong> Deliver instant guest vouchers, PDF tickets & invoices.</li>
+          <li><strong>2. WhatsApp Automation:</strong> Send instant WhatsApp booking alerts & driver dispatch info.</li>
+          <li><strong>3. Custom Domain:</strong> Connect your branded domain (e.g. <code>yourdomain.com</code>) with free SSL.</li>
+          <li><strong>4. Gemini API Key:</strong> Unlock AI Tour Builder, Landing Page Generator & Customer Chatbot.</li>
+          <li><strong>5. Dress Your Site:</strong> Upload your logo, set brand colors & choose desktop + mobile templates.</li>
+          <li><strong>6. Payment Gateways (BYOPG):</strong> Enable Stripe, Midtrans, Xendit, PayPal, or Bank Transfer (0% commission).</li>
+          <li><strong>7. Company Info:</strong> Set official legal business name, address, support phone & social links.</li>
+          <li><strong>8. SEO Settings:</strong> Optimize global meta title, description, OG social card & Google Analytics.</li>
+        </ul>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>1. Setup Email for Notifications & Vouchers</h3>
+      <p>Transactional email is the backbone of your booking operations. When a guest completes checkout, Tripbone automatically renders a customized PDF voucher with a scannable QR code and sends it with an invoice.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; Communication &rarr; Email Settings</code>.</li>
+        <li><strong>Recommended Providers:</strong> <strong>Resend</strong> (fastest setup, 3,000 free emails/mo) or <strong>Mailjet</strong>. Custom SMTP is also supported.</li>
+        <li><strong>Step-by-Step:</strong>
+          <ol>
+            <li>Select your provider (e.g., Resend).</li>
+            <li>Paste your <strong>API Key</strong> (starts with <code>re_...</code>).</li>
+            <li>Set your <strong>Sender Email</strong> (e.g. <code>booking@yourdomain.com</code> or <code>hello@yourbrand.com</code>) and <strong>Sender Name</strong>.</li>
+            <li>Click <strong>"Send Test Email"</strong> to verify inbox delivery.</li>
+            <li>Ensure the toggle <em>"Attach PDF Voucher on Booking Confirmation"</em> is switched <strong>ON</strong>.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>2. Setup WhatsApp Messaging Automation</h3>
+      <p>Over 80% of travelers communicate primarily through WhatsApp during their holidays. Tripbone features native automated WhatsApp notifications for booking confirmations, pickup times, and guide assignments.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; Communication &rarr; WhatsApp Settings</code>.</li>
+        <li><strong>Integration Options:</strong> 
+          <ul>
+            <li><strong>Whapi.cloud (Recommended):</strong> Cloud WhatsApp API token with zero phone disconnection issues.</li>
+            <li><strong>OpenWA Gateway:</strong> Self-hosted or shared OpenWA multi-device session.</li>
+          </ul>
+        </li>
+        <li><strong>Step-by-Step:</strong>
+          <ol>
+            <li>Enter your Whapi Token or OpenWA URL and API Key.</li>
+            <li>Verify your sender mobile number and country code (e.g., <code>+62</code> for Indonesia, <code>+1</code> for US).</li>
+            <li>Click <strong>"Test WhatsApp Health"</strong> to confirm the connection is active.</li>
+            <li>Customize your notification template with dynamic placeholders like <code>{customer_name}</code>, <code>{tour_title}</code>, and <code>{pickup_time}</code>.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>3. Setup Custom Domain (White-Label Branding)</h3>
+      <p>By default, your workspace is served on a Tripbone subdomain. Mapping your own custom domain (e.g. <code>baliadventours.com</code> or <code>book.islandtrips.com</code>) gives you full brand ownership and professional credibility.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Other Menu &rarr; Custom Domain</code> (or <code>Settings &rarr; Domain</code>).</li>
+        <li><strong>DNS Configuration at your Registrar (Cloudflare, GoDaddy, Namecheap):</strong>
+          <ul>
+            <li><strong>For Root / Apex Domain (e.g. <code>yourbrand.com</code>):</strong>
+              <br />Add an <strong>A Record</strong>: Name <code>@</code> &rarr; Target <code>76.76.21.21</code>
+            </li>
+            <li><strong>For Subdomain (e.g. <code>tours.yourbrand.com</code> or <code>book.yourbrand.com</code>):</strong>
+              <br />Add a <strong>CNAME Record</strong>: Name <code>tours</code> &rarr; Target <code>cname.vercel-dns.com</code>
+            </li>
+          </ul>
+        </li>
+        <li><strong>Cloudflare Notice:</strong> If using Cloudflare, toggle Proxy Status to <strong>DNS Only (Gray Cloud)</strong> during initial SSL verification.</li>
+        <li>Click <strong>"Verify Domain"</strong> in Tripbone. Your automatic SSL certificate will be issued within a few minutes!</li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>4. Setup Gemini API Key (Native AI Intelligence)</h3>
+      <p>Tripbone comes integrated with Google Gemini to supercharge your business. It powers the 1-Click Tour Generator, Itinerary Builder, AI Inquiry Proposal Generator, and Grounded Traveler Chatbot.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; Communication &rarr; AI / Gemini</code>.</li>
+        <li><strong>How to Obtain:</strong>
+          <ol>
+            <li>Go to <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style="color: #ea580c; font-weight: bold;">Google AI Studio</a>.</li>
+            <li>Sign in with your Google account and click <strong>"Get API key"</strong>.</li>
+            <li>Click <strong>"Create API key"</strong> in a new or existing project.</li>
+            <li>Copy your key and paste it into the <strong>Gemini API Key</strong> input in Tripbone.</li>
+            <li>Click <strong>"Save Settings"</strong>. You can now generate full tour listings, SEO copy, and custom proposals in seconds!</li>
+          </ol>
+        </li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>5. Dress Your Site (Brand Colors, Logo, Desktop & Mobile Templates)</h3>
+      <p>Make your storefront uniquely yours. In under 5 minutes, you can tailor your header, brand identity, and mobile app-like layout.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Website Builder</code>.</li>
+        <li><strong>Key Configurations:</strong>
+          <ol>
+            <li><strong>Brand Logo & Favicon:</strong> In <code>Site Settings</code>, upload your primary header logo (transparent PNG, ~240x60px) and your browser favicon.</li>
+            <li><strong>Primary & Secondary Brand Colors:</strong> Pick your brand's signature color (e.g., Vibrant Orange <code>#FF7A00</code>, Emerald Green <code>#059669</code>, Royal Blue <code>#2563EB</code>). All buttons, badges, and accents instantly adapt.</li>
+            <li><strong>Mobile Layout Preset:</strong> Select the <strong>JoyTime Special</strong> preset for an app-like mobile experience with sticky bottom booking controls, or <strong>Default Responsive</strong>.</li>
+            <li><strong>Homepage Hero & Block Customizer:</strong> Choose your hero style (Full Screen Video, Dual Search Form, or Split Banner) under <code>Blocks</code>.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>6. Setup Payment Gateways (BYOPG - Bring Your Own Payment Gateway)</h3>
+      <p>Tripbone uses a BYOPG model with <strong>0% platform commission fee</strong>. Every cent your guests pay lands directly in your merchant account.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; Payment Settings</code>.</li>
+        <li><strong>Supported Gateways (Enable multiple simultaneously!):</strong>
+          <ul>
+            <li><strong>Stripe:</strong> Enter Publishable Key & Secret Key. Perfect for global Visa, MasterCard, Apple Pay, Google Pay.</li>
+            <li><strong>Midtrans:</strong> Enter Server Key & Client Key for Indonesia (GoPay, QRIS, BCA/Mandiri Virtual Account).</li>
+            <li><strong>Xendit:</strong> Enter Secret API Key for Southeast Asian local payment methods.</li>
+            <li><strong>PayPal:</strong> Enter PayPal Client ID for global PayPal wallet transactions.</li>
+            <li><strong>Manual Bank Transfer / Cash on Arrival:</strong> Add your bank instructions, account number, and wire instructions. Guests can upload payment proof receipts directly into their booking dashboard.</li>
+          </ul>
+        </li>
+        <li><strong>Deposit Rule:</strong> Choose whether customers pay 100% upfront or a customizable deposit (e.g. 20% online, 80% balance due on departure date).</li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>7. Setup Company Information</h3>
+      <p>Legitimate contact details build immediate trust with high-value travelers and satisfy payment gateway risk compliance.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; Company Info</code>.</li>
+        <li><strong>Information to Complete:</strong>
+          <ol>
+            <li><strong>Legal Entity Name & Trading Name:</strong> Displayed on formal booking vouchers and tax invoices.</li>
+            <li><strong>Support Email & Phone:</strong> Displayed prominently in the website header and footer.</li>
+            <li><strong>Physical Office Address:</strong> Adds local credibility and Google Maps routing.</li>
+            <li><strong>Social Media Links:</strong> Connect your Instagram, Facebook, TripAdvisor, and TikTok accounts.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 2rem 0;" />
+
+      <h3>8. Setup SEO & Analytics Settings</h3>
+      <p>Ensure your tours rank at the top of Google and your social links look stunning when shared on WhatsApp, iMessage, and Facebook.</p>
+      <ul>
+        <li><strong>Where in Admin:</strong> Navigate to <code>Admin &rarr; Settings &rarr; SEO Settings</code>.</li>
+        <li><strong>Key Fields:</strong>
+          <ol>
+            <li><strong>Global Meta Title:</strong> Craft a compelling title under 60 characters (e.g., <em>Bali Adventours | Private Tours, Volcano Treks & Fast Boats</em>).</li>
+            <li><strong>Meta Description:</strong> Write a rich 150-character summary highlighting your top experiences, customer rating, and instant confirmation guarantee.</li>
+            <li><strong>OpenGraph Social Share Card:</strong> Upload a 1200x630px image that automatically previews whenever someone shares your website link on social media.</li>
+            <li><strong>Google Analytics (GA4):</strong> Enter your Measurement ID (<code>G-XXXXXXXXXX</code>) for real-time traffic and conversion tracking.</li>
+            <li><strong>Google Tag Manager (GTM):</strong> Enter your container ID (<code>GTM-XXXXXXX</code>) if deploying custom Meta Pixel, TikTok Pixel, or Google Ads tags.</li>
+          </ol>
+        </li>
+      </ul>
+
+      <div style="background: #f8fafc; border-left: 4px solid #10b981; border-radius: 8px; padding: 1.25rem; margin-top: 2rem;">
+        <h4 style="margin: 0 0 0.5rem 0; color: #047857; font-weight: 800;">🎉 You Are Ready to Launch!</h4>
+        <p style="margin: 0; font-size: 0.95rem; color: #334155; line-height: 1.6;">
+          Once these 8 fundamentals are completed, publish your tour products under <code>Tour Catalog</code> and begin sharing your custom domain with guests, travel agents, and social media followers!
+        </p>
+      </div>
+    `,
+    steps: [
+      {
+        title: 'Step 1: Email & WhatsApp Notifications',
+        desc: 'Connect your Resend/Mailjet API key and WhatsApp credentials so guests receive instant booking confirmations and vouchers.',
+        image: 'https://images.unsplash.com/photo-1596524430615-b46475ddff6e?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        title: 'Step 2: Custom Domain & Gemini AI Key',
+        desc: 'Map your custom domain with DNS records and paste your Google Gemini API key to activate AI features.',
+        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        title: 'Step 3: Brand Dressing & BYOPG Payments',
+        desc: 'Upload your logo, set your primary color, and activate Stripe, PayPal, or Midtrans for 0% commission direct payouts.',
+        image: 'https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=1200&q=80'
+      },
+      {
+        title: 'Step 4: Company Profile & SEO Launchpad',
+        desc: 'Fill in official legal company contact details and meta tags to maximize Google search ranking and guest trust.',
+        image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80'
+      }
+    ],
+    order: 0,
+    status: 'published'
+  },
+
   // 1. GETTING STARTED
   {
     id: 'getting-started-intro',

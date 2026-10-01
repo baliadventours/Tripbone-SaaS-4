@@ -26,6 +26,7 @@ import RentalAutomations from "../components/Admin/CarRental/RentalAutomations";
 import RentalModuleSettings from "../components/Admin/CarRental/RentalModuleSettings";
 import BookingDetailModal from "../components/Admin/BookingDetailModal";
 import CreateManualBookingModal from "../components/Admin/CreateManualBookingModal";
+import { FundamentalOnboardingBanner } from "../components/Admin/FundamentalOnboardingBanner";
 import { ReviewManager } from "../components/Admin/BookingTimeManager";
 import { BlogManager } from "../components/Admin/PartnerListing";
 
@@ -5930,6 +5931,17 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         )}
 
         <div className={isCentralPortal ? "p-0" : "p-4 md:p-8"}>
+          {/* Fundamental Onboarding Notification Banner */}
+          {!isCentralPortal && (
+            <div className="mb-6">
+              <FundamentalOnboardingBanner
+                setActiveMenu={setActiveMenu}
+                setSettingsActiveTab={setSettingsActiveTab}
+                setWebsiteBuilderTab={setWebsiteBuilderTab}
+              />
+            </div>
+          )}
+
           {/* Dashboard View */}
           {activeMenu === 'dashboard' && (
             <AdminDashboardOverview
