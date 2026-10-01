@@ -5,7 +5,7 @@ import { getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { formatPlanName, getPlanPrice, generateInvoiceNumber, getNextBillingDate } from '../lib/planUtils';
 import { useTenant } from '../lib/TenantContext';
 import { uploadImage } from '../lib/imgbb';
-import { LogOut, Lock, Loader2, Key, CheckCircle2, AlertCircle, KeyRound } from 'lucide-react';
+import { LogOut, Lock, Loader2, Key, CheckCircle2, AlertCircle, KeyRound, Smartphone, UserCheck } from 'lucide-react';
 import { 
   Building, 
   Users, 
@@ -64,9 +64,15 @@ import {
   Upload,
   Printer,
   FileText,
+  Receipt,
   ArrowUpDown,
   LifeBuoy,
-  Code
+  Code,
+  Phone,
+  MessageCircle,
+  UserX,
+  Compass,
+  MapPin
 } from 'lucide-react';
 import CustomFooterEmbed from '../components/CustomFooterEmbed';
 import { Tenant } from '../types';
@@ -332,8 +338,17 @@ export default function SaaSSuperAdmin() {
   const [txSearch, setTxSearch] = useState('');
   const [txStatusFilter, setTxStatusFilter] = useState('all');
   const [txSortOrder, setTxSortOrder] = useState<'latest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'no-desc' | 'no-asc' | 'status'>('latest');
-  const [txSubTab, setTxSubTab] = useState<'bookings' | 'invoices'>('invoices');
+  const [txSubTab, setTxSubTab] = useState<'invoices' | 'commerce' | 'bookings'>('invoices');
   const [viewingInvoice, setViewingInvoice] = useState<any>(null);
+  const [tenantInvoices, setTenantInvoices] = useState<any[]>([]);
+
+  // End Users Sub Tab: 'operators' | 'travelers'
+  const [userDirectorySubTab, setUserDirectorySubTab] = useState<'operators' | 'travelers'>('operators');
+  const [travelerSearchTerm, setTravelerSearchTerm] = useState('');
+
+  // Marketing & Sales Funnel Sub Tab: 'leads' | 'dropoffs' | 'trials' | 'geo'
+  const [funnelSubTab, setFunnelSubTab] = useState<'leads' | 'dropoffs' | 'trials' | 'geo'>('leads');
+  const [leadStatusFilter, setLeadStatusFilter] = useState<'all' | 'new' | 'contacted' | 'demo_given' | 'trial_started' | 'converted'>('all');
 
   // Showcases list & states
   const [showcases, setShowcases] = useState<any[]>([]);
@@ -704,6 +719,18 @@ export default function SaaSSuperAdmin() {
           console.error("Error loading invoices:", invErr);
         }
 
+        // Load Tenant Commerce Invoices
+        try {
+          const tenantInvoicesSnap = await getDocs(collection(db, 'tenant_invoices'));
+          const tInvList: any[] = [];
+          tenantInvoicesSnap.forEach((snap) => {
+            tInvList.push({ id: snap.id, ...snap.data() });
+          });
+          setTenantInvoices(tInvList);
+        } catch (tInvErr) {
+          console.warn("Error loading tenant_invoices:", tInvErr);
+        }
+
         // Load Users
         const userSnapshot = await getDocs(collection(db, 'users'));
         const userList: any[] = [];
@@ -949,7 +976,21 @@ export default function SaaSSuperAdmin() {
       console.warn("Realtime invoices listener in Superadmin:", err);
     });
 
-    return () => unsubInvoices();
+    // Real-time listener for tenant_invoices collection
+    const unsubTenantInvoices = onSnapshot(collection(db, 'tenant_invoices'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((snap) => {
+        list.push({ id: snap.id, ...snap.data() });
+      });
+      setTenantInvoices(list);
+    }, (err) => {
+      console.warn("Realtime tenant_invoices listener in Superadmin:", err);
+    });
+
+    return () => {
+      unsubInvoices();
+      unsubTenantInvoices();
+    };
   }, [isAuthorized]);
 
   const handleDeleteLead = async (id: string) => {
@@ -1145,6 +1186,229 @@ export default function SaaSSuperAdmin() {
       unpaidInvoicesCount: unpaidCount
     };
   }, [allInvoices]);
+
+  // Country Flag Emoji Helper
+  const getCountryFlag = (code?: string) => {
+    if (!code || typeof code !== 'string' || code.length !== 2) return '🌐';
+    try {
+      const codePoints = code
+        .toUpperCase()
+        .split('')
+        .map(char => 127397 + char.charCodeAt(0));
+      return String.fromCodePoint(...codePoints);
+    } catch {
+      return '🌐';
+    }
+  };
+
+  // WhatsApp Link Helper
+  const getWhatsAppUrl = (phone?: string, text: string = '') => {
+    if (!phone) return null;
+    const cleaned = String(phone).replace(/[^0-9]/g, '');
+    if (!cleaned || cleaned.length < 5) return null;
+    return `https://wa.me/${cleaned}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
+  };
+
+  // Unified Tenant Client Invoices (Commerce GMV)
+  const allCommerceInvoices = React.useMemo(() => {
+    return tenantInvoices.map((inv) => {
+      const matchedTenant = tenants.find(t => t.id === inv.tenantId || t.slug === inv.tenantId);
+      const tenantName = matchedTenant?.companyName || inv.tenantName || inv.tenantId || 'Operator Workspace';
+      const customerName = inv.customer?.name || inv.customerName || 'Traveler';
+      const customerEmail = inv.customer?.email || inv.customerEmail || '';
+      const customerPhone = inv.customer?.phone || '';
+      
+      let amount = inv.totalAmount || inv.amount || 0;
+      if (typeof amount === 'string') {
+        const parsed = parseFloat(amount.replace(/[^0-9.]/g, ''));
+        amount = isNaN(parsed) ? 0 : parsed;
+      }
+
+      return {
+        ...inv,
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber || inv.no || ('INV-' + (inv.id?.slice(-4) || '1001').toUpperCase()),
+        tenantName,
+        customerName,
+        customerEmail,
+        customerPhone,
+        currency: inv.currency || 'USD',
+        amount,
+        status: (inv.status || 'UNPAID').toUpperCase(),
+        issueDate: inv.issueDate || inv.createdAt || new Date().toISOString()
+      };
+    }).sort((a, b) => new Date(b.issueDate || 0).getTime() - new Date(a.issueDate || 0).getTime());
+  }, [tenantInvoices, tenants]);
+
+  // Total Platform Commerce GMV (from paid bookings + paid client invoices)
+  const platformCommerceGMV = React.useMemo(() => {
+    const bookingsTotal = bookings.reduce((sum, b) => {
+      if (b.status === 'confirmed' || b.paymentStatus === 'paid') {
+        return sum + (Number(b.totalAmount) || 0);
+      }
+      return sum;
+    }, 0);
+
+    const invoicesTotal = allCommerceInvoices.reduce((sum, inv) => {
+      if (inv.status === 'PAID') {
+        return sum + (Number(inv.amount) || 0);
+      }
+      return sum;
+    }, 0);
+
+    return bookingsTotal + invoicesTotal;
+  }, [bookings, allCommerceInvoices]);
+
+  // Global Traveler Directory deduplicated by Email or Phone
+  const globalTravelers = React.useMemo(() => {
+    const map = new Map<string, any>();
+
+    bookings.forEach(b => {
+      const c = b.customerData || {};
+      const email = (c.email || b.bookedBy?.email || '').toLowerCase().trim();
+      const phone = c.phone || '';
+      const key = email || phone;
+      if (!key) return;
+
+      const existing = map.get(key) || {
+        key,
+        name: c.fullName || b.bookedBy?.name || 'Traveler',
+        email,
+        phone,
+        nationality: c.nationality || 'Unknown',
+        country: c.nationality || 'Unknown',
+        totalBookings: 0,
+        totalSpend: 0,
+        firstSeen: b.createdAt || b.date,
+        lastSeen: b.createdAt || b.date,
+        originTenantId: b.tenantId || '',
+        originTenantName: b.tenantName || ''
+      };
+
+      existing.totalBookings += 1;
+      existing.totalSpend += Number(b.totalAmount) || 0;
+      if (b.tenantName && !existing.originTenantName) existing.originTenantName = b.tenantName;
+      if (b.tenantId && !existing.originTenantId) existing.originTenantId = b.tenantId;
+      map.set(key, existing);
+    });
+
+    tenantInvoices.forEach(inv => {
+      const c = inv.customer || {};
+      const email = (c.email || '').toLowerCase().trim();
+      const phone = c.phone || '';
+      const key = email || phone;
+      if (!key) return;
+
+      const existing = map.get(key) || {
+        key,
+        name: c.name || 'Traveler',
+        email,
+        phone,
+        nationality: c.country || 'Unknown',
+        country: c.country || 'Unknown',
+        totalBookings: 0,
+        totalSpend: 0,
+        firstSeen: inv.createdAt || inv.issueDate,
+        lastSeen: inv.createdAt || inv.issueDate,
+        originTenantId: inv.tenantId || '',
+        originTenantName: ''
+      };
+
+      existing.totalSpend += Number(inv.totalAmount) || 0;
+      map.set(key, existing);
+    });
+
+    return Array.from(map.values()).map(trav => {
+      if (!trav.originTenantName && trav.originTenantId) {
+        const t = tenants.find(item => item.id === trav.originTenantId);
+        if (t) trav.originTenantName = t.companyName;
+      }
+      return trav;
+    }).sort((a, b) => b.totalSpend - a.totalSpend);
+  }, [bookings, tenantInvoices, tenants]);
+
+  // Users who completed Step 1 (created auth/profile) but haven't provisioned a workspace (Drop-off Leads)
+  const abandonedOnboardingLeads = React.useMemo(() => {
+    return users.filter(u => {
+      if (u.role === 'superadmin') return false;
+      const hasTenant = Boolean(u.tenantId && tenants.some(t => t.id === u.tenantId || t.slug === u.tenantId));
+      return !hasTenant;
+    }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }, [users, tenants]);
+
+  // Workspaces currently in Trial status with Days Remaining
+  const activeTrials = React.useMemo(() => {
+    return tenants.filter(t => t.status === 'trial' || Boolean(t.trialEnds)).map(t => {
+      let daysRemaining = 0;
+      if (t.trialEnds) {
+        const end = new Date(t.trialEnds).getTime();
+        const diff = end - Date.now();
+        daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+      }
+      return {
+        ...t,
+        daysRemaining
+      };
+    }).sort((a, b) => a.daysRemaining - b.daysRemaining);
+  }, [tenants]);
+
+  // Geographic Country aggregation across Workspaces and Leads
+  const countryFunnelStats = React.useMemo(() => {
+    const map = new Map<string, { country: string; countryCode: string; dialCode: string; workspaces: number; leads: number; mrr: number }>();
+
+    tenants.forEach(t => {
+      const c = t.country || (t as any).countryName || 'Global / Other';
+      const code = t.countryCode || '';
+      const dial = (t as any).dialCode || '';
+      const mrr = t.status === 'active' ? getPlanPrice(t.plan, t.billingInterval || 'monthly', packages) : 0;
+      
+      const existing = map.get(c) || { country: c, countryCode: code, dialCode: dial, workspaces: 0, leads: 0, mrr: 0 };
+      existing.workspaces += 1;
+      existing.mrr += mrr;
+      if (code && !existing.countryCode) existing.countryCode = code;
+      if (dial && !existing.dialCode) existing.dialCode = dial;
+      map.set(c, existing);
+    });
+
+    demoLeads.forEach(l => {
+      const c = l.country || 'Global / Other';
+      const existing = map.get(c) || { country: c, countryCode: l.countryCode || '', dialCode: l.dialCode || '', workspaces: 0, leads: 0, mrr: 0 };
+      existing.leads += 1;
+      map.set(c, existing);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.workspaces - a.workspaces || b.leads - a.leads);
+  }, [tenants, demoLeads, packages]);
+
+  const handleUpdateLeadStatus = async (id: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, 'demoLeads', id), {
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      });
+      setDemoLeads(prev => prev.map(l => l.id === id ? { ...l, status: newStatus } : l));
+    } catch (err: any) {
+      console.error("Error updating lead status:", err);
+      alert("Failed to update status: " + err.message);
+    }
+  };
+
+  const handleExtendTrial = async (tenantId: string, days: number = 7) => {
+    try {
+      const t = tenants.find(item => item.id === tenantId);
+      const currentEnd = t?.trialEnds ? new Date(t.trialEnds) : new Date();
+      const newEnd = new Date(currentEnd.getTime() + days * 24 * 60 * 60 * 1000);
+      await updateDoc(doc(db, 'tenants', tenantId), {
+        trialEnds: newEnd.toISOString(),
+        status: 'trial',
+        updatedAt: new Date().toISOString()
+      });
+      setTenants(prev => prev.map(item => item.id === tenantId ? { ...item, trialEnds: newEnd.toISOString(), status: 'trial' } : item));
+      alert(`✨ Trial extended by ${days} days for ${t?.companyName || 'tenant'}!`);
+    } catch (err: any) {
+      alert("Failed to extend trial: " + err.message);
+    }
+  };
 
   const handleProcessPayment = async (inv: any) => {
     const matchedTenant = tenants.find(t => t.id === inv.tenantId);
@@ -6181,15 +6445,31 @@ export default function SaaSSuperAdmin() {
                   const activeTenants = tenants.filter(t => t.status === 'active');
                   const totalMRR = activeTenants.reduce((acc, t) => acc + getPlanPrice(t.plan, t.billingInterval || 'monthly', packages), 0);
                   return (
-                    <div className={`px-3.5 py-1.5 rounded-xl border flex items-center space-x-2.5 shrink-0 ${
-                      isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-indigo-50/50 border-indigo-100'
-                    }`}>
-                      <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
-                        <DollarSign className="w-3.5 h-3.5" />
+                    <div className="flex flex-wrap items-center gap-3 shrink-0">
+                      <div className={`px-3.5 py-1.5 rounded-xl border flex items-center space-x-2.5 ${
+                        isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-indigo-50/50 border-indigo-100'
+                      }`}>
+                        <div className="p-1.5 rounded-lg bg-indigo-600 text-white shadow-xs">
+                          <DollarSign className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-slate-400 block uppercase tracking-wider">Active SaaS MRR</span>
+                          <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-indigo-950'}`}>${totalMRR.toLocaleString()}/mo</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] font-medium text-slate-400 block uppercase tracking-wider">Total Active MRR</span>
-                        <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-indigo-950'}`}>${totalMRR.toLocaleString()}/mo</span>
+
+                      <div className={`px-3.5 py-1.5 rounded-xl border flex items-center space-x-2.5 ${
+                        isDarkMode ? 'bg-slate-900/80 border-slate-800' : 'bg-emerald-50/50 border-emerald-100'
+                      }`}>
+                        <div className="p-1.5 rounded-lg bg-emerald-600 text-white shadow-xs">
+                          <Receipt className="w-3.5 h-3.5" />
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-medium text-slate-400 block uppercase tracking-wider">Platform Commerce GMV</span>
+                          <span className={`text-sm font-bold ${isDarkMode ? 'text-white' : 'text-emerald-950'}`}>
+                            ${platformCommerceGMV.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
@@ -6269,10 +6549,56 @@ export default function SaaSSuperAdmin() {
 
             {/* Live Recorded Transaction Tracking */}
             <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-slate-850 bg-[#0d121f]/90' : 'border-slate-200/80 bg-white shadow-xs'}`}>
+              
+              {/* Sub-tab Navigation */}
+              <div className="flex items-center space-x-2 border-b px-5 pt-3 pb-0 border-slate-200/60 dark:border-slate-850 overflow-x-auto">
+                <button
+                  onClick={() => { setTxSubTab('invoices'); setTxSearch(''); }}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    txSubTab === 'invoices'
+                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>SaaS Subscriptions ({allInvoices.length})</span>
+                </button>
+                <button
+                  onClick={() => { setTxSubTab('commerce'); setTxSearch(''); }}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    txSubTab === 'commerce'
+                      ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Receipt className="w-3.5 h-3.5" />
+                  <span>Tenant Commerce Invoices ({allCommerceInvoices.length})</span>
+                </button>
+                <button
+                  onClick={() => { setTxSubTab('bookings'); setTxSearch(''); }}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    txSubTab === 'bookings'
+                      ? 'border-sky-600 text-sky-600 dark:text-sky-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Bookings & GMV Ledger ({bookings.length})</span>
+                </button>
+              </div>
+
               <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-slate-850 bg-[#0d121f]' : 'border-slate-100 bg-white'}`}>
                 <div>
-                  <h3 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>Operator Subscription Invoices</h3>
-                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>Monitor and verify operator billing history, manual payments, renewals, and invoice receipts.</p>
+                  <h3 className={`text-base font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {txSubTab === 'invoices' ? 'Operator Subscription Invoices' : txSubTab === 'commerce' ? 'Tenant Commercial Client Invoices' : 'Platform Bookings & GMV Ledger'}
+                  </h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'} mt-0.5`}>
+                    {txSubTab === 'invoices' 
+                      ? 'Monitor and verify operator SaaS billing history, manual payments, renewals, and invoice receipts.' 
+                      : txSubTab === 'commerce'
+                        ? 'Commercial invoices generated by tenant tour operators for their retail travelers and direct bookings.'
+                        : 'Real-time booking transactions, payment confirmations, and revenue attribution across all tenant storefronts.'}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -6334,6 +6660,7 @@ export default function SaaSSuperAdmin() {
 
               {/* Transactions Table */}
               <div className="overflow-x-auto">
+                {txSubTab === 'invoices' && (
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className={`border-b text-[11px] font-semibold tracking-wider uppercase ${
@@ -6541,6 +6868,324 @@ export default function SaaSSuperAdmin() {
                     })()}
                   </tbody>
                 </table>
+                )}
+
+                {/* Tenant Commerce Invoices Table */}
+                {txSubTab === 'commerce' && (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={`border-b text-[11px] font-semibold tracking-wider uppercase ${
+                      isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-5">Invoice #</th>
+                      <th className="py-3 px-5">Originating Workspace</th>
+                      <th className="py-3 px-5">Retail Customer / Traveler</th>
+                      <th className="py-3 px-5">Date</th>
+                      <th className="py-3 px-5 text-right">Amount</th>
+                      <th className="py-3 px-5 text-center">Status</th>
+                      <th className="py-3 px-5 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
+                    {(() => {
+                      const filtered = allCommerceInvoices.filter(inv => {
+                        const invStatus = (inv.status || '').toLowerCase();
+                        const matchesStatus = txStatusFilter === 'all' ||
+                          (txStatusFilter === 'paid' && (invStatus === 'paid' || invStatus === 'confirmed')) ||
+                          (txStatusFilter === 'pending' && (invStatus === 'pending' || invStatus === 'unpaid')) ||
+                          (txStatusFilter === 'cancelled' && (invStatus === 'cancelled' || invStatus === 'void'));
+
+                        const searchStr = txSearch.toLowerCase().trim();
+                        const matchesSearch = !searchStr ||
+                          (inv.tenantName || '').toLowerCase().includes(searchStr) ||
+                          (inv.customerName || '').toLowerCase().includes(searchStr) ||
+                          (inv.customerEmail || '').toLowerCase().includes(searchStr) ||
+                          (inv.customerPhone || '').toLowerCase().includes(searchStr) ||
+                          (inv.invoiceNumber || '').toLowerCase().includes(searchStr);
+
+                        return matchesStatus && matchesSearch;
+                      });
+
+                      const sorted = [...filtered].sort((a, b) => {
+                        const dateA = new Date(a.issueDate || a.createdAt || 0).getTime();
+                        const dateB = new Date(b.issueDate || b.createdAt || 0).getTime();
+                        if (txSortOrder === 'latest') return dateB - dateA;
+                        if (txSortOrder === 'oldest') return dateA - dateB;
+                        if (txSortOrder === 'amount-desc') return (Number(b.amount) || 0) - (Number(a.amount) || 0);
+                        if (txSortOrder === 'amount-asc') return (Number(a.amount) || 0) - (Number(b.amount) || 0);
+                        return dateB - dateA;
+                      });
+
+                      if (sorted.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={7} className="py-12 text-center text-xs text-slate-400">
+                              <Receipt className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-40" />
+                              <p className="font-medium">No tenant commercial invoices found matching filters.</p>
+                              <p className="text-[11px] text-slate-500 mt-1">Tenant operators generate invoices in their workspace Invoice Manager.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return sorted.map((inv) => {
+                        const dateStr = inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A';
+                        const waUrl = getWhatsAppUrl(inv.customerPhone, `Hi ${inv.customerName}, this is regarding invoice ${inv.invoiceNumber} from ${inv.tenantName}.`);
+
+                        return (
+                          <tr key={inv.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-5 font-bold font-mono">
+                              <span className="text-emerald-400 font-bold">{inv.invoiceNumber}</span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <div className="flex items-center space-x-2">
+                                <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                  {inv.tenantName}
+                                </span>
+                                {inv.tenantId && (
+                                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                                    {inv.tenantId}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <div>
+                                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'} block`}>
+                                  {inv.customerName}
+                                </span>
+                                <div className="flex items-center space-x-2 text-[11px] text-slate-400 mt-0.5">
+                                  {inv.customerEmail && <span>{inv.customerEmail}</span>}
+                                  {inv.customerPhone && <span className="font-mono text-[10px] text-emerald-400">{inv.customerPhone}</span>}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5 font-mono text-slate-400">
+                              {dateStr}
+                            </td>
+                            <td className="py-3.5 px-5 text-right font-mono font-bold">
+                              <span className="text-emerald-400">
+                                {inv.currency || 'USD'} {Number(inv.amount || 0).toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                inv.status === 'PAID'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : inv.status === 'PENDING' || inv.status === 'UNPAID'
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              }`}>
+                                {inv.status}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <div className="flex items-center justify-center space-x-1.5">
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    title="WhatsApp Customer"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                {inv.customerEmail && (
+                                  <a
+                                    href={`mailto:${inv.customerEmail}?subject=Invoice%20${inv.invoiceNumber}`}
+                                    className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                    title="Email Customer"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(`${inv.invoiceNumber} - ${inv.customerName} - ${inv.amount}`);
+                                    alert("Copied invoice details!");
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                                  title="Copy Info"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+                )}
+
+                {/* Direct Platform Bookings Table */}
+                {txSubTab === 'bookings' && (
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className={`border-b text-[11px] font-semibold tracking-wider uppercase ${
+                      isDarkMode ? 'border-slate-850 bg-slate-950/40 text-slate-400' : 'border-slate-100 bg-slate-50 text-slate-500'
+                    }`}>
+                      <th className="py-3 px-5">Booking Ref</th>
+                      <th className="py-3 px-5">Tour / Service</th>
+                      <th className="py-3 px-5">Workspace</th>
+                      <th className="py-3 px-5">Traveler Info</th>
+                      <th className="py-3 px-5">Date</th>
+                      <th className="py-3 px-5 text-right">Total & Pax</th>
+                      <th className="py-3 px-5 text-center">Status</th>
+                      <th className="py-3 px-5 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isDarkMode ? 'divide-slate-850/60' : 'divide-slate-100'}`}>
+                    {(() => {
+                      const filtered = bookings.filter(b => {
+                        const bStatus = (b.status || b.paymentStatus || '').toLowerCase();
+                        const matchesStatus = txStatusFilter === 'all' ||
+                          (txStatusFilter === 'paid' && (bStatus === 'confirmed' || bStatus === 'paid' || bStatus === 'completed')) ||
+                          (txStatusFilter === 'pending' && (bStatus === 'pending')) ||
+                          (txStatusFilter === 'cancelled' && (bStatus === 'cancelled'));
+
+                        const searchStr = txSearch.toLowerCase().trim();
+                        const cust = b.customerData || {};
+                        const travelerName = (cust.fullName || b.bookedBy?.name || '').toLowerCase();
+                        const travelerEmail = (cust.email || b.bookedBy?.email || '').toLowerCase();
+                        const travelerPhone = (cust.phone || '').toLowerCase();
+                        const tourTitle = (b.tourTitle || '').toLowerCase();
+                        const bookingId = (b.id || '').toLowerCase();
+                        const tenantName = (b.tenantName || b.tenantId || '').toLowerCase();
+
+                        const matchesSearch = !searchStr ||
+                          travelerName.includes(searchStr) ||
+                          travelerEmail.includes(searchStr) ||
+                          travelerPhone.includes(searchStr) ||
+                          tourTitle.includes(searchStr) ||
+                          bookingId.includes(searchStr) ||
+                          tenantName.includes(searchStr);
+
+                        return matchesStatus && matchesSearch;
+                      });
+
+                      const sorted = [...filtered].sort((a, b) => {
+                        const dateA = new Date(a.createdAt || a.date || 0).getTime();
+                        const dateB = new Date(b.createdAt || b.date || 0).getTime();
+                        if (txSortOrder === 'latest') return dateB - dateA;
+                        if (txSortOrder === 'oldest') return dateA - dateB;
+                        if (txSortOrder === 'amount-desc') return (Number(b.totalAmount) || 0) - (Number(a.totalAmount) || 0);
+                        if (txSortOrder === 'amount-asc') return (Number(a.totalAmount) || 0) - (Number(b.totalAmount) || 0);
+                        return dateB - dateA;
+                      });
+
+                      if (sorted.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={8} className="py-12 text-center text-xs text-slate-400">
+                              <Calendar className="w-8 h-8 mx-auto mb-2 text-slate-500 opacity-40" />
+                              <p className="font-medium">No bookings found matching filter criteria.</p>
+                              <p className="text-[11px] text-slate-500 mt-1">Bookings captured via tenant checkout will automatically sync into this platform ledger.</p>
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      return sorted.map((b) => {
+                        const cust = b.customerData || {};
+                        const travelerName = cust.fullName || b.bookedBy?.name || 'Retail Traveler';
+                        const travelerEmail = cust.email || b.bookedBy?.email || '';
+                        const travelerPhone = cust.phone || '';
+                        const dateStr = b.date || (b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A');
+                        const waUrl = getWhatsAppUrl(travelerPhone, `Hello ${travelerName}, regarding your booking ${b.id} for ${b.tourTitle || 'Tour'}...`);
+
+                        return (
+                          <tr key={b.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'}`}>
+                            <td className="py-3.5 px-5 font-bold font-mono">
+                              <span className="text-sky-400">#{b.id?.slice(-8) || b.id}</span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span className={`font-semibold line-clamp-1 ${isDarkMode ? 'text-white' : 'text-slate-900'}`}>
+                                {b.tourTitle || 'Custom Tour / Booking'}
+                              </span>
+                              <span className="text-[10px] text-slate-400">
+                                {b.pax || b.participants || 1} Guests
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                {b.tenantName || b.tenantId || 'Direct'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <div>
+                                <span className={`font-semibold ${isDarkMode ? 'text-slate-200' : 'text-slate-800'} block`}>
+                                  {travelerName}
+                                </span>
+                                <div className="flex items-center space-x-2 text-[11px] text-slate-400">
+                                  {travelerEmail && <span>{travelerEmail}</span>}
+                                  {travelerPhone && <span className="font-mono text-emerald-400">{travelerPhone}</span>}
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5 font-mono text-slate-400">
+                              {dateStr}
+                            </td>
+                            <td className="py-3.5 px-5 text-right font-mono font-bold">
+                              <span className="text-sky-400">
+                                {b.currency || 'USD'} {Number(b.totalAmount || 0).toLocaleString()}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                                b.status === 'confirmed' || b.paymentStatus === 'paid'
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                  : b.status === 'pending'
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              }`}>
+                                {b.status || b.paymentStatus || 'Pending'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <div className="flex items-center justify-center space-x-1.5">
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    title="WhatsApp Traveler"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                {travelerEmail && (
+                                  <a
+                                    href={`mailto:${travelerEmail}?subject=Booking%20Confirmation%20${b.id}`}
+                                    className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                    title="Email Traveler"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(`Booking #${b.id}: ${travelerName} - ${b.tourTitle} - ${b.totalAmount}`);
+                                    alert("Copied booking info!");
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                                  title="Copy Booking Info"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      });
+                    })()}
+                  </tbody>
+                </table>
+                )}
               </div>
 
               {/* Table Summary Footer */}
@@ -7414,41 +8059,145 @@ export default function SaaSSuperAdmin() {
 
         {activeTab === 'end_users' && (
           <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-gray-800 bg-slate-900/40' : 'border-gray-200 bg-white shadow-sm'}`}>
-            <div className={`p-6 border-b flex items-center justify-between ${isDarkMode ? 'border-gray-800 bg-slate-900/60' : 'border-gray-200 bg-white'}`}>
+            {/* Sub-tab Navigation */}
+            <div className="flex items-center space-x-2 border-b px-6 pt-4 pb-0 border-slate-200/60 dark:border-slate-800 overflow-x-auto">
+              <button
+                onClick={() => setUserDirectorySubTab('operators')}
+                className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                  userDirectorySubTab === 'operators'
+                    ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Platform Accounts & Operators ({users.length})</span>
+              </button>
+              <button
+                onClick={() => setUserDirectorySubTab('travelers')}
+                className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                  userDirectorySubTab === 'travelers'
+                    ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                    : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" />
+                <span>Global Travelers & Customers ({globalTravelers.length})</span>
+              </button>
+            </div>
+
+            <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-gray-800 bg-slate-900/60' : 'border-gray-200 bg-white'}`}>
               <div>
-                <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Platform User Accounts</h2>
-                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>List and manage system administrators, workspace owners, guides, and customer accounts.</p>
+                <h2 className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {userDirectorySubTab === 'operators' ? 'Platform User & Operator Accounts' : 'Global Customer & Traveler Directory'}
+                </h2>
+                <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                  {userDirectorySubTab === 'operators'
+                    ? 'List and manage system administrators, workspace owners, guides, and customer accounts.'
+                    : 'Consolidated traveler repository aggregated across all tenant storefront bookings and client invoices.'}
+                </p>
+              </div>
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={userDirectorySubTab === 'operators' ? 'Search user, email, tenant...' : 'Search traveler, email, phone...'}
+                  value={travelerSearchTerm}
+                  onChange={(e) => setTravelerSearchTerm(e.target.value)}
+                  className={`pl-9 pr-3 py-1.5 rounded-xl text-xs border focus:outline-none focus:ring-1 focus:ring-indigo-500 w-52 sm:w-64 transition-all ${
+                    isDarkMode ? 'bg-slate-950 border-gray-800 text-white placeholder-gray-500' : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-400'
+                  }`}
+                />
               </div>
             </div>
 
+            {/* Operator Accounts Table */}
+            {userDirectorySubTab === 'operators' && (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
                     <th className="py-4 px-6">User / Display Name</th>
                     <th className="py-4 px-6">Email Address</th>
-                    <th className="py-4 px-6 font-mono">Assigned Tenant ID</th>
+                    <th className="py-4 px-6">Phone & WhatsApp</th>
+                    <th className="py-4 px-6 font-mono">Assigned Workspace</th>
                     <th className="py-4 px-6">Access Role</th>
                     <th className="py-4 px-6">Account Status</th>
                     <th className="py-4 px-6 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
-                  {users.map((u) => (
+                  {users.filter(u => {
+                    const search = travelerSearchTerm.toLowerCase().trim();
+                    if (!search) return true;
+                    return (
+                      (u.displayName || '').toLowerCase().includes(search) ||
+                      (u.email || '').toLowerCase().includes(search) ||
+                      (u.phoneNumber || u.phone || '').toLowerCase().includes(search) ||
+                      (u.tenantId || '').toLowerCase().includes(search)
+                    );
+                  }).map((u) => {
+                    const matchedTenant = tenants.find(t => t.id === u.tenantId || t.slug === u.tenantId);
+                    const userPhone = u.phoneNumber || u.phone || '';
+                    const waUrl = getWhatsAppUrl(userPhone, `Hi ${u.displayName || 'there'}, Tripbone SaaS Support reaching out.`);
+
+                    return (
                     <tr key={u.id} className={`text-sm transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
                       <td className="py-4 px-6">
                         <div className="flex items-center space-x-3">
                           <img src={u.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.displayName || u.email)}`} className={`w-8 h-8 rounded-full ${isDarkMode ? 'bg-slate-850' : 'bg-gray-100'}`} />
-                          <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{u.displayName || 'Traveler'}</span>
+                          <div>
+                            <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'} block`}>{u.displayName || 'Operator / User'}</span>
+                            {u.createdAt && (
+                              <span className="text-[10px] text-gray-500">Joined {new Date(u.createdAt).toLocaleDateString()}</span>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className={`py-4 px-6 font-mono text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{u.email}</td>
-                      <td className={`py-4 px-6 font-mono text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{u.tenantId || 'None (Platform Guest)'}</td>
+                      <td className={`py-4 px-6 font-mono text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        <a href={`mailto:${u.email}`} className="hover:text-indigo-400 transition-colors">{u.email}</a>
+                      </td>
+                      <td className="py-4 px-6">
+                        {userPhone ? (
+                          <div className="flex items-center space-x-1.5 font-mono text-xs">
+                            <span className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>{userPhone}</span>
+                            {waUrl && (
+                              <a
+                                href={waUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                title="WhatsApp"
+                              >
+                                <MessageCircle className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-xs italic">Not registered</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
+                        {matchedTenant ? (
+                          <div className="flex items-center space-x-1.5">
+                            <span className={`font-semibold text-xs ${isDarkMode ? 'text-indigo-300' : 'text-indigo-600'}`}>
+                              {matchedTenant.companyName}
+                            </span>
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${isDarkMode ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                              {matchedTenant.slug}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className={`font-mono text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {u.tenantId || 'Platform Guest'}
+                          </span>
+                        )}
+                      </td>
                       <td className="py-4 px-6">
                         <select
                           value={u.role || 'customer'}
                           onChange={(e) => updateUserRole(u.id, e.target.value)}
-                          className="bg-slate-950 border border-gray-800 text-xs text-indigo-300 font-mono rounded px-2.5 py-1 focus:outline-none focus:border-indigo-500"
+                          className="bg-slate-950 border border-gray-800 text-xs text-indigo-300 font-mono rounded px-2.5 py-1 focus:outline-none focus:border-indigo-500 cursor-pointer"
                         >
                           <option value="customer">Customer / Traveler</option>
                           <option value="supplier">Staff / Guide</option>
@@ -7467,31 +8216,172 @@ export default function SaaSSuperAdmin() {
                           <button
                             title="Edit User"
                             onClick={() => handleEditUser(u.id, u.displayName || '')}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-slate-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-slate-800 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-900'}`}
                           >
                             <Settings className="w-4 h-4" />
                           </button>
                           <button
                             title={u.status !== 'suspended' ? 'Suspend User' : 'Activate User'}
                             onClick={() => toggleUserStatus(u.id, u.status || 'active')}
-                            className={`p-1.5 rounded-lg transition-colors ${u.status !== 'suspended' ? (isDarkMode ? 'hover:bg-rose-950/50 text-rose-400' : 'hover:bg-rose-50 text-rose-600') : (isDarkMode ? 'hover:bg-emerald-950/50 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600')}`}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${u.status !== 'suspended' ? (isDarkMode ? 'hover:bg-rose-950/50 text-rose-400' : 'hover:bg-rose-50 text-rose-600') : (isDarkMode ? 'hover:bg-emerald-950/50 text-emerald-400' : 'hover:bg-emerald-50 text-emerald-600')}`}
                           >
                             <Power className="w-4 h-4" />
                           </button>
                           <button
                             title="Delete User completely"
                             onClick={() => handleDeleteUser(u.id)}
-                            className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-red-900/50 text-red-500' : 'hover:bg-red-50 text-red-600'}`}
+                            className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'hover:bg-red-900/50 text-red-500' : 'hover:bg-red-50 text-red-600'}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
+            )}
+
+            {/* Global Travelers Table */}
+            {userDirectorySubTab === 'travelers' && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                    <th className="py-4 px-6">Traveler Name</th>
+                    <th className="py-4 px-6">Email Address</th>
+                    <th className="py-4 px-6">Phone / WhatsApp</th>
+                    <th className="py-4 px-6">Country / Origin</th>
+                    <th className="py-4 px-6">Originating Workspace</th>
+                    <th className="py-4 px-6 text-center">Total Bookings</th>
+                    <th className="py-4 px-6 text-right">Lifetime Value (LTV)</th>
+                    <th className="py-4 px-6 text-center">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
+                  {(() => {
+                    const filteredTravelers = globalTravelers.filter(t => {
+                      const search = travelerSearchTerm.toLowerCase().trim();
+                      if (!search) return true;
+                      return (
+                        (t.name || '').toLowerCase().includes(search) ||
+                        (t.email || '').toLowerCase().includes(search) ||
+                        (t.phone || '').toLowerCase().includes(search) ||
+                        (t.originTenantName || '').toLowerCase().includes(search)
+                      );
+                    });
+
+                    if (filteredTravelers.length === 0) {
+                      return (
+                        <tr>
+                          <td colSpan={8} className="py-12 text-center text-xs text-gray-400">
+                            <Compass className="w-8 h-8 mx-auto mb-2 text-gray-600 opacity-40" />
+                            <p className="font-medium">No traveler customer records match your filter criteria.</p>
+                            <p className="text-[11px] text-gray-500 mt-1">Traveler details are automatically collected from checkout bookings and invoice payments.</p>
+                          </td>
+                        </tr>
+                      );
+                    }
+
+                    return filteredTravelers.map((trav, idx) => {
+                      const waUrl = getWhatsAppUrl(trav.phone, `Hello ${trav.name}, this is Tripbone Support.`);
+                      return (
+                        <tr key={trav.key || idx} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                          <td className="py-4 px-6">
+                            <div className="flex items-center space-x-3">
+                              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isDarkMode ? 'bg-emerald-500/10 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>
+                                {(trav.name || 'T').charAt(0).toUpperCase()}
+                              </div>
+                              <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{trav.name}</span>
+                            </div>
+                          </td>
+                          <td className={`py-4 px-6 font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            {trav.email ? (
+                              <a href={`mailto:${trav.email}`} className="hover:text-indigo-400 transition-colors">{trav.email}</a>
+                            ) : (
+                              <span className="text-gray-500 italic">No email</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 font-mono">
+                            {trav.phone ? (
+                              <div className="flex items-center space-x-1.5">
+                                <span className="text-emerald-400">{trav.phone}</span>
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                    title="WhatsApp Chat"
+                                  >
+                                    <MessageCircle className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 italic">No phone</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className="text-slate-400 font-medium">
+                              {trav.nationality || 'International'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                              {trav.originTenantName || trav.originTenantId || 'Direct / Global'}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-center font-bold font-mono">
+                            <span className="text-indigo-400">{trav.totalBookings}</span>
+                          </td>
+                          <td className="py-4 px-6 text-right font-bold font-mono">
+                            <span className="text-emerald-400">${Number(trav.totalSpend || 0).toLocaleString()}</span>
+                          </td>
+                          <td className="py-4 px-6 text-center">
+                            <div className="flex items-center justify-center space-x-1.5">
+                              {waUrl && (
+                                <a
+                                  href={waUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                  title="WhatsApp Traveler"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              {trav.email && (
+                                <a
+                                  href={`mailto:${trav.email}?subject=Hello%20${encodeURIComponent(trav.name)}`}
+                                  className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                  title="Email Traveler"
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${trav.name} - ${trav.email || ''} - ${trav.phone || ''}`);
+                                  alert("Copied traveler details!");
+                                }}
+                                className={`p-1.5 rounded-lg transition-colors ${isDarkMode ? 'text-slate-400 hover:text-white hover:bg-slate-800' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}`}
+                                title="Copy Traveler Contact"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            )}
           </div>
         )}
 
@@ -7896,146 +8786,406 @@ export default function SaaSSuperAdmin() {
             {/* Header section with actions */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Demo Lead Submissions</h2>
-                <p className="text-xs text-gray-500 mt-1">Organize and manage leads captured from the marketing website Watch Demo modal.</p>
+                <h2 className={`text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Marketing & Sales Funnel Hub</h2>
+                <p className="text-xs text-gray-500 mt-1">Track inbound demo prospects, recover abandoned onboarding signups, nurture active trials, and analyze geographical performance.</p>
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleExportLeadsCSV}
                   disabled={demoLeads.length === 0}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl flex items-center space-x-2 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 shrink-0"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs rounded-xl flex items-center space-x-2 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 shrink-0 cursor-pointer"
                 >
-                  <ExternalLink className="w-4 h-4" />
-                  <span>Export to CSV</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Export Leads CSV</span>
                 </button>
               </div>
             </div>
 
-            {/* Leads Search & Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className={`p-6 rounded-3xl md:col-span-1 ${isDarkMode ? 'bg-white/[0.02] border border-white/5' : 'bg-white border border-gray-100 shadow-sm'}`}>
-                <span className={`text-[11px] font-mono uppercase tracking-wider block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Total Leads Captured</span>
-                <div className="flex items-baseline space-x-2 text-indigo-500">
-                  <span className="text-3xl font-extrabold">{demoLeads.length}</span>
-                  <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>contacts</span>
-                </div>
+            {/* Sub-tab Navigation */}
+            <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'border-gray-800 bg-slate-900/40' : 'border-gray-200 bg-white shadow-xs'}`}>
+              <div className="flex items-center space-x-2 border-b px-5 pt-3.5 pb-0 border-slate-200/60 dark:border-slate-800 overflow-x-auto">
+                <button
+                  onClick={() => setFunnelSubTab('leads')}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    funnelSubTab === 'leads'
+                      ? 'border-indigo-600 text-indigo-600 dark:text-indigo-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Megaphone className="w-3.5 h-3.5" />
+                  <span>Inbound Demo Leads ({demoLeads.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setFunnelSubTab('dropoffs')}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    funnelSubTab === 'dropoffs'
+                      ? 'border-amber-600 text-amber-600 dark:text-amber-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                  <span>Abandoned Onboarding ({abandonedOnboardingLeads.length})</span>
+                  {abandonedOnboardingLeads.length > 0 && (
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  )}
+                </button>
+
+                <button
+                  onClick={() => setFunnelSubTab('trials')}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    funnelSubTab === 'trials'
+                      ? 'border-sky-600 text-sky-600 dark:text-sky-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>Active Trials & Retention ({activeTrials.length})</span>
+                </button>
+
+                <button
+                  onClick={() => setFunnelSubTab('geo')}
+                  className={`pb-3 px-3 text-xs font-bold border-b-2 transition-all cursor-pointer flex items-center space-x-2 shrink-0 ${
+                    funnelSubTab === 'geo'
+                      ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
+                      : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Geographical Funnel ({countryFunnelStats.length} Regions)</span>
+                </button>
               </div>
 
-              <div className={`p-6 rounded-3xl md:col-span-2 flex items-center justify-between ${isDarkMode ? 'bg-white/[0.02] border border-white/5' : 'bg-white border border-gray-100 shadow-sm'}`}>
-                <div className="w-full">
-                  <span className={`text-[11px] font-mono uppercase tracking-wider block mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Filter Lead List</span>
-                  <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none">
-                      <Search className="w-4 h-4 text-gray-400" />
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Search leads by name or email..."
-                      value={demoLeadsSearch}
-                      onChange={(e) => setDemoLeadsSearch(e.target.value)}
-                      className={`w-full pl-10 pr-4 py-2.5 rounded-xl border text-sm outline-none transition-all ${
-                        isDarkMode 
-                          ? 'bg-slate-950 border-gray-800 text-white focus:border-indigo-500 placeholder-gray-600' 
-                          : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 placeholder-gray-400'
-                      }`}
-                    />
+              {/* KPI Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 p-5">
+                <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-gray-50 border-gray-200'}`}>
+                  <span className={`text-[10px] font-mono uppercase tracking-wider block mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>Inbound Demo Leads</span>
+                  <div className="flex items-baseline space-x-2 text-indigo-500">
+                    <span className="text-2xl font-black">{demoLeads.length}</span>
+                    <span className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>prospects</span>
+                  </div>
+                </div>
+
+                <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-amber-50/50 border-amber-200/60'}`}>
+                  <span className="text-[10px] font-mono uppercase tracking-wider block mb-1 text-amber-500">Drop-off Signups (Step 1)</span>
+                  <div className="flex items-baseline space-x-2 text-amber-500">
+                    <span className="text-2xl font-black">{abandonedOnboardingLeads.length}</span>
+                    <span className="text-xs text-amber-600/70">unclaimed</span>
+                  </div>
+                </div>
+
+                <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-sky-50/50 border-sky-200/60'}`}>
+                  <span className="text-[10px] font-mono uppercase tracking-wider block mb-1 text-sky-500">Active Trials</span>
+                  <div className="flex items-baseline space-x-2 text-sky-500">
+                    <span className="text-2xl font-black">{activeTrials.length}</span>
+                    <span className="text-xs text-sky-600/70">evaluating</span>
+                  </div>
+                </div>
+
+                <div className={`p-4 rounded-xl border ${isDarkMode ? 'bg-slate-950/60 border-gray-800' : 'bg-emerald-50/50 border-emerald-200/60'}`}>
+                  <span className="text-[10px] font-mono uppercase tracking-wider block mb-1 text-emerald-500">Top Market</span>
+                  <div className="flex items-baseline space-x-1 text-emerald-500">
+                    <span className="text-lg font-bold truncate">{countryFunnelStats[0]?.country || 'Global'}</span>
+                    <span className="text-xs">{countryFunnelStats[0] ? getCountryFlag(countryFunnelStats[0].countryCode) : '🌐'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Leads List Table */}
-            <div className={`border rounded-3xl overflow-hidden ${isDarkMode ? 'bg-slate-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
-              <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
-                <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Leads Directory</h3>
-                <span className="text-xs font-mono font-bold text-indigo-400">Live Synchronization</span>
-              </div>
+            {/* TAB 1: Inbound Demo Leads */}
+            {funnelSubTab === 'leads' && (
+              <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'bg-slate-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <div className={`p-5 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <div>
+                    <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Inbound Leads & Pipeline</h3>
+                    <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>Track prospective tour operators requesting product demos and update their qualification status.</p>
+                  </div>
 
-              {(() => {
-                const filteredLeads = demoLeads.filter(lead => {
-                  const searchLower = demoLeadsSearch.toLowerCase();
-                  return (
-                    (lead.name || '').toLowerCase().includes(searchLower) ||
-                    (lead.email || '').toLowerCase().includes(searchLower)
-                  );
-                }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Search lead, company, email..."
+                        value={demoLeadsSearch}
+                        onChange={(e) => setDemoLeadsSearch(e.target.value)}
+                        className={`pl-9 pr-3 py-1.5 rounded-xl border text-xs outline-none transition-all w-48 sm:w-60 ${
+                          isDarkMode 
+                            ? 'bg-slate-950 border-gray-800 text-white focus:border-indigo-500 placeholder-gray-500' 
+                            : 'bg-gray-50 border-gray-200 text-gray-900 focus:border-indigo-500 placeholder-gray-400'
+                        }`}
+                      />
+                    </div>
 
-                if (filteredLeads.length === 0) {
-                  return (
-                    <div className="p-12 text-center">
-                      <div className="max-w-sm mx-auto space-y-4">
-                        <div className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center ${isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                          <Megaphone className="w-6 h-6 animate-pulse" />
+                    <select
+                      value={leadStatusFilter}
+                      onChange={(e) => setLeadStatusFilter(e.target.value as any)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium border focus:outline-none focus:ring-1 focus:ring-indigo-500 transition-all cursor-pointer ${
+                        isDarkMode ? 'bg-slate-950 border-gray-800 text-slate-200' : 'bg-gray-50 border-gray-200 text-slate-700'
+                      }`}
+                    >
+                      <option value="all">All Stages</option>
+                      <option value="new">New Inquiry</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="demo_given">Demo Completed</option>
+                      <option value="trial_started">Trial Started</option>
+                      <option value="converted">Won / Subscribed</option>
+                      <option value="lost">Lost / Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                {(() => {
+                  const filteredLeads = demoLeads.filter(lead => {
+                    const searchLower = demoLeadsSearch.toLowerCase();
+                    const matchesSearch = !demoLeadsSearch ||
+                      (lead.name || '').toLowerCase().includes(searchLower) ||
+                      (lead.email || '').toLowerCase().includes(searchLower) ||
+                      (lead.companyName || '').toLowerCase().includes(searchLower) ||
+                      (lead.phoneNumber || '').toLowerCase().includes(searchLower) ||
+                      (lead.country || '').toLowerCase().includes(searchLower);
+
+                    const status = lead.status || 'new';
+                    const matchesStatus = leadStatusFilter === 'all' || status === leadStatusFilter;
+
+                    return matchesSearch && matchesStatus;
+                  }).sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+                  if (filteredLeads.length === 0) {
+                    return (
+                      <div className="p-12 text-center">
+                        <div className="max-w-sm mx-auto space-y-4">
+                          <div className={`w-12 h-12 rounded-full mx-auto flex items-center justify-center ${isDarkMode ? 'bg-slate-800 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                            <Megaphone className="w-6 h-6" />
+                          </div>
+                          <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No Leads Found</h4>
+                          <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                            {demoLeadsSearch || leadStatusFilter !== 'all'
+                              ? "No lead records match your search criteria. Try modifying your filter."
+                              : "Inbound leads captured from the marketing homepage Watch Demo modal will automatically sync here."}
+                          </p>
                         </div>
-                        <h4 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>No Leads Found</h4>
-                        <p className={`text-xs leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {demoLeadsSearch 
-                            ? "No lead records match your search criteria. Try modifying your filter."
-                            : "Your watch demo capture modal is live on the marketing homepage. Once prospective operators fill it out, they will automatically appear here."}
-                        </p>
                       </div>
+                    );
+                  }
+
+                  return (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                            <th className="py-4 px-6">Prospect / Operator</th>
+                            <th className="py-4 px-6">Phone & WhatsApp</th>
+                            <th className="py-4 px-6">Email Address</th>
+                            <th className="py-4 px-6">Monthly Volume</th>
+                            <th className="py-4 px-6">Region</th>
+                            <th className="py-4 px-6">Pipeline Stage</th>
+                            <th className="py-4 px-6">Captured Date</th>
+                            <th className="py-4 px-6 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
+                          {filteredLeads.map((lead) => {
+                            const dateStr = lead.createdAt 
+                              ? new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                              : 'Unknown';
+                            const phoneVal = lead.phoneNumber || '';
+                            const waUrl = getWhatsAppUrl(phoneVal, `Hi ${lead.name || 'there'}! Thank you for requesting the Tripbone SaaS demo for ${lead.companyName || 'your tour agency'}. Are you available for a quick chat?`);
+                            const currentStatus = lead.status || 'new';
+
+                            return (
+                              <tr key={lead.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                                <td className="py-4 px-6">
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
+                                      {(lead.name || 'L').charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                      <div className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{lead.name || 'Anonymous Lead'}</div>
+                                      {lead.companyName && (
+                                        <div className="text-[11px] text-indigo-400 font-medium">{lead.companyName}</div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="py-4 px-6 font-mono">
+                                  {phoneVal ? (
+                                    <div className="flex items-center space-x-1.5">
+                                      <span className="text-emerald-400">{phoneVal}</span>
+                                      {waUrl && (
+                                        <a
+                                          href={waUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="p-1 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                                          title="WhatsApp Chat"
+                                        >
+                                          <MessageCircle className="w-3 h-3" />
+                                        </a>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 italic">Not provided</span>
+                                  )}
+                                </td>
+                                <td className={`py-4 px-6 font-mono ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                  <a href={`mailto:${lead.email}`} className="hover:text-indigo-400 transition-colors">{lead.email}</a>
+                                </td>
+                                <td className="py-4 px-6">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-mono border ${isDarkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-700 border-slate-200'}`}>
+                                    {lead.monthlyBookings ? `${lead.monthlyBookings} tours/mo` : 'Standard'}
+                                  </span>
+                                </td>
+                                <td className="py-4 px-6">
+                                  <div className="flex items-center space-x-1.5">
+                                    <span>{getCountryFlag(lead.countryCode)}</span>
+                                    <span className="text-slate-400">{lead.country || 'International'}</span>
+                                  </div>
+                                </td>
+                                <td className="py-4 px-6">
+                                  <select
+                                    value={currentStatus}
+                                    onChange={(e) => handleUpdateLeadStatus(lead.id, e.target.value)}
+                                    className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider border cursor-pointer focus:outline-none ${
+                                      currentStatus === 'won' || currentStatus === 'converted'
+                                        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                        : currentStatus === 'trial_started'
+                                          ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                          : currentStatus === 'demo_given'
+                                            ? 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                                            : currentStatus === 'contacted'
+                                              ? 'bg-sky-500/10 text-sky-400 border-sky-500/20'
+                                              : currentStatus === 'lost'
+                                                ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    }`}
+                                  >
+                                    <option value="new">New Inquiry</option>
+                                    <option value="contacted">Contacted</option>
+                                    <option value="demo_given">Demo Completed</option>
+                                    <option value="trial_started">Trial Started</option>
+                                    <option value="converted">Won / Subscribed</option>
+                                    <option value="lost">Lost</option>
+                                  </select>
+                                </td>
+                                <td className={`py-4 px-6 font-mono text-slate-400 text-xs`}>{dateStr}</td>
+                                <td className="py-4 px-6 text-right space-x-1.5">
+                                  {waUrl && (
+                                    <a
+                                      href={waUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors inline-flex items-center"
+                                      title="WhatsApp"
+                                    >
+                                      <MessageCircle className="w-3.5 h-3.5" />
+                                    </a>
+                                  )}
+                                  <a
+                                    href={`mailto:${lead.email}?subject=Thank%20you%20for%20watching%20the%20Tripbone%20SaaS%20Demo&body=Hi%20${encodeURIComponent(lead.name || 'there')},%0A%0AThank%20you%20for%20requesting%20our%20product%20demo!%20We%20would%20love%20to%20learn%20more%20about%20your%20tour%20operator%20business.%0A%0ABest%20regards,%0ATripbone%20Team`}
+                                    className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors inline-flex items-center"
+                                    title="Email Lead"
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                  <button
+                                    onClick={() => handleDeleteLead(lead.id)}
+                                    className="p-1.5 rounded-lg text-rose-400 hover:bg-rose-500/10 transition-colors inline-flex items-center cursor-pointer"
+                                    title="Delete Lead"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   );
-                }
+                })()}
+              </div>
+            )}
 
-                return (
+            {/* TAB 2: Abandoned Onboarding Drop-offs */}
+            {funnelSubTab === 'dropoffs' && (
+              <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'bg-slate-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <div className={`p-5 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Abandoned Onboarding Signups (Drop-off Leads)</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                    Users who registered their account (Step 1) but never completed workspace provisioning. Follow up immediately to help unblock their setup.
+                  </p>
+                </div>
+
+                {abandonedOnboardingLeads.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto mb-2 opacity-60" />
+                    <p className={`font-medium text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>No abandoned signups detected!</p>
+                    <p className="text-[11px] text-gray-500 mt-1">All registered accounts have successfully completed workspace provisioning.</p>
+                  </div>
+                ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
                         <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
-                          <th className="py-4 px-6">Name</th>
+                          <th className="py-4 px-6">User / Lead</th>
                           <th className="py-4 px-6">Email Address</th>
-                          <th className="py-4 px-6">Captured Date</th>
-                          <th className="py-4 px-6 text-right">Actions</th>
+                          <th className="py-4 px-6">Phone</th>
+                          <th className="py-4 px-6">Signup Date</th>
+                          <th className="py-4 px-6">Funnel Drop-off Point</th>
+                          <th className="py-4 px-6 text-right">Recovery Actions</th>
                         </tr>
                       </thead>
                       <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
-                        {filteredLeads.map((lead) => {
-                          const dateStr = lead.createdAt 
-                            ? new Date(lead.createdAt).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-                            : 'Unknown';
+                        {abandonedOnboardingLeads.map(u => {
+                          const userPhone = u.phoneNumber || u.phone || '';
+                          const waUrl = getWhatsAppUrl(userPhone, `Hi ${u.displayName || 'there'}! We noticed you started creating your Tripbone SaaS account. Would you like a hand setting up your workspace?`);
+
                           return (
-                            <tr key={lead.id} className={`text-sm transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                            <tr key={u.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                              <td className="py-4 px-6 font-semibold">
+                                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>{u.displayName || 'Prospective Operator'}</span>
+                              </td>
+                              <td className="py-4 px-6 font-mono text-gray-400">{u.email}</td>
+                              <td className="py-4 px-6 font-mono">
+                                {userPhone ? <span className="text-emerald-400">{userPhone}</span> : <span className="text-gray-500 italic">None</span>}
+                              </td>
+                              <td className="py-4 px-6 text-gray-400 font-mono">
+                                {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'Recent'}
+                              </td>
                               <td className="py-4 px-6">
-                                <div className="flex items-center space-x-3">
-                                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${isDarkMode ? 'bg-indigo-500/10 text-indigo-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                                    {(lead.name || 'L').charAt(0).toUpperCase()}
-                                  </div>
-                                  <div className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{lead.name || 'Anonymous Lead'}</div>
-                                </div>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                  Step 1 Auth Created (No Workspace)
+                                </span>
                               </td>
-                              <td className="py-4 px-6 font-mono text-xs text-gray-500">
-                                <a href={`mailto:${lead.email}`} className="hover:text-indigo-500 transition-colors">{lead.email}</a>
-                              </td>
-                              <td className={`py-4 px-6 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>{dateStr}</td>
-                              <td className="py-4 px-6 text-right space-x-2">
-                                <button
-                                  onClick={(e) => {
-                                    navigator.clipboard.writeText(lead.email);
-                                    const btn = e.currentTarget;
-                                    const originalText = btn.innerHTML;
-                                    btn.innerHTML = "Copied!";
-                                    setTimeout(() => {
-                                      btn.innerHTML = originalText;
-                                    }, 2000);
-                                  }}
-                                  className="px-2.5 py-1.5 border border-indigo-900/50 text-xs font-semibold text-indigo-400 rounded-lg hover:bg-indigo-900/20 transition-all inline-flex items-center gap-1"
-                                  title="Copy Email"
-                                >
-                                  Copy
-                                </button>
+                              <td className="py-4 px-6 text-right space-x-1.5">
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors inline-flex items-center"
+                                    title="WhatsApp Recovery"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
                                 <a
-                                  href={`mailto:${lead.email}?subject=Thank%20you%20for%20watching%20the%20Tripbone%20SaaS%20Demo&body=Hi%20${encodeURIComponent(lead.name || 'there')},%0A%0AThank%20you%20for%20requesting%20our%20product%20demo!%20We%20would%20love%20to%20learn%20more%20about%20your%20tour%20operator%20business.%0A%0ABest%20regards,%0ATripbone%20Indonesia`}
-                                  className="px-2.5 py-1.5 border border-gray-800 text-xs font-semibold text-gray-300 rounded-lg hover:bg-slate-800 transition-all inline-flex items-center gap-1 animate-none"
+                                  href={`mailto:${u.email}?subject=Need%20help%20setting%20up%20your%20Tripbone%20workspace?&body=Hi%20${encodeURIComponent(u.displayName || 'there')},%0A%0AWe%20noticed%20you%20signed%20up%20for%20Tripbone!%20Can%20we%20help%20you%20finish%20creating%20your%20tour%20operator%20workspace?`}
+                                  className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors inline-flex items-center"
+                                  title="Send Email"
                                 >
-                                  Reach Out
+                                  <Mail className="w-3.5 h-3.5" />
                                 </a>
                                 <button
-                                  onClick={() => handleDeleteLead(lead.id)}
-                                  className="px-2.5 py-1.5 border border-rose-950 text-xs font-semibold text-rose-400 rounded-lg hover:bg-rose-950/20 transition-all inline-flex items-center gap-1"
-                                  title="Delete Lead"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(`${u.displayName || ''} - ${u.email} - ${userPhone}`);
+                                    alert("Copied contact details!");
+                                  }}
+                                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'}`}
+                                  title="Copy Info"
                                 >
-                                  <Trash2 className="w-3 h-3" />
+                                  <Copy className="w-3.5 h-3.5" />
                                 </button>
                               </td>
                             </tr>
@@ -8044,9 +9194,168 @@ export default function SaaSSuperAdmin() {
                       </tbody>
                     </table>
                   </div>
-                );
-              })()}
-            </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 3: Active Trials & Retention */}
+            {funnelSubTab === 'trials' && (
+              <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'bg-slate-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <div className={`p-5 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Active Trials & Retention Pipeline</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                    Monitor trial expiration count-downs. Proactively extend evaluation periods or contact operators to close paid plan conversions.
+                  </p>
+                </div>
+
+                {activeTrials.length === 0 ? (
+                  <div className="p-12 text-center text-xs text-gray-500">
+                    No workspaces currently on trial.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                          <th className="py-4 px-6">Workspace</th>
+                          <th className="py-4 px-6">Admin Contact</th>
+                          <th className="py-4 px-6">Trial Plan</th>
+                          <th className="py-4 px-6 text-center">Days Remaining</th>
+                          <th className="py-4 px-6 text-right">Retention Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
+                        {activeTrials.map(t => {
+                          const waUrl = getWhatsAppUrl(t.phone || (t as any).whatsapp, `Hi ${t.companyName}, how is your Tripbone evaluation going? Let us know if you need any assistance!`);
+                          const isUrgent = t.daysRemaining <= 2;
+                          const isWarning = t.daysRemaining <= 5 && t.daysRemaining > 2;
+
+                          return (
+                            <tr key={t.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                              <td className="py-4 px-6">
+                                <span className={`font-semibold block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{t.companyName}</span>
+                                <span className="font-mono text-[10px] text-gray-500">{t.slug}</span>
+                              </td>
+                              <td className="py-4 px-6 font-mono text-gray-400">
+                                <div>{t.adminEmail || t.email || 'No email'}</div>
+                                {t.phone && <div className="text-emerald-400 text-[11px]">{t.phone}</div>}
+                              </td>
+                              <td className="py-4 px-6">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                                  {t.plan || 'Starter'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-center">
+                                <span className={`px-2.5 py-1 rounded text-xs font-bold font-mono border ${
+                                  isUrgent
+                                    ? 'bg-rose-500/10 text-rose-400 border-rose-500/30 animate-pulse'
+                                    : isWarning
+                                      ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                                      : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                                }`}>
+                                  {t.daysRemaining > 0 ? `${t.daysRemaining} days left` : 'Expired'}
+                                </span>
+                              </td>
+                              <td className="py-4 px-6 text-right space-x-2">
+                                <button
+                                  onClick={() => handleExtendTrial(t.id, 7)}
+                                  className="px-2.5 py-1.5 bg-indigo-600/10 hover:bg-indigo-600/20 text-indigo-400 border border-indigo-600/30 rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                                  title="Extend trial by 7 days"
+                                >
+                                  +7 Days Trial
+                                </button>
+                                {waUrl && (
+                                  <a
+                                    href={waUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors inline-flex items-center"
+                                    title="WhatsApp Admin"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                                <a
+                                  href={`mailto:${t.adminEmail || t.email}?subject=Your%20Tripbone%20Trial%20Status`}
+                                  className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-colors inline-flex items-center"
+                                  title="Email Admin"
+                                >
+                                  <Mail className="w-3.5 h-3.5" />
+                                </a>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB 4: Geographical Funnel & Analytics */}
+            {funnelSubTab === 'geo' && (
+              <div className={`border rounded-2xl overflow-hidden ${isDarkMode ? 'bg-slate-900/50 border-gray-800' : 'bg-white border-gray-200 shadow-sm'}`}>
+                <div className={`p-5 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-100'}`}>
+                  <h3 className={`font-bold text-base ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Geographical Distribution & Regional Performance</h3>
+                  <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} mt-0.5`}>
+                    Cross-border analytics tracking where prospective and paying tour operator workspaces originate from.
+                  </p>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className={`border-b text-[10px] font-mono uppercase tracking-wider ${isDarkMode ? 'border-gray-800/80 bg-slate-950/40 text-gray-400' : 'border-gray-200 bg-gray-50 text-gray-500'}`}>
+                        <th className="py-4 px-6">Country / Territory</th>
+                        <th className="py-4 px-6 font-mono">Dial Code</th>
+                        <th className="py-4 px-6 text-center">Active Workspaces</th>
+                        <th className="py-4 px-6 text-center">Inbound Leads</th>
+                        <th className="py-4 px-6 text-right">Subscription MRR</th>
+                        <th className="py-4 px-6 text-right">Market Share</th>
+                      </tr>
+                    </thead>
+                    <tbody className={`divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-100'}`}>
+                      {countryFunnelStats.map((geo, idx) => {
+                        const totalEntities = tenants.length + demoLeads.length || 1;
+                        const share = Math.round(((geo.workspaces + geo.leads) / totalEntities) * 100);
+
+                        return (
+                          <tr key={geo.country || idx} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/20' : 'hover:bg-gray-50'}`}>
+                            <td className="py-4 px-6">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-base">{getCountryFlag(geo.countryCode)}</span>
+                                <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{geo.country}</span>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6 font-mono text-gray-400">
+                              {geo.dialCode || '-'}
+                            </td>
+                            <td className="py-4 px-6 text-center font-mono font-bold">
+                              <span className="text-indigo-400">{geo.workspaces}</span>
+                            </td>
+                            <td className="py-4 px-6 text-center font-mono font-bold">
+                              <span className="text-amber-400">{geo.leads}</span>
+                            </td>
+                            <td className="py-4 px-6 text-right font-mono font-bold">
+                              <span className="text-emerald-400">${geo.mrr.toLocaleString()}</span>
+                            </td>
+                            <td className="py-4 px-6 text-right font-mono">
+                              <div className="flex items-center justify-end space-x-2">
+                                <div className="w-16 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${share}%` }} />
+                                </div>
+                                <span className="text-gray-400 text-[11px]">{share}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

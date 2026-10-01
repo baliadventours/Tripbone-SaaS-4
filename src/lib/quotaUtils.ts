@@ -15,7 +15,7 @@ export async function checkQuota(tenantData: any, type: 'tours' | 'bookings', cu
       currentPlanObj = plansData.find((p: any) => p.slug?.toLowerCase().split('-')[0] === planName);
     }
 
-    let maxLimit = type === 'tours' ? 10 : 25; // Starter defaults
+    let maxLimit = type === 'tours' ? 10 : 100; // Starter defaults: 10 tours, 100 bookings
     
     if (currentPlanObj) {
       if (type === 'tours' && typeof currentPlanObj.maxTours === 'number') {
@@ -68,16 +68,30 @@ export async function checkQuota(tenantData: any, type: 'tours' | 'bookings', cu
 
     let count = currentCount ?? 0;
     
-    if (currentCount === undefined && tenantData?.uid) {
+    if (currentCount === undefined) {
+      const tenantIdentifier = tenantData?.id || tenantData?.tenantId || tenantData?.slug;
+      const userUid = tenantData?.uid || tenantData?.ownerUid;
+
       if (type === 'tours') {
-        const q = query(collection(db, 'tours'), where('supplierId', '==', tenantData.uid));
-        const snap = await getCountFromServer(q);
-        count = snap.data().count;
+        if (tenantIdentifier) {
+          const q = query(collection(db, 'tours'), where('tenantId', '==', tenantIdentifier));
+          const snap = await getCountFromServer(q);
+          count = snap.data().count;
+        } else if (userUid) {
+          const q = query(collection(db, 'tours'), where('supplierId', '==', userUid));
+          const snap = await getCountFromServer(q);
+          count = snap.data().count;
+        }
       } else if (type === 'bookings') {
-        // Bookings can be counted by supplierId
-        const q = query(collection(db, 'bookings'), where('supplierId', '==', tenantData.uid));
-        const snap = await getCountFromServer(q);
-        count = snap.data().count;
+        if (tenantIdentifier) {
+          const q = query(collection(db, 'bookings'), where('tenantId', '==', tenantIdentifier));
+          const snap = await getCountFromServer(q);
+          count = snap.data().count;
+        } else if (userUid) {
+          const q = query(collection(db, 'bookings'), where('supplierId', '==', userUid));
+          const snap = await getCountFromServer(q);
+          count = snap.data().count;
+        }
       }
     }
 

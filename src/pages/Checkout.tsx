@@ -68,7 +68,7 @@ import { useCurrency } from "../lib/CurrencyContext";
 import { motion, AnimatePresence } from "motion/react";
 import { sendBookingEmail } from "../lib/emailService";
 import { sendWhatsAppNotification } from "../lib/whatsappService";
-import { PaymentService } from "../services/payment/PaymentService";
+import { PaymentService, sanitizeFirestoreData } from "../services/payment/PaymentService";
 import { 
   trackGABeginCheckout, 
   trackGAAddShippingInfo, 
@@ -1241,7 +1241,11 @@ const toggleAddOn = (addon: AddOn) => {
       }
       // --- END: AUTOMATED CAPACITY CHECK ---
 
+      const activeTenant = tenant?.id || (tour as any)?.tenantId || getActiveTenantId() || 'global';
       const bookingData: Partial<Booking> = {
+        tenantId: activeTenant,
+        tenantSlug: tenant?.slug || '',
+        tenantName: tenant?.companyName || '',
         tourId: tour?.id,
         tourTitle: tour?.title,
         userId: auth.currentUser?.uid || "anonymous",
@@ -1322,7 +1326,7 @@ const toggleAddOn = (addon: AddOn) => {
 
       if (isUpgrade && existingBooking) {
         try {
-          await updateDoc(doc(db, "bookings", existingBooking.id), bookingData);
+          await updateDoc(doc(db, "bookings", existingBooking.id), sanitizeFirestoreData(bookingData));
           finalBookingId = existingBooking.id;
         } catch (err) {
           handleFirestoreError(err, 'update' as any, `bookings/${existingBooking.id}`);
@@ -1351,7 +1355,7 @@ const toggleAddOn = (addon: AddOn) => {
       }
 
       try {
-        await setDoc(doc(db, "bookings", generatedId), { ...bookingData, createdAt: serverTimestamp() });
+        await setDoc(doc(db, "bookings", generatedId), { ...sanitizeFirestoreData(bookingData), createdAt: serverTimestamp() });
         finalBookingId = generatedId;
       } catch (err) {
         handleFirestoreError(err, 'create' as any, 'bookings');

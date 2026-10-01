@@ -21,6 +21,8 @@ import {
   trackPostHogDemoLeadSubmit, 
   trackPostHogShowcaseClick 
 } from '../lib/posthog';
+import { CountryPhoneInput, CountryPhoneValue } from '../components/UI/CountryPhoneInput';
+import { detectUserCountry } from '../lib/countryPhoneData';
 
 export default function SaaSMarketing() {
   const { settings, globalBrand } = useSettings();
@@ -31,7 +33,24 @@ export default function SaaSMarketing() {
 
   // Watch Demo Modal state
   const [showDemoModal, setShowDemoModal] = useState(false);
-  const [demoLead, setDemoLead] = useState({ name: '', email: '' });
+  const [demoLead, setDemoLead] = useState({ 
+    name: '', 
+    email: '', 
+    companyName: '',
+    monthlyBookings: '10-50'
+  });
+  const [demoPhoneData, setDemoPhoneData] = useState<CountryPhoneValue>(() => {
+    const detected = detectUserCountry();
+    return {
+      phone: '',
+      rawPhone: '',
+      whatsapp: '',
+      isWhatsappSame: true,
+      country: detected.name,
+      countryCode: detected.code,
+      dialCode: detected.dialCode
+    };
+  });
   const [submittingLead, setSubmittingLead] = useState(false);
 
   const handleWatchDemoSubmit = async (e: React.FormEvent) => {
@@ -42,11 +61,23 @@ export default function SaaSMarketing() {
       trackPostHogDemoLeadSubmit({
         name: demoLead.name,
         email: demoLead.email,
+        phone: demoPhoneData.phone,
+        country: demoPhoneData.country,
+        companyName: demoLead.companyName,
         source: 'main_hero_modal'
       });
       await addDoc(collection(db, 'demoLeads'), {
-        name: demoLead.name,
-        email: demoLead.email,
+        name: demoLead.name.trim(),
+        email: demoLead.email.trim(),
+        phone: demoPhoneData.phone || '',
+        whatsapp: demoPhoneData.whatsapp || demoPhoneData.phone || '',
+        country: demoPhoneData.country || 'Unknown',
+        countryCode: demoPhoneData.countryCode || '',
+        dialCode: demoPhoneData.dialCode || '',
+        companyName: demoLead.companyName.trim() || 'Pending Workspace',
+        monthlyBookings: demoLead.monthlyBookings || '10-50',
+        status: 'new', // Funnel stages: new -> contacted -> demo_given -> trial_started -> converted
+        source: 'marketing_demo_modal',
         createdAt: new Date().toISOString()
       });
       // Redirect to demo site
@@ -1359,7 +1390,7 @@ export default function SaaSMarketing() {
                 </p>
               </div>
 
-              <form onSubmit={handleWatchDemoSubmit} className="space-y-4">
+              <form onSubmit={handleWatchDemoSubmit} className="space-y-3.5 max-h-[75vh] overflow-y-auto px-1">
                 <div>
                   <label className="block text-xs font-bold text-[#1a1d1b] uppercase tracking-wider mb-1.5">Full Name</label>
                   <input 
@@ -1368,7 +1399,18 @@ export default function SaaSMarketing() {
                     placeholder="e.g. John Doe"
                     value={demoLead.name}
                     onChange={(e) => setDemoLead({ ...demoLead, name: e.target.value })}
-                    className="w-full px-4 py-3 bg-[#f6f8f6] hover:bg-white focus:bg-white border border-[#dce1dc] focus:border-[#00aa13] focus:ring-1 focus:ring-[#00aa13] rounded-xl text-sm transition-all outline-none text-[#1a1d1b] font-medium"
+                    className="w-full px-4 py-2.5 bg-[#f6f8f6] hover:bg-white focus:bg-white border border-[#dce1dc] focus:border-[#00aa13] focus:ring-1 focus:ring-[#00aa13] rounded-xl text-sm transition-all outline-none text-[#1a1d1b] font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1d1b] uppercase tracking-wider mb-1.5">Business / Agency Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Bali Gorilla Adventure"
+                    value={demoLead.companyName}
+                    onChange={(e) => setDemoLead({ ...demoLead, companyName: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#f6f8f6] hover:bg-white focus:bg-white border border-[#dce1dc] focus:border-[#00aa13] focus:ring-1 focus:ring-[#00aa13] rounded-xl text-sm transition-all outline-none text-[#1a1d1b] font-medium"
                   />
                 </div>
                 
@@ -1380,14 +1422,39 @@ export default function SaaSMarketing() {
                     placeholder="john@example.com"
                     value={demoLead.email}
                     onChange={(e) => setDemoLead({ ...demoLead, email: e.target.value })}
-                    className="w-full px-4 py-3 bg-[#f6f8f6] hover:bg-white focus:bg-white border border-[#dce1dc] focus:border-[#00aa13] focus:ring-1 focus:ring-[#00aa13] rounded-xl text-sm transition-all outline-none text-[#1a1d1b] font-medium"
+                    className="w-full px-4 py-2.5 bg-[#f6f8f6] hover:bg-white focus:bg-white border border-[#dce1dc] focus:border-[#00aa13] focus:ring-1 focus:ring-[#00aa13] rounded-xl text-sm transition-all outline-none text-[#1a1d1b] font-medium"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1d1b] uppercase tracking-wider mb-1.5">WhatsApp / Phone Number</label>
+                  <CountryPhoneInput 
+                    value={demoPhoneData}
+                    onChange={setDemoPhoneData}
+                    theme="light"
+                    showWhatsappToggle={false}
+                    className="border-[#dce1dc]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-[#1a1d1b] uppercase tracking-wider mb-1.5">Monthly Booking Volume</label>
+                  <select
+                    value={demoLead.monthlyBookings}
+                    onChange={(e) => setDemoLead({ ...demoLead, monthlyBookings: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-[#f6f8f6] border border-[#dce1dc] rounded-xl text-sm outline-none text-[#1a1d1b] font-medium"
+                  >
+                    <option value="1-20">Just starting out (1-20 bookings/mo)</option>
+                    <option value="20-100">Growing operator (20-100 bookings/mo)</option>
+                    <option value="100-500">Established agency (100-500 bookings/mo)</option>
+                    <option value="500+">High volume / Enterprise (500+ bookings/mo)</option>
+                  </select>
                 </div>
 
                 <button 
                   type="submit"
                   disabled={submittingLead}
-                  className="btn-kelola-primary w-full mt-6 py-3.5 text-white font-extrabold rounded-full shadow-[0_4px_16px_rgba(0,170,19,0.3)] hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-center"
+                  className="btn-kelola-primary w-full mt-4 py-3.5 text-white font-extrabold rounded-full shadow-[0_4px_16px_rgba(0,170,19,0.3)] hover:brightness-105 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 text-center"
                 >
                   {submittingLead ? (
                     <span>Saving and Redirecting...</span>

@@ -3723,11 +3723,18 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
     const filteredBookings = useMemo(() => {
       const todayStr = format(new Date(), 'yyyy-MM-dd');
       const tomorrowStr = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+      const activeTenant = getActiveTenantId() || tenant?.id;
 
       return bookings
         .filter(b => {
           if (currentUserProfile?.role === 'supplier') {
             return b.supplierId === currentUserProfile.uid;
+          }
+          if (currentUserProfile?.role === 'agent') {
+            return b.userId === currentUserProfile.uid;
+          }
+          if (activeTenant && activeTenant !== 'global' && !isCentralPortal) {
+            return b.tenantId === activeTenant || !b.tenantId;
           }
           return true;
         })
