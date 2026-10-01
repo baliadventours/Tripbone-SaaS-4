@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { db, collection, getDocs, addDoc, setDoc, updateDoc, doc, auth, setActiveTenantId } from '../lib/firebase';
+import { db, collection, getDocs, addDoc, setDoc, updateDoc, doc, auth, setActiveTenantId, serverTimestamp } from '../lib/firebase';
 import { getDoc, onSnapshot } from 'firebase/firestore';
 import { formatPlanName, getPlanPrice, getNextBillingDate, getEffectiveInterval, generateInvoiceNumber } from '../lib/planUtils';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
@@ -27,6 +27,8 @@ import {
   trackPostHogSignupStep, 
   trackPostHogWorkspaceProvisioned 
 } from '../lib/posthog';
+import { CountryPhoneInput, CountryPhoneValue } from '../components/UI/CountryPhoneInput';
+import { detectUserCountry } from '../lib/countryPhoneData';
 
 export default function SaaSHome() {
   const { setPreviewTenant } = useTenant();
@@ -86,6 +88,18 @@ export default function SaaSHome() {
 
   // New Registration / OTP verification states
   const [regName, setRegName] = useState('');
+  const [regPhoneData, setRegPhoneData] = useState<CountryPhoneValue>(() => {
+    const detected = detectUserCountry();
+    return {
+      phone: '',
+      whatsapp: '',
+      country: detected.name,
+      countryCode: detected.code,
+      dialCode: detected.dialCode,
+      rawPhone: '',
+      isSameAsWhatsapp: true
+    };
+  });
   const [otpVerified, setOtpVerified] = useState<boolean>(() => {
     try {
       return sessionStorage.getItem('otp_verified') === 'true';
@@ -538,6 +552,26 @@ export default function SaaSHome() {
       } else {
         sessionStorage.setItem('otp_verified', 'true');
         setOtpVerified(true);
+        if (userCred.user) {
+          try {
+            await setDoc(doc(db, 'users', userCred.user.uid), {
+              uid: userCred.user.uid,
+              email: userCred.user.email,
+              displayName: userCred.user.displayName || 'Operator',
+              photoURL: userCred.user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userCred.user.displayName || 'O')}`,
+              phoneNumber: regPhoneData.phone || '',
+              whatsapp: regPhoneData.whatsapp || regPhoneData.phone || '',
+              country: regPhoneData.country || 'United States',
+              countryCode: regPhoneData.countryCode || 'US',
+              dialCode: regPhoneData.dialCode || '+1',
+              role: 'admin',
+              status: 'active',
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          } catch (e) {
+            console.warn("[Google Signup] Profile sync failed:", e);
+          }
+        }
       }
     } catch (err: any) {
       console.error(err);
@@ -642,19 +676,47 @@ export default function SaaSHome() {
       setError("Please enter your name.");
       return;
     }
+    if (!regPhoneData.rawPhone.trim()) {
+      setError("Please enter your mobile or WhatsApp number.");
+      return;
+    }
     setLoginLoading(true);
     setError(null);
     try {
-      // Create user profile
+      // Create user profile in Firebase Auth
       const usrCredential = await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
       setCurrentUser(usrCredential.user);
       
+      // Store user profile with Phone, WhatsApp & Country in Firestore
+      try {
+        await setDoc(doc(db, 'users', usrCredential.user.uid), {
+          uid: usrCredential.user.uid,
+          email: loginEmail,
+          displayName: regName.trim(),
+          photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(regName.trim())}`,
+          phoneNumber: regPhoneData.phone,
+          whatsapp: regPhoneData.whatsapp || regPhoneData.phone,
+          country: regPhoneData.country,
+          countryCode: regPhoneData.countryCode,
+          dialCode: regPhoneData.dialCode,
+          role: 'admin',
+          status: 'active',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (profileErr) {
+        console.warn("[SaaS Signup] Failed to write profile to Firestore:", profileErr);
+      }
+
       // Advance immediately to workspace creation step 2
       setFormData(prev => ({
         ...prev,
         adminEmail: loginEmail,
         adminName: regName.trim(),
-        adminPassword: loginPassword
+        adminPassword: loginPassword,
+        phone: regPhoneData.phone,
+        country: regPhoneData.country,
+        email: loginEmail
       }));
       
       // Track signup funnel step 1 in PostHog
@@ -736,7 +798,11 @@ export default function SaaSHome() {
           secondaryColor: formData.secondaryColor,
           currency: formData.currency,
           email: formData.adminEmail || currentUser?.email || '',
-          phone: formData.phone || '',
+          phone: formData.phone || regPhoneData.phone || '',
+          whatsapp: regPhoneData.whatsapp || formData.phone || regPhoneData.phone || '',
+          country: formData.country || regPhoneData.country || 'United States',
+          countryCode: regPhoneData.countryCode || 'US',
+          dialCode: regPhoneData.dialCode || '+1',
           address: constructedAddress
         })
       });
@@ -1724,6 +1790,21 @@ export default function SaaSHome() {
                   />
                 </div>
 
+                {authView === 'signup' && (
+                  <div className="pt-0.5">
+                    <CountryPhoneInput
+                      value={regPhoneData}
+                      onChange={setRegPhoneData}
+                      required={true}
+                      inputBg="bg-gray-50"
+                      label="Country & WhatsApp Number"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1.5 flex items-center gap-1">
+                      <span>💬 Direct WhatsApp is used for instant tour booking alerts and customer support.</span>
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-[11px] font-bold text-gray-500 uppercase">Password</label>
@@ -1748,6 +1829,42 @@ export default function SaaSHome() {
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
+
+                  {authView === 'signup' && loginPassword && (
+                    <div className="pt-1.5 px-0.5 space-y-1 animate-in fade-in duration-200">
+                      <div className="flex gap-1 h-1">
+                        {[1, 2, 3, 4].map((step) => {
+                          let score = 0;
+                          if (loginPassword.length >= 6) score += 1;
+                          if (loginPassword.length >= 8) score += 1;
+                          if (/[A-Z]/.test(loginPassword) && /[a-z]/.test(loginPassword)) score += 1;
+                          if (/[0-9]/.test(loginPassword)) score += 1;
+                          const isActive = (loginPassword.length < 6 ? 1 : score <= 2 ? 2 : score <= 3 ? 3 : 4) >= step;
+                          const color = loginPassword.length < 6 ? 'bg-red-500' : score <= 2 ? 'bg-amber-500' : score <= 3 ? 'bg-emerald-500' : 'bg-teal-500';
+                          return (
+                            <div
+                              key={step}
+                              className={cn(
+                                "flex-1 rounded-full transition-colors duration-300",
+                                isActive ? color : "bg-gray-200"
+                              )}
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="flex justify-between items-center text-[10px]">
+                        <span className="text-gray-400">Password strength:</span>
+                        <span className={cn(
+                          "font-bold",
+                          loginPassword.length < 6 ? "text-red-500" :
+                          loginPassword.length < 8 ? "text-amber-600" : "text-emerald-600"
+                        )}>
+                          {loginPassword.length < 6 ? "Too short (min 6 characters)" :
+                           loginPassword.length < 8 ? "Fair" : "Strong"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <button

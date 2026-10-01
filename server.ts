@@ -2601,6 +2601,10 @@ export async function createServer() {
         currency,
         email,
         phone,
+        whatsapp,
+        country,
+        countryCode,
+        dialCode,
         address
       } = req.body;
 
@@ -2730,6 +2734,11 @@ export async function createServer() {
         email: finalAdminEmail,
         displayName: finalAdminName,
         photoURL: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(finalAdminName)}`,
+        phoneNumber: phone || '',
+        whatsapp: whatsapp || phone || '',
+        country: country || 'United States',
+        countryCode: countryCode || 'US',
+        dialCode: dialCode || '+1',
         role: 'admin',
         status: 'active',
         tenantId: tenantId,
@@ -2752,12 +2761,25 @@ export async function createServer() {
         email: email || finalAdminEmail,
         adminEmail: finalAdminEmail,
         phone: phone || '',
+        whatsappNumber: whatsapp || phone || '',
+        country: country || 'United States',
+        countryCode: countryCode || 'US',
+        dialCode: dialCode || '+1',
         address: address || '',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         emailVerified: false
       };
       await safeSetDoc('tenants', tenantId, newTenantData);
+
+      // Initialize communication settings with operator WhatsApp
+      await safeSetDoc('communicationSettings', tenantId, {
+        tenantId: tenantId,
+        whatsappNumber: whatsapp || phone || '',
+        supportEmail: email || finalAdminEmail,
+        enableWhatsappBookingAlerts: true,
+        createdAt: new Date().toISOString()
+      });
 
       // Create initial invoice
       let tenantCount = 1;
@@ -2792,6 +2814,9 @@ export async function createServer() {
         secondaryColor: secondaryColor || '#8b5cf6',
         currency: currency || 'USD',
         supportEmail: finalAdminEmail,
+        companyPhone: phone || '',
+        companyWhatsapp: whatsapp || phone || '',
+        companyCountry: country || 'United States',
         enableAIHub: true,
         enableAIPlanner: true,
         enableChatbot: true,

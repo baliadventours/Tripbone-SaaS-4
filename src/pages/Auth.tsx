@@ -10,11 +10,13 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc, query, collection, where, getDocs, deleteDoc } from '@/src/lib/firebase';
-import { Mail, Lock, User, ArrowRight, Github, Chrome, Apple, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Github, Chrome, Apple, Eye, EyeOff, Loader2, Sparkles, CheckCircle2, MessageSquare, Globe, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useSettings } from '../lib/SettingsContext';
 import { useTenant } from '../lib/TenantContext';
+import { CountryPhoneInput, CountryPhoneValue } from '../components/UI/CountryPhoneInput';
+import { detectUserCountry } from '../lib/countryPhoneData';
 
 type AuthMode = 'signin' | 'signup' | 'forgot';
 
@@ -31,11 +33,45 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetSent, setResetSent] = useState(false);
 
+  // Phone / WhatsApp & Country state
+  const [phoneData, setPhoneData] = useState<CountryPhoneValue>(() => {
+    const detected = detectUserCountry();
+    return {
+      phone: '',
+      whatsapp: '',
+      country: detected.name,
+      countryCode: detected.code,
+      dialCode: detected.dialCode,
+      rawPhone: '',
+      isSameAsWhatsapp: true
+    };
+  });
+
+  // Social Login Post-Registration Profile Completion state
+  const [pendingSocialUser, setPendingSocialUser] = useState<{ user: any; profileData: any; targetPath: string } | null>(null);
+  const [socialSaving, setSocialSaving] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/';
 
   const [ssoLoading, setSsoLoading] = useState(false);
+
+  // Password strength helper
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { score: 0, text: '', color: 'bg-gray-200' };
+    let score = 0;
+    if (pass.length >= 6) score += 1;
+    if (pass.length >= 8) score += 1;
+    if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+
+    if (pass.length < 6) return { score: 1, text: 'Too short (minimum 6 characters)', color: 'bg-red-500' };
+    if (score <= 2) return { score: 2, text: 'Fair', color: 'bg-amber-500' };
+    if (score <= 3) return { score: 3, text: 'Good', color: 'bg-emerald-500' };
+    return { score: 4, text: 'Strong', color: 'bg-teal-500' };
+  };
 
   useEffect(() => {
     if (isImpersonating) {
@@ -192,15 +228,22 @@ export default function Auth() {
           }
         }
 
+        let targetPath = from;
         if (from === '/' || from === '/login') {
-          if (userRole === 'admin' || userRole === 'staff' || isTenantOwner) navigate('/admin', { replace: true });
-          else if (userRole === 'superadmin' || isSuperAdminEmail) navigate('/superadmin', { replace: true });
-          else if (userRole === 'supplier') navigate('/supplier', { replace: true });
-          else if (userRole === 'agent') navigate('/agent', { replace: true });
-          else navigate('/customer/dashboard', { replace: true });
-        } else {
-          navigate(from, { replace: true });
+          if (userRole === 'admin' || userRole === 'staff' || isTenantOwner) targetPath = '/admin';
+          else if (userRole === 'superadmin' || isSuperAdminEmail) targetPath = '/superadmin';
+          else if (userRole === 'supplier') targetPath = '/supplier';
+          else if (userRole === 'agent') targetPath = '/agent';
+          else targetPath = '/customer/dashboard';
         }
+
+        // If phone or country is not recorded yet, prompt user with smooth profile completion
+        if (!profileData?.phoneNumber && !profileData?.country) {
+          setPendingSocialUser({ user, profileData, targetPath });
+          return;
+        }
+
+        navigate(targetPath, { replace: true });
       } else {
         setError('Apple login is not configured yet. Please use Google or Email.');
       }
@@ -211,6 +254,36 @@ export default function Auth() {
     }
   };
 
+  const handleCompleteSocialProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pendingSocialUser) return;
+    if (!phoneData.rawPhone.trim()) {
+      setError("Please enter your mobile or WhatsApp number.");
+      return;
+    }
+
+    setSocialSaving(true);
+    setError(null);
+    try {
+      const userRef = doc(db, 'users', pendingSocialUser.user.uid);
+      await setDoc(userRef, {
+        phoneNumber: phoneData.phone || '',
+        whatsapp: phoneData.whatsapp || phoneData.phone || '',
+        country: phoneData.country || 'Indonesia',
+        countryCode: phoneData.countryCode || 'ID',
+        dialCode: phoneData.dialCode || '+62',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      navigate(pendingSocialUser.targetPath, { replace: true });
+    } catch (err: any) {
+      console.error("[Auth] Failed to complete social profile:", err);
+      setError("Failed to save phone and country. Please try again.");
+    } finally {
+      setSocialSaving(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -218,6 +291,14 @@ export default function Auth() {
     setIsCredentialError(false);
 
     try {
+      if (mode === 'signup') {
+        if (!phoneData.rawPhone.trim()) {
+          setError("Please enter your mobile or WhatsApp number.");
+          setLoading(false);
+          return;
+        }
+      }
+
       if (mode === 'signin' || mode === 'signup') {
         const user = (await (mode === 'signin' 
           ? signInWithEmailAndPassword(auth, email, password)
@@ -278,6 +359,11 @@ export default function Auth() {
               photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || (migratedData as any)?.displayName || 'T')}&background=random`,
               role: isTenantOwner ? 'admin' : ((migratedData as any)?.role || (isSuperAdminEmail ? 'superadmin' : 'customer')),
               tenantId: tenantId || null,
+              phoneNumber: phoneData.phone || '',
+              whatsapp: phoneData.whatsapp || phoneData.phone || '',
+              country: phoneData.country || 'Indonesia',
+              countryCode: phoneData.countryCode || 'ID',
+              dialCode: phoneData.dialCode || '+62',
               createdAt: (migratedData as any)?.createdAt || serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
@@ -294,6 +380,11 @@ export default function Auth() {
               photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'T')}&background=random`,
               role: isTenantOwner ? 'admin' : (isSuperAdminEmail ? 'superadmin' : 'customer'),
               tenantId: tenantId || null,
+              phoneNumber: phoneData.phone || '',
+              whatsapp: phoneData.whatsapp || phoneData.phone || '',
+              country: phoneData.country || 'Indonesia',
+              countryCode: phoneData.countryCode || 'ID',
+              dialCode: phoneData.dialCode || '+62',
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             });
@@ -465,139 +556,240 @@ export default function Auth() {
         )}
       </Link>
 
-      <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={mode}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {mode === 'signin' ? 'Welcome back!' : mode === 'signup' ? 'Create an account' : 'Reset password'}
-              </h1>
-              <p className="text-gray-500 text-sm">
-                {mode === 'signin' ? 'Please sign in to your account' : mode === 'signup' ? 'Start your adventure with us' : "Enter your email to receive a reset link"}
-              </p>
+      {pendingSocialUser ? (
+        <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#00b272] flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <MessageSquare className="w-8 h-8 text-emerald-600" />
             </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-1.5">
+              Welcome, {pendingSocialUser.user.displayName || 'Traveler'}!
+            </h2>
+            <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
+              To connect your bookings and receive instant WhatsApp confirmation vouchers, please confirm your Country & WhatsApp number.
+            </p>
+          </div>
 
-            {error && (
-              <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-[10px] border border-red-100 space-y-2">
-                <p className="font-medium">{error}</p>
-                {isCredentialError && (
-                  <div className="pt-2 border-t border-red-100/80 flex flex-col gap-2">
-                    <Link 
-                      to={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                      className="inline-flex items-center text-xs font-bold text-[#00A651] hover:underline"
-                    >
-                      → Reset your password via secure code
-                    </Link>
-                    <p className="text-xs text-gray-500">
-                      If you registered using Google Sign-In, please use the <strong>Google</strong> button below.
-                    </p>
-                  </div>
-                )}
+          {error && (
+            <div className="mb-4 p-3.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100 flex items-center gap-2">
+              <span className="font-semibold">{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleCompleteSocialProfile} className="space-y-4">
+            <CountryPhoneInput
+              value={phoneData}
+              onChange={setPhoneData}
+              required={true}
+              inputBg="bg-gray-50"
+              label="Country & Mobile / WhatsApp Number"
+            />
+
+            <button
+              type="submit"
+              disabled={socialSaving}
+              className="w-full bg-[#00A651] hover:bg-emerald-700 text-white py-3.5 rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+            >
+              {socialSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Saving Details...</span>
+                </>
+              ) : (
+                <>
+                  <span>Complete Setup & Continue</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => navigate(pendingSocialUser.targetPath, { replace: true })}
+              className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+            >
+              Skip for now →
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="text-center mb-8">
+                <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                  {mode === 'signin' ? 'Welcome back!' : mode === 'signup' ? 'Create an account' : 'Reset password'}
+                </h1>
+                <p className="text-gray-500 text-sm">
+                  {mode === 'signin' ? 'Please sign in to your account' : mode === 'signup' ? 'Start your adventure with us' : "Enter your email to receive a reset link"}
+                </p>
               </div>
-            )}
 
-            {resetSent ? (
-              <div className="text-center">
-                <div className="w-16 h-16 bg-orange-50 text-[#00A651] rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Mail className="h-8 w-8" />
+              {error && (
+                <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-[10px] border border-red-100 space-y-2">
+                  <p className="font-medium">{error}</p>
+                  {isCredentialError && (
+                    <div className="pt-2 border-t border-red-100/80 flex flex-col gap-2">
+                      <Link 
+                        to={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
+                        className="inline-flex items-center text-xs font-bold text-[#00A651] hover:underline"
+                      >
+                        → Reset your password via secure code
+                      </Link>
+                      <p className="text-xs text-gray-500">
+                        If you registered using Google Sign-In, please use the <strong>Google</strong> button below.
+                      </p>
+                    </div>
+                  )}
                 </div>
-                <h3 className="text-lg font-bold mb-2">Check your email</h3>
-                <p className="text-gray-500 mb-6 text-sm">We've sent a password reset link to <span className="font-semibold text-gray-900">{email}</span></p>
-                <button 
-                  onClick={() => setMode('signin')}
-                  className="text-[#00A651] font-bold text-sm hover:underline"
-                >
-                  Back to Sign In
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === 'signup' && (
+              )}
+
+              {resetSent ? (
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-orange-50 text-[#00A651] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Mail className="h-8 w-8" />
+                  </div>
+                  <h3 className="text-lg font-bold mb-2">Check your email</h3>
+                  <p className="text-gray-500 mb-6 text-sm">We've sent a password reset link to <span className="font-semibold text-gray-900">{email}</span></p>
+                  <button 
+                    onClick={() => setMode('signin')}
+                    className="text-[#00A651] font-bold text-sm hover:underline"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {mode === 'signup' && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 ml-1">Full name</label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input 
+                          type="text"
+                          required
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
+                          placeholder="John Doe"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 ml-1">Full name</label>
+                    <label className="text-xs font-bold text-gray-400 ml-1">Email address</label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                       <input 
-                        type="text"
+                        type="email"
                         required
-                        value={fullName}
-                        onChange={(e) => setFullName(e.target.value)}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
-                        placeholder="John Doe"
+                        placeholder="john@example.com"
                       />
                     </div>
                   </div>
-                )}
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-400 ml-1">Email address</label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <input 
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                </div>
+                  {mode === 'signup' && (
+                    <div className="pt-0.5">
+                      <CountryPhoneInput
+                        value={phoneData}
+                        onChange={setPhoneData}
+                        required={true}
+                        inputBg="bg-gray-50"
+                        label="Country & Mobile / WhatsApp Number"
+                      />
+                    </div>
+                  )}
 
-                {mode !== 'forgot' && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center px-1">
-                      <label className="text-xs font-bold text-gray-400">Password</label>
-                      {mode === 'signin' && (
-                        <Link 
-                          to={email ? `/forgot-password?email=${encodeURIComponent(email)}` : '/forgot-password'}
-                          className="text-xs font-bold text-[#00A651] hover:underline"
+                  {mode !== 'forgot' && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-xs font-bold text-gray-400">Password</label>
+                        {mode === 'signin' && (
+                          <Link 
+                            to={email ? `/forgot-password?email=${encodeURIComponent(email)}` : '/forgot-password'}
+                            className="text-xs font-bold text-[#00A651] hover:underline"
+                          >
+                            Forgot password?
+                          </Link>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input 
+                          type={showPassword ? "text" : "password"}
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-11 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
+                          placeholder="••••••••"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                         >
-                          Forgot password?
-                        </Link>
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+
+                      {mode === 'signup' && password && (
+                        <div className="pt-1.5 px-1 space-y-1 animate-in fade-in duration-200">
+                          <div className="flex gap-1 h-1">
+                            {[1, 2, 3, 4].map((step) => {
+                              const strength = getPasswordStrength(password);
+                              const isActive = strength.score >= step;
+                              return (
+                                <div
+                                  key={step}
+                                  className={cn(
+                                    "flex-1 rounded-full transition-colors duration-300",
+                                    isActive ? strength.color : "bg-gray-200"
+                                  )}
+                                />
+                              );
+                            })}
+                          </div>
+                          <div className="flex justify-between items-center text-[10px]">
+                            <span className="text-gray-400">Password strength:</span>
+                            <span className={cn(
+                              "font-bold",
+                              getPasswordStrength(password).score >= 3 ? "text-emerald-600" :
+                              getPasswordStrength(password).score === 2 ? "text-amber-600" : "text-red-500"
+                            )}>
+                              {getPasswordStrength(password).text}
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                      <input 
-                        type={showPassword ? "text" : "password"}
-                        required
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-11 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
-                        placeholder="••••••••"
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                <button 
-                  type="submit"
-                  disabled={loading}
-                  className="w-full bg-[#00A651] text-white py-3 rounded-[10px] font-bold text-sm flex items-center justify-center gap-2 hover:bg-orange-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-                >
-                  {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                    <>
-                      {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
-                      <ArrowRight className="h-4 w-4" />
-                    </>
                   )}
-                </button>
-              </form>
-            )}
+
+                  <button 
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-[#00A651] text-white py-3 rounded-[10px] font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-sm shadow-emerald-600/20 cursor-pointer"
+                  >
+                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                      <>
+                        {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
 
             {mode !== 'forgot' && !resetSent && (
               <>
@@ -651,6 +843,7 @@ export default function Auth() {
           </motion.div>
         </AnimatePresence>
       </div>
+      )}
 
       <Link to="/" className="mt-8 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
         ← Back to home
