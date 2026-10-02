@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { db, collection, getDocs, addDoc, setDoc, updateDoc, doc, auth, setActiveTenantId, serverTimestamp } from '../lib/firebase';
 import { getDoc, onSnapshot, query, where } from 'firebase/firestore';
 import { formatPlanName, getPlanPrice, getNextBillingDate, getEffectiveInterval, generateInvoiceNumber } from '../lib/planUtils';
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, onAuthStateChanged, signOut, signInWithPopup, GoogleAuthProvider, EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendEmailVerification } from 'firebase/auth';
 import { useTenant } from '../lib/TenantContext';
 import { Helmet } from 'react-helmet-async';
 import { useSettings } from '../lib/SettingsContext';
@@ -708,7 +708,14 @@ export default function SaaSHome() {
         console.warn("[SaaS Signup] Failed to write profile to Firestore:", profileErr);
       }
 
-      // Advance immediately to workspace creation step 2
+      // Send Firebase verification email
+      try {
+        await sendEmailVerification(usrCredential.user);
+      } catch (verErr) {
+        console.warn("[SaaS Signup] Failed to send verification email:", verErr);
+      }
+
+      // Populate form data
       setFormData(prev => ({
         ...prev,
         adminEmail: loginEmail,
@@ -727,10 +734,15 @@ export default function SaaSHome() {
         method: 'email_password'
       });
 
-      // Bypass OTP on brand new registration
       sessionStorage.setItem('otp_verified', 'true');
       setOtpVerified(true);
-      setStep(2);
+      
+      const isSuperAdminEmail = ['baliadventours@gmail.com', 'admin@tripbone.com', 'kuotabox@gmail.com'].includes(loginEmail.toLowerCase());
+      if (isSuperAdminEmail) {
+        setStep(2);
+      } else {
+        setStep(1); // Keep at step 1 email verification gate
+      }
     } catch (err: any) {
       console.error(err);
       setError(translateFirebaseError(err));
@@ -841,7 +853,45 @@ export default function SaaSHome() {
         successUrl = `${protocol}//app.${host.replace('app.', '')}/?billing_setup=success&tenant=${formData.slug}`;
       }
 
-      // Automatically activate 0 payment 7-day trial!
+      // Automatically activate 0 payment 7-day trial and write initial SaaS invoice to Firestore!
+      const newTenantId = result.tenantId || `tenant_${formData.slug}`;
+      const calculatedPrice = getPlanPrice(formData.plan || 'starter', billingInterval, plans);
+      const formattedName = formatPlanName(formData.plan || 'starter', plans, billingInterval);
+      const generatedNo = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+      const invId = `${newTenantId}_${generatedNo}`;
+      const isLife = billingInterval === 'lifetime';
+
+      try {
+        await setDoc(doc(db, 'invoices', invId), {
+          id: invId,
+          tenantId: newTenantId,
+          tenantName: formData.companyName,
+          no: generatedNo,
+          invoiceNumber: generatedNo,
+          invoiceDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+          dueDate: isLife ? 'Lifetime Access' : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+          amount: `$${calculatedPrice}.00`,
+          paidAmount: '$0.00',
+          balanceDue: `$${calculatedPrice}.00`,
+          status: 'UNPAID',
+          plan: `${formattedName} (${billingInterval.toUpperCase()})`,
+          planSlug: formData.plan || 'starter',
+          billingInterval: billingInterval,
+          type: 'saas_subscription',
+          isTrialInvoice: true,
+          trialEnds: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          customer: {
+            name: formData.companyName,
+            email: formData.adminEmail || currentUser?.email || ''
+          },
+          paymentMethod: 'Instant Card / Bank Transfer',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+      } catch (invErr) {
+        console.warn("Direct Firestore initial invoice creation notice:", invErr);
+      }
+
       trackPostHogWorkspaceProvisioned({
         slug: formData.slug,
         companyName: formData.companyName,
@@ -2024,6 +2074,9 @@ export default function SaaSHome() {
   // ----------------------------------------------------
   // RENDER 2: WORKSPACE ONBOARDING STEP FLOW (Screenshot 3 & 4)
   // ----------------------------------------------------
+  const isSuperAdminEmail = ['baliadventours@gmail.com', 'admin@tripbone.com', 'kuotabox@gmail.com'].includes(currentUser?.email?.toLowerCase() || '');
+  const isEmailVerified = currentUser?.emailVerified || isSuperAdminEmail;
+
   if (currentUser && (!showDashboard || userWorkspaces.length === 0 || step > 1)) {
     return (
       <div className="min-h-screen bg-white text-gray-900 flex font-sans select-none selection:bg-[#00b272]">
@@ -2046,42 +2099,42 @@ export default function SaaSHome() {
             {/* Step list */}
             <div className="space-y-6">
               <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm bg-[#00b272] border-[#00b272] text-white`}>
-                  <Check className="w-4 h-4" />
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-amber-400 bg-amber-500/20 text-amber-300 animate-pulse'}`}>
+                  {isEmailVerified ? <Check className="w-4 h-4" /> : '1'}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold text-white`}>Account Setup</h4>
-                  <p className="text-[10px] text-gray-500 font-medium">Your credentials</p>
+                  <h4 className={`text-sm font-bold text-white`}>{isEmailVerified ? 'Account Verified' : 'Verify Email'}</h4>
+                  <p className="text-[10px] text-gray-500 font-medium">{isEmailVerified ? 'Email confirmed' : 'Awaiting confirmation'}</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${step >= 2 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
-                  {step > 2 ? <Check className="w-4 h-4" /> : '2'}
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step >= 2 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
+                  {isEmailVerified && step > 2 ? <Check className="w-4 h-4" /> : '2'}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${step >= 2 ? 'text-white' : 'text-gray-400'}`}>Workspace Details</h4>
+                  <h4 className={`text-sm font-bold ${isEmailVerified && step >= 2 ? 'text-white' : 'text-gray-400'}`}>Workspace Details</h4>
                   <p className="text-[10px] text-gray-500 font-medium">Company & Subdomain</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${step >= 3 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
-                  {step > 3 ? <Check className="w-4 h-4" /> : '3'}
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step >= 3 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
+                  {isEmailVerified && step > 3 ? <Check className="w-4 h-4" /> : '3'}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${step >= 3 ? 'text-white' : 'text-gray-400'}`}>Select Plan</h4>
+                  <h4 className={`text-sm font-bold ${isEmailVerified && step >= 3 ? 'text-white' : 'text-gray-400'}`}>Select Plan</h4>
                   <p className="text-[10px] text-gray-500 font-medium">Choose subscription</p>
                 </div>
               </div>
 
               <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${step === 4 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
+                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step === 4 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
                   {'4'}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${step === 4 ? 'text-white' : 'text-gray-400'}`}>Checkout</h4>
-                  <p className="text-[10px] text-gray-500 font-medium">Review & Pay</p>
+                  <h4 className={`text-sm font-bold ${isEmailVerified && step === 4 ? 'text-white' : 'text-gray-400'}`}>Checkout</h4>
+                  <p className="text-[10px] text-gray-500 font-medium">Review & Provision</p>
                 </div>
               </div>
             </div>
@@ -2110,8 +2163,86 @@ export default function SaaSHome() {
               </div>
             )}
 
+            {/* STEP 1: Email Confirmation Gate (if email unverified) */}
+            {!isEmailVerified && (
+              <div className="animate-fadeIn">
+                <div className="max-w-xl mx-auto space-y-6 bg-white border border-gray-200 p-8 rounded-2xl shadow-xl text-center">
+                  <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-[#00b272] rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <Mail className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-900">Verify Your Email Address</h2>
+                  <p className="text-xs text-gray-500 leading-relaxed max-w-md mx-auto">
+                    We've dispatched a confirmation link to <strong className="font-mono text-gray-900">{currentUser.email}</strong>. 
+                    Please verify your email before configuring your company workspace to prevent spam and protect your store.
+                  </p>
+
+                  <div className="bg-emerald-50/50 border border-emerald-500/10 rounded-2xl p-5 text-left space-y-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-800">
+                      <ShieldCheck className="w-4 h-4 text-[#00b272]" />
+                      <span>Workspace Security & Anti-Spam Gate</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      Confirming your email address activates your custom subdomain, unlocks booking automation widgets, and prevents unauthorized workspace provisioning.
+                    </p>
+                  </div>
+
+                  <div className="space-y-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await auth.currentUser?.reload();
+                          if (auth.currentUser?.emailVerified) {
+                            setCurrentUser({ ...auth.currentUser });
+                            setSuccess("🎉 Email verified successfully! Continuing to company setup...");
+                            setStep(2);
+                          } else {
+                            setError("Email is not verified yet. Please click the confirmation link in your inbox (or check your Spam/Junk folder).");
+                          }
+                        } catch (err: any) {
+                          setError("Error checking status: " + err.message);
+                        }
+                      }}
+                      className="w-full py-3.5 bg-[#00b272] hover:bg-[#009e64] text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-600/15 cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <span>I've Confirmed My Email — Continue to Setup</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          if (auth.currentUser) {
+                            await sendEmailVerification(auth.currentUser);
+                            setSuccess("📧 Verification email resent! Please check your inbox.");
+                            setError(null);
+                          }
+                        } catch (resendErr: any) {
+                          setError("Failed to resend: " + resendErr.message);
+                        }
+                      }}
+                      className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl border border-gray-200 transition-colors cursor-pointer"
+                    >
+                      Resend Verification Email
+                    </button>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-100 text-center">
+                    <button
+                      type="button"
+                      onClick={() => signOut(auth)}
+                      className="text-xs text-gray-400 hover:text-gray-600 font-medium cursor-pointer"
+                    >
+                      ← Sign Out & Use Another Email
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* STEP 2: Website Setup */}
-            {(step === 1 || step === 2) && (
+            {isEmailVerified && (step === 1 || step === 2) && (
               <div>
                 <h1 className="text-3xl font-black text-gray-900 mb-2">Setup Your Website</h1>
                 <p className="text-xs text-gray-500 mb-6 font-medium">Just a few details to provision your platform.</p>

@@ -6,7 +6,8 @@ import {
   signInWithPopup, 
   GoogleAuthProvider,
   sendPasswordResetEmail,
-  signInWithCustomToken
+  signInWithCustomToken,
+  sendEmailVerification
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc, query, collection, where, getDocs, deleteDoc } from '@/src/lib/firebase';
@@ -51,9 +52,24 @@ export default function Auth() {
   const [pendingSocialUser, setPendingSocialUser] = useState<{ user: any; profileData: any; targetPath: string } | null>(null);
   const [socialSaving, setSocialSaving] = useState(false);
 
+  // Email Verification Waiting State
+  const [awaitingVerificationEmail, setAwaitingVerificationEmail] = useState<string | null>(null);
+  const [pendingRedirectTarget, setPendingRedirectTarget] = useState<string>('/');
+  const [verificationSuccessNotice, setVerificationSuccessNotice] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isCheckingVerification, setIsCheckingVerification] = useState(false);
+
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/';
+
+  // Cooldown countdown timer
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
 
   const [ssoLoading, setSsoLoading] = useState(false);
 
@@ -108,6 +124,56 @@ export default function Auth() {
     setMode(newMode);
     setError(null);
     setResetSent(false);
+  };
+
+  const handleCheckVerification = async () => {
+    setIsCheckingVerification(true);
+    setError(null);
+    setVerificationSuccessNotice(null);
+    try {
+      if (auth.currentUser) {
+        await auth.currentUser.reload();
+        if (auth.currentUser.emailVerified) {
+          setVerificationSuccessNotice("🎉 Email verified successfully! Redirecting to company setup...");
+          try {
+            await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+              emailVerified: true,
+              updatedAt: serverTimestamp()
+            });
+          } catch (_) {}
+          setTimeout(() => {
+            navigate(pendingRedirectTarget || '/', { replace: true });
+          }, 1200);
+        } else {
+          setError("Email is not verified yet. Please check your inbox (and Spam/Junk folder) and click the verification link.");
+        }
+      }
+    } catch (checkErr: any) {
+      setError("Error checking verification: " + (checkErr.message || checkErr));
+    } finally {
+      setIsCheckingVerification(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (resendCooldown > 0) return;
+    setError(null);
+    setVerificationSuccessNotice(null);
+    try {
+      if (auth.currentUser) {
+        await sendEmailVerification(auth.currentUser);
+        const baseHost = window.location.origin;
+        fetch(`${baseHost}/api/mail/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: auth.currentUser.email })
+        }).catch(() => {});
+        setVerificationSuccessNotice("📧 Fresh verification email dispatched! Please check your inbox.");
+        setResendCooldown(60);
+      }
+    } catch (resendErr: any) {
+      setError("Failed to resend email: " + (resendErr.message || resendErr));
+    }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'apple') => {
@@ -390,6 +456,13 @@ export default function Auth() {
             });
           }
 
+          // --- Send Verification Email ---
+          try {
+            await sendEmailVerification(user);
+          } catch (verErr) {
+            console.warn('[Auth] Failed to send Firebase verification email:', verErr);
+          }
+
           // --- MAILJET: Trigger Welcome & Verification Emails ---
           try {
             const baseHost = window.location.origin;
@@ -406,6 +479,23 @@ export default function Auth() {
             }).catch(e => console.warn('[Mailjet] Verify fail', e));
           } catch (mailError) {
             console.warn('[Auth] Failed to send welcome/verification emails:', mailError);
+          }
+
+          let targetPath = from;
+          if (from === '/' || from === '/login') {
+            if (userRole === 'admin' || userRole === 'staff' || isTenantOwner) targetPath = '/admin';
+            else if (userRole === 'superadmin' || isSuperAdminEmail) targetPath = '/superadmin';
+            else if (userRole === 'supplier') targetPath = '/supplier';
+            else if (userRole === 'agent') targetPath = '/agent';
+            else targetPath = '/customer/dashboard';
+          }
+
+          // If not superadmin, halt and show the Email Verification Gate
+          if (!isSuperAdminEmail && userRole !== 'superadmin') {
+            setPendingRedirectTarget(targetPath);
+            setAwaitingVerificationEmail(user.email || email);
+            setResendCooldown(60);
+            return;
           }
         } else {
           // Double-check if the profile document exists in Firestore on Email Signin
@@ -556,7 +646,90 @@ export default function Auth() {
         )}
       </Link>
 
-      {pendingSocialUser ? (
+      {awaitingVerificationEmail ? (
+        <div className="w-full max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#00b272] flex items-center justify-center mx-auto mb-3 shadow-inner">
+              <Mail className="w-8 h-8 text-[#00b272] animate-bounce" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 mb-1.5">
+              Verify Your Email Address
+            </h2>
+            <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
+              We have dispatched a verification link to <strong className="font-mono text-gray-900 font-bold">{awaitingVerificationEmail}</strong>.
+            </p>
+          </div>
+
+          <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 mb-6 text-xs text-emerald-800 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-emerald-900">
+              <ShieldCheck className="w-4 h-4 text-[#00b272] shrink-0" />
+              <span>Anti-Spam & Security Protection</span>
+            </div>
+            <p className="text-[11px] leading-relaxed text-emerald-700">
+              Please open your email inbox and click the verification link before proceeding to set up your company workspace.
+            </p>
+          </div>
+
+          {error && (
+            <div className="mb-4 p-3.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+              <span className="font-medium">{error}</span>
+            </div>
+          )}
+
+          {verificationSuccessNotice && (
+            <div className="mb-4 p-3.5 bg-emerald-50 text-emerald-700 text-xs rounded-xl border border-emerald-100 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span className="font-medium">{verificationSuccessNotice}</span>
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={handleCheckVerification}
+              disabled={isCheckingVerification}
+              className="w-full bg-[#00A651] hover:bg-emerald-700 text-white py-3.5 rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+            >
+              {isCheckingVerification ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Checking Status...</span>
+                </>
+              ) : (
+                <>
+                  <span>I've Confirmed My Email — Continue</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendCooldown > 0}
+              className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl border border-gray-200 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              {resendCooldown > 0 ? `Resend Verification Email (${resendCooldown}s)` : 'Resend Verification Email'}
+            </button>
+          </div>
+
+          <div className="mt-6 text-center border-t border-gray-100 pt-4">
+            <button
+              type="button"
+              onClick={async () => {
+                await auth.signOut();
+                setAwaitingVerificationEmail(null);
+                setMode('signin');
+                setError(null);
+              }}
+              className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+            >
+              ← Use a different email / Back to Login
+            </button>
+          </div>
+        </div>
+      ) : pendingSocialUser ? (
         <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center mb-6">
             <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#00b272] flex items-center justify-center mx-auto mb-3 shadow-inner">

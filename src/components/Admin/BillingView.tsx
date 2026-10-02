@@ -44,6 +44,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [isUpdatingPlan, setIsUpdatingPlan] = useState<string | null>(null);
   const [isPayingInvoice, setIsPayingInvoice] = useState(false);
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   const activeTenantId = getActiveTenantId() || tenantData?.id || tenantData?.slug;
@@ -418,6 +419,45 @@ export const BillingView: React.FC<BillingViewProps> = ({
       setNotification({ type: 'error', message: `Invoice generation failed: ${err.message}` });
     } finally {
       setIsGeneratingInvoice(false);
+    }
+  };
+
+  // Handle cancel / pause subscription
+  const handleCancelSubscription = async () => {
+    if (!activeTenantId) return;
+    const confirmCancel = window.confirm(
+      "Are you sure you want to cancel your package subscription? Your workspace will remain accessible until the end of your current billing period."
+    );
+    if (!confirmCancel) return;
+
+    setIsCancelling(true);
+    try {
+      await setDoc(doc(db, 'tenants', activeTenantId), {
+        subscriptionStatus: 'cancelled',
+        status: 'cancelled',
+        cancelledAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      if (setTenantData) {
+        setTenantData((prev: any) => ({
+          ...prev,
+          subscriptionStatus: 'cancelled',
+          status: 'cancelled'
+        }));
+      }
+
+      setNotification({
+        type: 'success',
+        message: 'Subscription has been cancelled. Your workspace remains active until the end of the current billing cycle.'
+      });
+    } catch (err: any) {
+      setNotification({
+        type: 'error',
+        message: `Failed to cancel subscription: ${err.message}`
+      });
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -817,6 +857,17 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 </div>
               );
             })}
+          </div>
+
+          {/* Cancel Subscription Action */}
+          <div className="pt-2 text-center">
+            <button
+              onClick={handleCancelSubscription}
+              disabled={isCancelling}
+              className="text-xs text-rose-500 hover:text-rose-700 font-bold hover:underline transition-colors cursor-pointer"
+            >
+              {isCancelling ? 'Processing cancellation...' : 'Cancel or Pause Workspace Subscription →'}
+            </button>
           </div>
         </div>
       </div>
