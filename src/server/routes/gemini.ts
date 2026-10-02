@@ -1058,6 +1058,47 @@ Example:
 
 
 
+// API Route: Test Gemini API Key Connection Checker
+router.post("/test-connection", async (req, res) => {
+  try {
+    const { apiKey, tenantId } = req.body;
+    const resolvedKey = apiKey?.trim() || (tenantId ? await resolveTenantGeminiKey(tenantId) : null) || process.env.GEMINI_API_KEY?.trim();
+
+    if (!resolvedKey) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "No Gemini API key provided. Please enter an API key from Google AI Studio (https://aistudio.google.com)." 
+      });
+    }
+
+    const startTime = Date.now();
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey: resolvedKey });
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: "Hello! Ping check. Reply with one word: 'CONNECTED'."
+    });
+
+    const latency = Date.now() - startTime;
+    const replyText = response.text?.trim() || "OK";
+
+    return res.json({
+      success: true,
+      message: "Successfully connected to Google Gemini API!",
+      model: "gemini-2.5-flash",
+      latencyMs: latency,
+      sampleResponse: replyText
+    });
+  } catch (err: any) {
+    console.error("[Gemini Test Connection Error]:", err);
+    return res.status(400).json({
+      success: false,
+      error: err.message || "Failed to connect to Google Gemini API. Please verify the API key."
+    });
+  }
+});
+
 // API Route: Chatbot Endpoint
 router.post("/chatbot", async (req, res) => {
   try {

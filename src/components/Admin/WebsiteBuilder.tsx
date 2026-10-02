@@ -61,7 +61,7 @@ export interface WebsiteBuilderSettings {
 }
 
 interface WebsiteBuilderProps {
-  initialTab?: 'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp';
+  initialTab?: 'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp' | 'footerEmbed';
 }
 
 const DEFAULT_BLOCKS: BlockConfig[] = [
@@ -292,7 +292,7 @@ function TourPickerManager({
 
 export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilderProps = {}) {
   const { tenantId } = useTenant();
-  const [activeTab, setActiveTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp'>(
+  const [activeTab, setActiveTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'mobilePresets' | 'joytimeStudio' | 'androidApp' | 'footerEmbed'>(
     initialTab === 'mobilePresets' ? 'designPresets' : (initialTab || 'blocks')
   );
   const [presetDeviceTab, setPresetDeviceTab] = useState<'desktop' | 'mobile'>(
@@ -769,67 +769,226 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
         </button>
       </div>
 
-      <div className="flex border-b border-gray-200 overflow-x-auto">
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'siteSettings' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
-          onClick={() => setActiveTab('siteSettings')}
-        >
-          <div className="flex items-center gap-2"><Palette className="w-4 h-4" /> Site Setting (Branding & Style)</div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'blocks' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
-          onClick={() => setActiveTab('blocks')}
-        >
-          <div className="flex items-center gap-2"><LayoutTemplate className="w-4 h-4" /> Page Builder</div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'tours' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
-          onClick={() => setActiveTab('tours')}
-        >
-          <div className="flex items-center gap-2"><Star className="w-4 h-4 text-amber-500 fill-amber-400" /> Feature & Favorite Tours</div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'menus' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
-          onClick={() => setActiveTab('menus')}
-        >
-          <div className="flex items-center gap-2"><Menu className="w-4 h-4" /> Custom menu</div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap", activeTab === 'pages' ? "border-primary text-primary" : "border-transparent text-gray-500 hover:text-gray-700")}
-          onClick={() => setActiveTab('pages')}
-        >
-          <div className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> System Page Design</div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", (activeTab === 'designPresets' || activeTab === 'mobilePresets') ? "border-orange-500 text-orange-600 bg-orange-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
-          onClick={() => setActiveTab('designPresets')}
-        >
-          <div className="flex items-center gap-2">
-            <Sliders className="w-4 h-4 text-orange-500" />
-            <span>Design Preset (Mobile & Desktop)</span>
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-700 rounded-full">10 Desktop + 10 Mobile</span>
-          </div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", activeTab === 'joytimeStudio' ? "border-sky-600 text-sky-700 bg-sky-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
-          onClick={() => setActiveTab('joytimeStudio')}
-        >
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-sky-500" />
-            <span>JoyTime Mobile Customizer</span>
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-sky-100 text-sky-700 rounded-full">Colors & Banners</span>
-          </div>
-        </button>
-        <button
-          className={cn("py-4 px-6 font-bold border-b-2 transition-colors whitespace-nowrap relative", activeTab === 'androidApp' ? "border-emerald-600 text-emerald-700 bg-emerald-50/50" : "border-transparent text-gray-600 hover:text-gray-900")}
-          onClick={() => setActiveTab('androidApp')}
-        >
-          <div className="flex items-center gap-2">
-            <Smartphone className="w-4 h-4 text-emerald-500" />
-            <span>Android App Builder</span>
-            <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-full">APK Download</span>
-          </div>
-        </button>
+      {/* Redesigned Tab Navigation: 100% Visible Multi-Column Card Deck (No Slider, Zero Horizontal Scrolling) */}
+      <div className="bg-gray-100/90 p-3 rounded-2xl border border-gray-200/90 shadow-xs space-y-2">
+        <div className="flex items-center justify-between px-2 pt-1 pb-0.5">
+          <span className="text-[11px] font-black text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+            <LayoutGrid className="w-3.5 h-3.5 text-primary" />
+            Website Builder Navigation (All 9 Menus Visible)
+          </span>
+          <span className="text-[10px] text-gray-400 font-bold hidden md:inline">
+            Click any section below to customize your storefront
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          {/* 1. Site Setting (Branding & Style) */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'siteSettings'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-primary/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('siteSettings')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'siteSettings' ? "bg-primary text-white" : "bg-orange-50 text-primary")}>
+              <Palette className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Site Setting</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-orange-100 text-orange-800 rounded-md shrink-0">Brand</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Logo, Favicon & Brand Colors</span>
+            </div>
+          </button>
+
+          {/* 2. Page Builder */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'blocks'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-blue-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('blocks')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'blocks' ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-600")}>
+              <LayoutTemplate className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Page Builder</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 rounded-md shrink-0">Blocks</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Frontpage Section Hierarchy</span>
+            </div>
+          </button>
+
+          {/* 3. Feature & Favorite Tours */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'tours'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-amber-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('tours')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'tours' ? "bg-amber-500 text-white" : "bg-amber-50 text-amber-600")}>
+              <Star className="w-5 h-5 fill-current" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Feature & Favorite Tours</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-amber-100 text-amber-800 rounded-md shrink-0">Curated</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Handpicked Expeditions & Picks</span>
+            </div>
+          </button>
+
+          {/* 4. Custom Menu */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'menus'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-emerald-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('menus')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'menus' ? "bg-emerald-600 text-white" : "bg-emerald-50 text-emerald-600")}>
+              <Menu className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Custom Menu</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-md shrink-0">Nav</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Header & Footer Navigation Links</span>
+            </div>
+          </button>
+
+          {/* 5. System Page Design */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'pages'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-indigo-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('pages')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'pages' ? "bg-indigo-600 text-white" : "bg-indigo-50 text-indigo-600")}>
+              <ImageIcon className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">System Page Design</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-800 rounded-md shrink-0">Headers</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Booking, Checkout & Tour Headers</span>
+            </div>
+          </button>
+
+          {/* 6. Design Presets */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              (activeTab === 'designPresets' || activeTab === 'mobilePresets')
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-rose-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('designPresets')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", (activeTab === 'designPresets' || activeTab === 'mobilePresets') ? "bg-rose-500 text-white" : "bg-rose-50 text-rose-600")}>
+              <Sliders className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Design Presets</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-rose-100 text-rose-800 rounded-md shrink-0">10+10</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">10 Desktop & 10 Mobile Themes</span>
+            </div>
+          </button>
+
+          {/* 7. JoyTime Mobile */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'joytimeStudio'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-sky-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('joytimeStudio')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'joytimeStudio' ? "bg-sky-500 text-white" : "bg-sky-50 text-sky-600")}>
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">JoyTime Studio</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-sky-100 text-sky-800 rounded-md shrink-0">Mobile</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Mobile App Storefront Customizer</span>
+            </div>
+          </button>
+
+          {/* 8. Android App Builder */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'androidApp'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-teal-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('androidApp')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'androidApp' ? "bg-teal-600 text-white" : "bg-teal-50 text-teal-600")}>
+              <Smartphone className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Android App Builder</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-teal-100 text-teal-800 rounded-md shrink-0">APK</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Generate Android APK / Bundle</span>
+            </div>
+          </button>
+
+          {/* 9. Footer Embedded Code & Directory Badges (Inline after Android App!) */}
+          <button
+            type="button"
+            className={cn(
+              "flex items-center gap-3 p-3.5 rounded-xl transition-all text-left cursor-pointer border",
+              activeTab === 'footerEmbed'
+                ? "bg-white text-gray-900 shadow-sm border-gray-300 font-black ring-2 ring-purple-500/20"
+                : "bg-white/70 hover:bg-white text-gray-700 border-gray-200/80 hover:border-gray-300"
+            )}
+            onClick={() => setActiveTab('footerEmbed')}
+          >
+            <div className={cn("p-2.5 rounded-xl shrink-0", activeTab === 'footerEmbed' ? "bg-purple-600 text-white" : "bg-purple-50 text-purple-600")}>
+              <Code className="w-5 h-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-xs font-black tracking-tight text-gray-900 block truncate">Footer Embedded Code</span>
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 rounded-md shrink-0">Badges</span>
+              </div>
+              <span className="text-[11px] text-gray-500 font-medium block truncate">Row.so, Reviews & Partner Badges</span>
+            </div>
+          </button>
+        </div>
       </div>
 
       {activeTab === 'siteSettings' && (
@@ -920,161 +1079,6 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
               >
                 Apply Site Style
               </button>
-            </div>
-          </div>
-
-          {/* Footer Embedded Code Card (Directory Badges & Custom Scripts) */}
-          <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100">
-                  <Code className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-base font-black text-gray-900">Footer Embedded Code & Directory Badges</h3>
-                    <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800 rounded-full">
-                      Build Setting
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    Embed custom HTML, directory badges (e.g. Row.so, Product Hunt, SaaSHub, Uneed, Microlaunch), verification badges, or custom scripts into your website footer.
-                  </p>
-                </div>
-              </div>
-
-              {/* Master Toggle */}
-              <div className="flex items-center gap-3 shrink-0">
-                <span className="text-xs font-bold text-gray-700">
-                  {(settings?.footerEmbedEnabled ?? true) ? 'Enabled' : 'Disabled'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextVal = !(settings?.footerEmbedEnabled ?? true);
-                    setSettings(prev => prev ? ({ ...prev, footerEmbedEnabled: nextVal }) : null);
-                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedEnabled: nextVal }));
-                    updateBlock('footer', { embedEnabled: nextVal });
-                  }}
-                  className={cn(
-                    "w-12 h-6 rounded-full transition-colors relative cursor-pointer",
-                    (settings?.footerEmbedEnabled ?? true) ? 'bg-primary' : 'bg-gray-300'
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform",
-                      (settings?.footerEmbedEnabled ?? true) ? 'left-6' : 'left-0.5'
-                    )}
-                  />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick Templates Buttons */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">
-                  Embedded HTML / Script Snippet
-                </label>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] text-gray-400 font-semibold mr-1">Quick presets:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const snippet = `<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`;
-                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
-                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
-                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
-                    }}
-                    className="px-2.5 py-1 text-[10px] font-bold bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
-                  >
-                    + Row.so Badge
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const snippet = `<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://api.producthunt.com/widgets/embed.image?post_id=tripbone&theme=light" alt="Featured on Product Hunt" width="180" height="40" />\n</a>`;
-                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
-                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
-                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
-                    }}
-                    className="px-2.5 py-1 text-[10px] font-bold bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg transition"
-                  >
-                    + Product Hunt
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const snippet = `<a href="https://www.saashub.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://www.saashub.com/images/badges/badge-featured.png" alt="Featured on SaaSHub" width="150" height="40" />\n</a>`;
-                      setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
-                      setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
-                      updateBlock('footer', { embedCode: snippet, embedEnabled: true });
-                    }}
-                    className="px-2.5 py-1 text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg transition"
-                  >
-                    + SaaSHub
-                  </button>
-                  {(settings?.footerEmbedCode || brandingSettings.footerEmbedCode) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSettings(prev => prev ? ({ ...prev, footerEmbedCode: '' }) : null);
-                        setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: '' }));
-                        updateBlock('footer', { embedCode: '' });
-                      }}
-                      className="px-2 py-1 text-[10px] font-bold text-red-500 hover:bg-red-50 rounded-lg transition"
-                    >
-                      Clear
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <textarea
-                rows={5}
-                value={settings?.footerEmbedCode ?? brandingSettings.footerEmbedCode ?? ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setSettings(prev => prev ? ({ ...prev, footerEmbedCode: val }) : null);
-                  setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: val }));
-                  updateBlock('footer', { embedCode: val });
-                }}
-                placeholder={`<!-- Paste directory embed code or verification badges here, e.g.: -->\n<a href="https://row.so" target="_blank">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" />\n</a>`}
-                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono text-emerald-400 placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-primary/40 leading-relaxed"
-              />
-              <p className="text-[11px] text-gray-500 leading-normal">
-                Supported: Standard HTML links, image badges, SVG badges, and script widgets. Directory websites require this code on your footer to verify and approve your directory listing.
-              </p>
-            </div>
-
-            {/* Live Visual Preview */}
-            <div className="space-y-2 pt-2 border-t border-gray-100">
-              <div className="flex items-center justify-between">
-                <label className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-primary" />
-                  Footer Live Preview
-                </label>
-                <span className="text-[10px] text-gray-400">Previewing how it appears in the footer</span>
-              </div>
-
-              <div className="p-6 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col items-center justify-center min-h-[90px] text-center">
-                {(settings?.footerEmbedCode?.trim() || brandingSettings.footerEmbedCode?.trim()) ? (
-                  <div className="w-full">
-                    <p className="text-[10px] uppercase tracking-widest font-mono text-gray-400 mb-2">Rendered Output:</p>
-                    <CustomFooterEmbed html={settings?.footerEmbedCode || brandingSettings.footerEmbedCode} />
-                  </div>
-                ) : (
-                  <div className="text-gray-400 text-xs italic flex flex-col items-center gap-1">
-                    <Code className="w-5 h-5 text-gray-300" />
-                    <span>No embed code provided yet. Paste your directory badge snippet above to preview it here.</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-between">
-              <span className="text-xs text-gray-400">Click <strong>SAVE CHANGES</strong> at the top to publish changes to your live site.</span>
             </div>
           </div>
         </div>
@@ -3196,6 +3200,179 @@ export default function WebsiteBuilder({ initialTab = 'blocks' }: WebsiteBuilder
               setSettings(prev => prev ? ({ ...prev, androidAppSettings: newAppSettings }) : prev);
             }}
           />
+        </div>
+      )}
+
+      {/* 9. Independent Footer Embedded Code & Directory Badges Tab */}
+      {activeTab === 'footerEmbed' && (
+        <div className="space-y-6 animate-in fade-in max-w-4xl">
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 md:p-8 shadow-xs space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-600 shrink-0">
+                  <Code className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-gray-900">Footer Embedded Code & Directory Badges</h3>
+                  <p className="text-xs text-gray-500">Inject custom HTML verification badges, partner directory links, or tracking scripts into your storefront footer.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-gray-600">
+                  {(settings?.footerEmbedEnabled ?? true) ? 'Active on Storefront' : 'Disabled'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextVal = !(settings?.footerEmbedEnabled ?? true);
+                    updateBlock('footer', { embedEnabled: nextVal });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedEnabled: nextVal }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedEnabled: nextVal }));
+                  }}
+                  className={cn(
+                    "w-11 h-6 rounded-full transition-colors relative cursor-pointer",
+                    (settings?.footerEmbedEnabled ?? true) ? 'bg-purple-600' : 'bg-gray-300'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "w-5 h-5 rounded-full bg-white absolute top-0.5 transition-transform",
+                      (settings?.footerEmbedEnabled ?? true) ? 'left-5.5' : 'left-0.5'
+                    )}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Quick 1-Click Badges / Presets */}
+            <div className="p-4 bg-purple-50/60 border border-purple-100 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-black uppercase text-purple-900 tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                  1-Click Directory Badges & Presets:
+                </span>
+                <span className="text-[10px] text-purple-700 font-bold">Click to load snippet</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const snippet = `<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`;
+                    updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                  }}
+                  className="px-3 py-1.5 bg-white hover:bg-purple-100 text-purple-900 border border-purple-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Row.so Badge</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const snippet = `<a href="https://www.producthunt.com" target="_blank" rel="noopener noreferrer">\n  <img src="https://api.producthunt.com/widgets/embed.image?post_id=tripbone&theme=light" alt="Featured on Product Hunt" width="180" height="40" />\n</a>`;
+                    updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                  }}
+                  className="px-3 py-1.5 bg-white hover:bg-orange-100 text-orange-900 border border-orange-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Product Hunt Badge</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const snippet = `<div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;font-family:sans-serif;font-size:12px;font-weight:bold;color:#0f172a;box-shadow:0 1px 2px rgba(0,0,0,0.05);"><span style="color:#059669;">★ 4.9 / 5.0</span><span>Verified on Google Reviews</span></div>`;
+                    updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                  }}
+                  className="px-3 py-1.5 bg-white hover:bg-emerald-100 text-emerald-900 border border-emerald-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Google Reviews Badge</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const snippet = `<div style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;background:#00b67a;color:#ffffff;border-radius:10px;font-family:sans-serif;font-size:12px;font-weight:bold;"><span style="font-size:14px;">★</span><span>Trustpilot Rated Excellent</span></div>`;
+                    updateBlock('footer', { embedCode: snippet, embedEnabled: true });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: snippet, footerEmbedEnabled: true }));
+                  }}
+                  className="px-3 py-1.5 bg-white hover:bg-teal-100 text-teal-900 border border-teal-200 rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>+ Trustpilot Badge</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    updateBlock('footer', { embedCode: '', embedEnabled: false });
+                    setSettings(prev => prev ? ({ ...prev, footerEmbedCode: '', footerEmbedEnabled: false }) : null);
+                    setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: '', footerEmbedEnabled: false }));
+                  }}
+                  className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Clear Snippet
+                </button>
+              </div>
+            </div>
+
+            {/* Code Editor */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center justify-between">
+                <span>Custom HTML / Script Snippet</span>
+                <span className="text-[10px] text-gray-400 font-mono">Rendered automatically above footer copyright</span>
+              </label>
+              <textarea
+                rows={6}
+                value={settings?.footerEmbedCode ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  updateBlock('footer', { embedCode: val });
+                  setSettings(prev => prev ? ({ ...prev, footerEmbedCode: val }) : null);
+                  setBrandingSettings((prev: any) => ({ ...prev, footerEmbedCode: val }));
+                }}
+                placeholder={`<a href="https://row.so" target="_blank" rel="noopener noreferrer">\n  <img src="https://row.so/badge.svg" alt="Featured on Row.so" width="140" height="38" />\n</a>`}
+                className="w-full p-4 bg-slate-950 border border-slate-800 rounded-2xl text-xs font-mono text-emerald-400 focus:outline-none focus:ring-2 focus:ring-purple-500/40 leading-relaxed shadow-inner"
+              />
+            </div>
+
+            {/* Live Visual Preview */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">Live Storefront Footer Preview</label>
+                <span className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full font-bold">Interactive Sandbox</span>
+              </div>
+              <div className="p-6 bg-slate-900 border border-slate-800 rounded-2xl text-center space-y-3 shadow-md">
+                <p className="text-[10px] uppercase font-mono text-slate-400 tracking-widest">Storefront Footer Section</p>
+                <div className="flex items-center justify-center min-h-[50px] p-4 bg-slate-950/80 rounded-xl border border-slate-800/80">
+                  {settings?.footerEmbedCode ? (
+                    <CustomFooterEmbed html={settings.footerEmbedCode} />
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No custom badges inserted yet. Click one of the presets above to preview.</p>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-400">© {new Date().getFullYear()} {brandingSettings.businessName || 'Tripbone Storefront'}. All rights reserved.</p>
+              </div>
+            </div>
+
+            {/* Save Button for this tab */}
+            <div className="flex justify-end pt-4 border-t border-gray-100">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>Save Footer Embed Settings</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

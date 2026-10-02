@@ -544,7 +544,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
     return 'dashboard';
   });
   const [settingsActiveTab, setSettingsActiveTab] = useState<string>('all');
-  const [websiteBuilderTab, setWebsiteBuilderTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'joytimeStudio' | 'androidApp'>(() => {
+  const [websiteBuilderTab, setWebsiteBuilderTab] = useState<'siteSettings' | 'blocks' | 'tours' | 'menus' | 'pages' | 'designPresets' | 'joytimeStudio' | 'androidApp' | 'footerEmbed'>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const menu = params.get('menu');
@@ -556,6 +556,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       if (menu === 'wb-presets') return 'designPresets';
       if (menu === 'wb-joytime') return 'joytimeStudio';
       if (menu === 'wb-android-builder') return 'androidApp';
+      if (menu === 'wb-footer-embed') return 'footerEmbed';
     }
     return 'blocks';
   });
@@ -664,6 +665,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         'wb-presets': 'website-builder-group',
         'wb-joytime': 'website-builder-group',
         'wb-android-builder': 'website-builder-group',
+        'wb-footer-embed': 'website-builder-group',
         'website-builder': 'website-builder-group',
         'users': 'users-group',
         'access-roles': 'users-group',
@@ -1570,7 +1572,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           { id: 'wb-pages', label: 'System Page Design' },
           { id: 'wb-presets', label: 'Design Preset (Mobile & Desktop)' },
           { id: 'wb-joytime', label: 'JoyTime Mobile Customizer' },
-          { id: 'wb-android-builder', label: 'Android App Builder (APK)' }
+          { id: 'wb-android-builder', label: 'Android App Builder (APK)' },
+          { id: 'wb-footer-embed', label: 'Footer Embedded Code & Badges' }
         ]
       },
       { 
@@ -1653,6 +1656,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       'wb-menus': 'Custom menu',
       'wb-pages': 'System Page Design',
       'wb-presets': 'Design Preset (Mobile & Desktop)',
+      'wb-android-builder': 'Android App Builder (APK)',
+      'wb-footer-embed': 'Footer Embedded Code & Badges',
       'users': 'All Users',
       'add-user-trigger': 'Add Users',
       'access-roles': 'Roles & Permissions',
@@ -5660,7 +5665,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                             (child.id === 'wb-pages' && websiteBuilderTab === 'pages') ||
                             (child.id === 'wb-presets' && websiteBuilderTab === 'designPresets') ||
                             (child.id === 'wb-joytime' && websiteBuilderTab === 'joytimeStudio') ||
-                            (child.id === 'wb-android-builder' && websiteBuilderTab === 'androidApp')
+                            (child.id === 'wb-android-builder' && websiteBuilderTab === 'androidApp') ||
+                            (child.id === 'wb-footer-embed' && websiteBuilderTab === 'footerEmbed')
                           )) ||
                           (activeMenu === 'coupons' && child.id === 'coupons') ||
                           (activeMenu === 'popups-manager' && child.id === 'popups-manager') ||
@@ -5699,6 +5705,9 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                               } else if (child.id === 'wb-android-builder') {
                                   setActiveMenu('website-builder');
                                   setWebsiteBuilderTab('androidApp');
+                              } else if (child.id === 'wb-footer-embed') {
+                                  setActiveMenu('website-builder');
+                                  setWebsiteBuilderTab('footerEmbed');
                               } else if (child.id === 'company-info' || child.id === 'seo' || child.id === 'domain') {
                                   setActiveMenu('general-settings');
                                   setSettingsActiveTab(child.id);
@@ -6221,7 +6230,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
           )}
           {activeMenu === 'communication' && (
             <div className="space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
-              <CommunicationManager />
+              <CommunicationManager initialTab={settingsActiveTab === 'whatsapp' ? 'whatsapp' : (settingsActiveTab === 'ai' || settingsActiveTab === 'gemini') ? 'gemini' : 'email'} />
             </div>
           )}
           {activeMenu === 'payment-settings' && (

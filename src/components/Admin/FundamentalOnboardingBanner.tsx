@@ -190,8 +190,54 @@ export const FundamentalOnboardingBanner: React.FC<FundamentalOnboardingBannerPr
     navigate('/docs/fundamental-setup');
   };
 
-  if (isDismissed && isAllCompleted) {
-    return null;
+  if (isDismissed) {
+    return (
+      <div className={cn(
+        "flex flex-col sm:flex-row items-start sm:items-center justify-between bg-white border border-orange-200/90 rounded-2xl px-5 py-3.5 shadow-xs hover:border-orange-300 transition-all gap-3",
+        className
+      )}>
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "h-9 w-9 rounded-xl flex items-center justify-center shrink-0 shadow-xs",
+            isAllCompleted ? "bg-emerald-100 text-emerald-700" : "bg-orange-100 text-orange-700"
+          )}>
+            {isAllCompleted ? <Check className="h-5 w-5 stroke-[2.5]" /> : <Rocket className="h-4 w-4" />}
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-gray-900 flex flex-wrap items-center gap-2">
+              <span>Fundamental Onboarding Setup</span>
+              <span className={cn(
+                "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider",
+                isAllCompleted ? "bg-emerald-100 text-emerald-800" : "bg-orange-100 text-orange-800"
+              )}>
+                {completedCount}/{tasks.length} Completed ({progressPercent}%)
+              </span>
+              {isAllCompleted && (
+                <span className="text-[10px] text-emerald-700 font-bold hidden md:inline">
+                  🎉 Ready for live sales!
+                </span>
+              )}
+            </h4>
+            <p className="text-[11px] text-gray-500 font-medium">
+              Milestone checklist hidden. Click &apos;Show Fundamental Onboarding&apos; anytime to review setup milestones.
+            </p>
+          </div>
+        </div>
+
+        <button
+          onClick={() => {
+            setIsDismissed(false);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('tripbone_onboarding_dismissed');
+            }
+          }}
+          className="px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shrink-0 shadow-xs cursor-pointer"
+        >
+          <Rocket className="w-3.5 h-3.5" />
+          <span>Show Fundamental Onboarding</span>
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -236,15 +282,15 @@ export const FundamentalOnboardingBanner: React.FC<FundamentalOnboardingBannerPr
           </div>
         </div>
 
-        {/* Action Controls */}
-        <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
+        {/* Action Controls: Prominent Close and Show / Docs Buttons */}
+        <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
           <button
             onClick={handleOpenDocs}
-            className="px-3.5 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all hover:border-primary hover:text-primary"
+            className="px-3 py-2 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all hover:border-primary hover:text-primary"
             title="Read Complete Documentation on docs.tripbone.com/fundamental-setup"
           >
             <BookOpen className="h-4 w-4 text-primary" />
-            <span className="hidden sm:inline">docs.tripbone.com/</span>fundamental-setup
+            <span className="hidden lg:inline">Docs Guide</span>
             <ExternalLink className="h-3 w-3 text-gray-400" />
           </button>
 
@@ -256,15 +302,20 @@ export const FundamentalOnboardingBanner: React.FC<FundamentalOnboardingBannerPr
             {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
 
-          {isAllCompleted && (
-            <button
-              onClick={handleDismiss}
-              className="p-2 hover:bg-gray-100 rounded-xl text-gray-400 hover:text-gray-600 transition-colors"
-              title="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+          {/* User Close Block Button: Setup Done or Close */}
+          <button
+            onClick={handleDismiss}
+            className={cn(
+              "px-3.5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-xs cursor-pointer border",
+              isAllCompleted
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                : "bg-white hover:bg-gray-100 text-gray-700 border-gray-300 hover:border-gray-400"
+            )}
+            title={isAllCompleted ? "Setup Completed! Close this banner" : "Close and hide this onboarding checklist"}
+          >
+            {isAllCompleted ? <CheckCircle2 className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5 text-gray-500" />}
+            <span>{isAllCompleted ? "Setup Done — Close" : "Close Onboarding"}</span>
+          </button>
         </div>
       </div>
 
