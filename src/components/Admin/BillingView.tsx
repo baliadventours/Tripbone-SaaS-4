@@ -46,7 +46,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  const activeTenantId = getActiveTenantId() || tenantData?.id;
+  const activeTenantId = getActiveTenantId() || tenantData?.id || tenantData?.slug;
 
   // Realtime listener for invoices scoped to this workspace
   useEffect(() => {
@@ -56,13 +56,27 @@ export const BillingView: React.FC<BillingViewProps> = ({
       const q = query(collection(db, 'invoices'), where('tenantId', '==', activeTenantId));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const list: any[] = [];
+        const todayTime = Date.now();
         snapshot.forEach((d) => {
-          list.push({ id: d.id, ...d.data() });
+          const data = d.data();
+          let st = (data.status || '').toUpperCase();
+          const isPaid = st === 'PAID';
+          const isLife = data.billingInterval === 'lifetime' || String(data.dueDate || '').toLowerCase().includes('lifetime');
+          const dueMs = data.dueDate && !isLife ? new Date(data.dueDate).getTime() : 0;
+          const isPastDue = !isPaid && !isLife && (
+            st === 'OVERDUE' ||
+            (dueMs > 0 && dueMs < todayTime) ||
+            (tenantData?.trialEnds && new Date(tenantData.trialEnds).getTime() < todayTime && tenantData.status === 'past_due')
+          );
+
+          if (isPastDue && !isPaid) {
+            st = 'OVERDUE';
+          }
+
+          list.push({ id: d.id, ...data, status: st, isOverdue: isPastDue });
         });
         list.sort((a, b) => new Date(b.createdAt || b.invoiceDate || 0).getTime() - new Date(a.createdAt || a.invoiceDate || 0).getTime());
-        if (list.length > 0) {
-          setInvoices(list);
-        }
+        setInvoices(list);
       }, (err) => {
         console.warn("Realtime invoices listener note:", err);
       });
@@ -71,13 +85,18 @@ export const BillingView: React.FC<BillingViewProps> = ({
     } catch (e) {
       console.warn("Error setting up invoice listener:", e);
     }
-  }, [activeTenantId]);
+  }, [activeTenantId, tenantData?.trialEnds, tenantData?.status]);
 
   useEffect(() => {
     if (tenantInvoices && tenantInvoices.length > 0 && invoices.length === 0) {
       setInvoices(tenantInvoices);
     }
   }, [tenantInvoices, invoices.length]);
+
+  // Overdue subscription invoices calculation
+  const overdueInvoices = useMemo(() => {
+    return invoices.filter(inv => inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE');
+  }, [invoices]);
 
   // Sync billing cycle with tenantData if lifetime
   useEffect(() => {
@@ -101,8 +120,8 @@ export const BillingView: React.FC<BillingViewProps> = ({
           body: JSON.stringify({
             tenantId: activeTenantId,
             companyName: tenantData?.companyName || 'Operator Workspace',
-            plan: tenantData?.plan || 'business',
-            billingInterval: tenantData?.billingInterval || 'lifetime',
+            plan: tenantData?.plan || 'starter',
+            billingInterval: tenantData?.billingInterval || 'monthly',
             trialEnds: tenantData?.trialEnds
           })
         });
@@ -243,16 +262,33 @@ export const BillingView: React.FC<BillingViewProps> = ({
         }));
       }
 
-      // 4. Refresh invoices list
+      // 4. Refresh invoices list & synchronize any unpaid invoices in Firestore
+      const newPlanAmt = chosenInterval === 'lifetime' 
+        ? `$${pkg.lifetimePrice || 499}.00`
+        : chosenInterval === 'yearly' 
+        ? `$${pkg.yearlyPrice * 12}.00`
+        : `$${pkg.monthlyPrice}.00`;
+
+      for (const inv of invoices) {
+        if (inv.status !== 'PAID') {
+          try {
+            await setDoc(doc(db, 'invoices', inv.id), {
+              plan: `${pkg.name} (${chosenInterval.toUpperCase()})`,
+              billingInterval: chosenInterval,
+              amount: newPlanAmt,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+          } catch (syncErr) {
+            console.warn("Direct Firestore invoice update warning:", syncErr);
+          }
+        }
+      }
+
       setInvoices((prev) => 
         prev.map(inv => inv.status !== 'PAID' ? {
           ...inv,
           plan: `${pkg.name} (${chosenInterval.toUpperCase()})`,
-          amount: chosenInterval === 'lifetime' 
-            ? `$${pkg.lifetimePrice || 1999}.00`
-            : chosenInterval === 'yearly' 
-            ? `$${pkg.yearlyPrice * 12}.00`
-            : `$${pkg.monthlyPrice}.00`
+          amount: newPlanAmt
         } : inv)
       );
 
@@ -277,21 +313,27 @@ export const BillingView: React.FC<BillingViewProps> = ({
     setIsPayingInvoice(true);
     setNotification(null);
 
+    const nowIso = new Date().toISOString();
+    const paidAmt = invoice.amount || '$0.00';
+
     try {
       // 1. Direct Firestore write
       try {
         await setDoc(doc(db, 'invoices', invoice.id), {
           status: 'PAID',
-          paidAt: new Date().toISOString(),
+          paidAt: nowIso,
+          paidAmount: paidAmt,
+          balanceDue: '$0.00',
           paymentMethod: method,
-          updatedAt: new Date().toISOString()
+          updatedAt: nowIso
         }, { merge: true });
 
         await setDoc(doc(db, 'tenants', activeTenantId), {
           status: 'active',
           manualPaymentPending: false,
           subscriptionStatus: 'active',
-          updatedAt: new Date().toISOString()
+          trialEnds: 'Subscription Active',
+          updatedAt: nowIso
         }, { merge: true });
       } catch (fsErr: any) {
         console.warn("Direct Firestore pay update warning (using server API):", fsErr.message);
@@ -304,7 +346,8 @@ export const BillingView: React.FC<BillingViewProps> = ({
         body: JSON.stringify({
           tenantId: activeTenantId,
           invoiceId: invoice.id,
-          paymentMethod: method
+          paymentMethod: method,
+          amount: paidAmt
         })
       });
 
@@ -314,7 +357,14 @@ export const BillingView: React.FC<BillingViewProps> = ({
       }
 
       // 3. Update local invoice state
-      setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { ...inv, status: 'PAID', paymentMethod: method } : inv));
+      setInvoices(prev => prev.map(inv => inv.id === invoice.id ? { 
+        ...inv, 
+        status: 'PAID', 
+        paidAmount: paidAmt,
+        balanceDue: '$0.00',
+        isOverdue: false,
+        paymentMethod: method 
+      } : inv));
       
       if (setTenantData) {
         setTenantData((prev: any) => ({
@@ -415,6 +465,37 @@ export const BillingView: React.FC<BillingViewProps> = ({
           <button onClick={() => setNotification(null)} className="p-1 hover:bg-black/5 rounded-lg">
             <X className="w-4 h-4" />
           </button>
+        </div>
+      )}
+
+      {/* Overdue Invoice Alert Banner */}
+      {overdueInvoices.length > 0 && (
+        <div className="bg-gradient-to-r from-rose-500/15 via-red-500/10 to-rose-500/5 border-2 border-rose-500/40 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xs animate-in fade-in">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 bg-rose-600 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-xs">
+                <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
+                <span>Overdue Subscription Invoice</span>
+              </div>
+              <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
+                Payment Past Due: Settle Invoice #{overdueInvoices[0]?.no || overdueInvoices[0]?.id}
+              </h3>
+              <p className="text-sm text-gray-600 font-medium leading-relaxed">
+                Your workspace subscription invoice for <strong className="text-rose-700 font-black">{overdueInvoices[0]?.amount}</strong> was due on <strong>{overdueInvoices[0]?.dueDate}</strong>. 
+                Please complete payment now to prevent automated booking engine interruption and account suspension.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setSelectedInvoiceForPayment(overdueInvoices[0])}
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-rose-600/25 transition-all cursor-pointer animate-bounce"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Pay Overdue Invoice ({overdueInvoices[0]?.amount})</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -580,6 +661,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
                                 <CheckCircle2 className="w-3 h-3" />
                                 <span>Paid</span>
                               </span>
+                            ) : (inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? (
+                              <span className="bg-rose-50 border border-rose-300 text-rose-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1 shadow-2xs">
+                                <AlertCircle className="w-3 h-3 text-rose-600 animate-pulse" />
+                                <span>Overdue</span>
+                              </span>
                             ) : (
                               <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1">
                                 <Clock className="w-3 h-3" />
@@ -592,11 +678,16 @@ export const BillingView: React.FC<BillingViewProps> = ({
                               {!isPaid && (
                                 <button
                                   onClick={() => setSelectedInvoiceForPayment(inv)}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all cursor-pointer"
-                                  title="Pay Invoice Before Trial Ends"
+                                  className={cn(
+                                    "font-black text-[11px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all cursor-pointer",
+                                    (inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE')
+                                      ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
+                                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                  )}
+                                  title={(inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? "Pay Overdue Invoice" : "Pay Subscription Invoice"}
                                 >
                                   <CreditCard className="w-3.5 h-3.5" />
-                                  <span>Pay Now</span>
+                                  <span>{(inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? 'Pay Overdue' : 'Pay Now'}</span>
                                 </button>
                               )}
                               <button 

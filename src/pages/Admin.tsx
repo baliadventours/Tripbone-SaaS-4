@@ -808,6 +808,24 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
   const [commSettings, setCommSettings] = useState<CommunicationSettings | null>(null);
   const [siteSettings, setSiteSettings] = useState<SiteSettings | null>(null);
   const [tenantData, setTenantData] = useState<any>(null);
+
+  // Overdue subscription invoices calculation for the tenant workspace
+  const overdueSubscriptionInvoices = useMemo(() => {
+    const today = new Date();
+    return tenantInvoices.filter(inv => {
+      const isPaid = (inv.status || '').toUpperCase() === 'PAID';
+      if (isPaid) return false;
+      const isLifetime = inv.billingInterval === 'lifetime' || String(inv.dueDate || '').toLowerCase().includes('lifetime');
+      if (isLifetime) return false;
+      if ((inv.status || '').toUpperCase() === 'OVERDUE') return true;
+      if (inv.dueDate) {
+        const due = new Date(inv.dueDate);
+        if (!isNaN(due.getTime()) && due.getTime() < today.getTime()) return true;
+      }
+      if (tenantData?.trialEnds && new Date(tenantData.trialEnds).getTime() < today.getTime() && tenantData.status === 'past_due') return true;
+      return false;
+    });
+  }, [tenantInvoices, tenantData]);
   const [selectedPartner, setSelectedPartner] = useState<UserProfile | null>(null);
   
   // Shared Booking State for Detail Modal
@@ -1313,7 +1331,7 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       setLabels(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TourLabel)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'tourLabels'));
 
-    const tenantIdForInvoices = getActiveTenantId();
+    const tenantIdForInvoices = getActiveTenantId() || tenantData?.id || tenantData?.slug;
     let unsubscribeInvoices = () => {};
     if (tenantIdForInvoices) {
       const q = query(collection(db, 'invoices'), where('tenantId', '==', tenantIdForInvoices));
@@ -5775,6 +5793,9 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                 { id: 'logout-trigger', label: 'Log Out', icon: LogOut }
               ].map((item) => {
                 const isActive = activeMenu === item.id;
+                const isBilling = item.id === 'billing';
+                const hasOverdueSubs = isBilling && overdueSubscriptionInvoices.length > 0;
+
                 return (
                   <button
                     key={item.id}
@@ -5796,8 +5817,13 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
                         : "text-gray-500 hover:bg-gray-50 hover:text-gray-900"
                     )}
                   >
-                    <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : item.id === 'logout-trigger' ? "text-red-400 group-hover:text-red-700" : "text-gray-400 group-hover:text-gray-900")} />
+                    <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-primary" : item.id === 'logout-trigger' ? "text-red-400 group-hover:text-red-700" : hasOverdueSubs ? "text-rose-600 animate-pulse" : "text-gray-400 group-hover:text-gray-900")} />
                     {isSidebarOpen && <span className="font-bold text-sm tracking-tight">{item.label}</span>}
+                    {isSidebarOpen && hasOverdueSubs && (
+                      <span className="ml-auto px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-rose-600 text-white animate-pulse shadow-xs">
+                        OVERDUE
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -5947,6 +5973,36 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         )}
 
         <div className={isCentralPortal ? "p-0" : "p-4 md:p-8"}>
+          {/* Overdue Subscription Alert Banner */}
+          {!isCentralPortal && overdueSubscriptionInvoices.length > 0 && activeMenu !== 'billing' && (
+            <div className="mb-6 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white p-5 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-top-3 border-2 border-red-400/40">
+              <div className="flex items-start md:items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0 shadow-inner">
+                  <Icons.AlertCircle className="w-6 h-6 text-white animate-pulse" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-widest bg-black/30 px-2 py-0.5 rounded-md border border-white/20">Payment Past Due</span>
+                    <h4 className="text-base font-black text-white tracking-tight">
+                      Workspace Subscription Invoice #{overdueSubscriptionInvoices[0].no || overdueSubscriptionInvoices[0].id} is Overdue
+                    </h4>
+                  </div>
+                  <p className="text-xs text-rose-100 font-medium mt-1 leading-relaxed">
+                    Amount Past Due: <strong className="text-white font-black underline">{overdueSubscriptionInvoices[0].amount}</strong> (Due {overdueSubscriptionInvoices[0].dueDate}). 
+                    Please settle this invoice immediately to maintain continuous tour reservations, automated client messaging, and payment gateways.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveMenu('billing')}
+                className="px-6 py-3 bg-white hover:bg-rose-50 text-rose-700 font-black text-xs uppercase tracking-wider rounded-xl shadow-lg transition-all shrink-0 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Icons.CreditCard className="w-4 h-4" />
+                <span>Pay Invoice Now</span>
+              </button>
+            </div>
+          )}
+
           {/* Fundamental Onboarding Notification Banner */}
           {!isCentralPortal && (
             <div className="mb-6">

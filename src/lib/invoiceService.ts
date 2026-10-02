@@ -262,3 +262,31 @@ export async function sendInvoiceEmail(invoice: TenantInvoice, extraInfo?: any):
     throw error;
   }
 }
+
+/**
+ * Marks a tenant customer invoice as fully paid and captures transaction details in Firestore
+ */
+export async function markTenantInvoiceAsPaid(invoice: TenantInvoice, paymentMethod: string = 'Instant Card / Direct'): Promise<void> {
+  const now = new Date().toISOString();
+  const totalAmount = Number(invoice.totalAmount || 0);
+
+  const log: InvoiceAuditLog = {
+    id: `log_${Date.now()}`,
+    action: 'paid',
+    timestamp: now,
+    actorName: auth.currentUser?.displayName || 'Admin',
+    notes: `Invoice marked as PAID via ${paymentMethod}`
+  };
+
+  const updatedLogs = [...(invoice.auditLogs || []), log];
+
+  await setDoc(doc(db, 'tenant_invoices', invoice.id), {
+    status: 'paid',
+    paidAmount: totalAmount,
+    balanceDue: 0,
+    paidAt: now,
+    paymentMethod,
+    updatedAt: now,
+    auditLogs: updatedLogs
+  }, { merge: true });
+}

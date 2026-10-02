@@ -4770,7 +4770,7 @@ export async function createServer() {
       const planName = formatPlanName(plan, [], effectiveInterval);
       const planPrice = getPlanPrice(plan, effectiveInterval, []);
 
-      console.log(`[API Update Plan] Updating tenant: ${tenantId} to plan: ${plan} (${effectiveInterval})`);
+      console.log(`[API Update Plan] Updating tenant: ${tenantId} to plan: ${plan} (${effectiveInterval}, $${planPrice})`);
 
       getAdminApp();
       const db = getAdminDb();
@@ -4779,6 +4779,7 @@ export async function createServer() {
       const tenantPayload: any = {
         plan: plan.toLowerCase(),
         billingInterval: effectiveInterval,
+        subscriptionStatus: 'active',
         updatedAt: new Date().toISOString()
       };
 
@@ -4797,19 +4798,53 @@ export async function createServer() {
         console.log(`[API Update Plan] Updated tenant ${tenantId} via REST fallback`);
       }
 
-      // Also update or adjust any unpaid invoice to reflect the new plan price
+      // Synchronize all unpaid/overdue invoices for this tenant to reflect new plan and price
       try {
-        const invId = `${tenantId}_INV-1001`;
-        const invPayload = {
-          plan: planName,
-          billingInterval: effectiveInterval,
-          amount: `$${planPrice}.00`,
-          updatedAt: new Date().toISOString()
-        };
         if (db && !db._isFallback) {
-          await db.collection("invoices").doc(invId).set(invPayload, { merge: true });
+          const invSnap = await db.collection("invoices").where("tenantId", "==", tenantId).get();
+          let unpaidFound = false;
+          if (!invSnap.empty) {
+            for (const docSnap of invSnap.docs) {
+              const data = docSnap.data();
+              const statusUpper = (data.status || '').toUpperCase();
+              if (statusUpper !== 'PAID') {
+                unpaidFound = true;
+                await docSnap.ref.set({
+                  plan: planName,
+                  billingInterval: effectiveInterval,
+                  amount: `$${planPrice}.00`,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true });
+                console.log(`[API Update Plan] Synced unpaid invoice ${docSnap.id} to $${planPrice}.00`);
+              }
+            }
+          }
+          if (!unpaidFound && effectiveInterval !== 'lifetime') {
+            const invId = `${tenantId}_INV-101`;
+            const nowStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+            await db.collection("invoices").doc(invId).set({
+              id: invId,
+              tenantId,
+              no: 'INV-101',
+              invoiceDate: nowStr,
+              dueDate: new Date(Date.now() + 7 * 86400000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+              plan: planName,
+              billingInterval: effectiveInterval,
+              amount: `$${planPrice}.00`,
+              status: 'UNPAID',
+              paymentMethod: 'Instant Card / Sandbox',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+          }
         } else {
-          await writeDocViaRest("invoices", invId, invPayload, req);
+          const invId = `${tenantId}_INV-101`;
+          await writeDocViaRest("invoices", invId, {
+            plan: planName,
+            billingInterval: effectiveInterval,
+            amount: `$${planPrice}.00`,
+            updatedAt: new Date().toISOString()
+          }, req);
         }
       } catch (invErr: any) {
         console.warn(`[API Update Plan] Invoice sync note: ${invErr.message}`);
@@ -4828,7 +4863,7 @@ export async function createServer() {
     }
   });
 
-  // API Route: Generate Payable Subscription Invoice before trial ends
+  // API Route: Generate Payable Subscription Invoice before trial ends or when missing
   app.post("/api/tenant/generate-invoice", async (req: any, res: any) => {
     try {
       const { tenantId, companyName, plan, billingInterval, trialEnds } = req.body;
@@ -4841,10 +4876,51 @@ export async function createServer() {
       const planPrice = getPlanPrice(plan || 'starter', effectiveInterval, []);
       const isLifetime = effectiveInterval === 'lifetime';
 
+      const nowTime = Date.now();
+      const trialEndTime = trialEnds ? new Date(trialEnds).getTime() : 0;
+      const isPastDue = !isLifetime && (trialEndTime > 0 ? trialEndTime < nowTime : false);
+
       const generatedNo = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
       const invId = `${tenantId}_${generatedNo}`;
       const nowStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
       const dueStr = isLifetime ? 'Lifetime Access' : trialEnds ? new Date(trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+      getAdminApp();
+      const db = getAdminDb();
+
+      // Check if invoice already exists for this tenant
+      if (db && !db._isFallback) {
+        try {
+          const existingSnap = await db.collection("invoices").where("tenantId", "==", tenantId).get();
+          if (!existingSnap.empty) {
+            // Find unpaid invoice
+            for (const docSnap of existingSnap.docs) {
+              const inv = docSnap.data();
+              const stUpper = (inv.status || '').toUpperCase();
+              if (stUpper !== 'PAID') {
+                const dueDateMs = inv.dueDate && inv.dueDate !== 'Lifetime Access' ? new Date(inv.dueDate).getTime() : 0;
+                const overdue = !isLifetime && ((dueDateMs > 0 && dueDateMs < nowTime) || isPastDue);
+                const updatedStatus = overdue ? 'OVERDUE' : (inv.status || 'UNPAID');
+                
+                await docSnap.ref.set({
+                  status: updatedStatus,
+                  plan: planName,
+                  billingInterval: effectiveInterval,
+                  amount: `$${planPrice}.00`,
+                  updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                return res.json({ 
+                  success: true, 
+                  invoice: { ...inv, id: docSnap.id, status: updatedStatus, plan: planName, amount: `$${planPrice}.00` } 
+                });
+              }
+            }
+          }
+        } catch (findErr: any) {
+          console.warn("[Generate Invoice] Existing lookup note:", findErr.message);
+        }
+      }
 
       const newInvoice = {
         id: invId,
@@ -4854,7 +4930,7 @@ export async function createServer() {
         invoiceDate: nowStr,
         dueDate: dueStr,
         amount: `$${planPrice}.00`,
-        status: 'UNPAID',
+        status: isPastDue ? 'OVERDUE' : 'UNPAID',
         plan: planName,
         billingInterval: effectiveInterval,
         paymentMethod: 'Card / Sandbox Gate',
@@ -4862,13 +4938,13 @@ export async function createServer() {
         updatedAt: new Date().toISOString()
       };
 
-      getAdminApp();
-      const db = getAdminDb();
       let saved = false;
-
       try {
         if (db && !db._isFallback) {
           await db.collection("invoices").doc(invId).set(newInvoice, { merge: true });
+          if (isPastDue) {
+            await db.collection("tenants").doc(tenantId).set({ status: 'past_due', updatedAt: new Date().toISOString() }, { merge: true });
+          }
           saved = true;
         }
       } catch (e: any) {
@@ -4879,7 +4955,7 @@ export async function createServer() {
         await writeDocViaRest("invoices", invId, newInvoice, req);
       }
 
-      console.log(`[Generate Invoice] Created payable subscription invoice ${invId} for tenant ${tenantId}`);
+      console.log(`[Generate Invoice] Created payable subscription invoice ${invId} for tenant ${tenantId} (status: ${newInvoice.status})`);
       return res.json({ success: true, invoice: newInvoice });
     } catch (err: any) {
       console.error("[Generate Invoice Error]:", err);
@@ -4890,7 +4966,7 @@ export async function createServer() {
   // API Route: Mark Subscription Invoice as Paid & Activate Workspace
   app.post("/api/tenant/pay-invoice", async (req: any, res: any) => {
     try {
-      const { tenantId, invoiceId, paymentMethod } = req.body;
+      const { tenantId, invoiceId, paymentMethod, amount } = req.body;
       if (!tenantId || !invoiceId) {
         return res.status(400).json({ error: "Missing required parameters (tenantId, invoiceId)" });
       }
@@ -4901,17 +4977,22 @@ export async function createServer() {
       const db = getAdminDb();
       const nowIso = new Date().toISOString();
 
-      const invoiceUpdate = {
+      const invoiceUpdate: any = {
         status: 'PAID',
         paymentMethod: paymentMethod || 'Instant Card Payment',
         paidAt: nowIso,
+        balanceDue: '$0.00',
         updatedAt: nowIso
       };
+      if (amount) {
+        invoiceUpdate.paidAmount = amount;
+      }
 
       const tenantUpdate = {
         status: 'active',
         manualPaymentPending: false,
         subscriptionStatus: 'active',
+        trialEnds: 'Subscription Active',
         updatedAt: nowIso
       };
 

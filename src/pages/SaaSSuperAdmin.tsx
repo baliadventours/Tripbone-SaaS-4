@@ -1095,12 +1095,21 @@ export default function SaaSSuperAdmin() {
       const isLifetime = billingInterval === 'lifetime' || String(plan).toLowerCase().includes('lifetime') || String(raw.dueDate || '').toLowerCase().includes('lifetime');
 
       let status = (raw.status || '').toUpperCase();
-      if (!status) {
-        if (raw.paid === true || isLifetime || (matchedTenant && matchedTenant.status === 'active' && !matchedTenant.manualPaymentPending)) {
-          status = 'PAID';
-        } else {
-          status = 'UNPAID';
-        }
+      const isPaid = status === 'PAID' || raw.paid === true;
+      const todayMs = Date.now();
+      const dueMs = raw.dueDate && !isLifetime && raw.dueDate !== 'Never (Lifetime)' ? new Date(raw.dueDate).getTime() : 0;
+      const isOverdue = !isPaid && !isLifetime && (
+        status === 'OVERDUE' ||
+        (dueMs > 0 && dueMs < todayMs) ||
+        (matchedTenant?.trialEnds && new Date(matchedTenant.trialEnds).getTime() < todayMs && matchedTenant?.status === 'past_due')
+      );
+
+      if (isPaid) {
+        status = 'PAID';
+      } else if (isOverdue) {
+        status = 'OVERDUE';
+      } else if (!status || status === 'PENDING') {
+        status = status || 'UNPAID';
       }
 
       let amount = raw.amount;
@@ -1167,11 +1176,13 @@ export default function SaaSSuperAdmin() {
   }, [tenants, packages]);
 
   // Verified Actual Payments Total from Firestore Invoices
-  const { paidRevenueTotal, paidInvoicesCount, unpaidInvoicesCount, unpaidRevenueTotal } = React.useMemo(() => {
+  const { paidRevenueTotal, paidInvoicesCount, unpaidInvoicesCount, unpaidRevenueTotal, overdueRevenueTotal, overdueInvoicesCount } = React.useMemo(() => {
     let paidTotal = 0;
     let paidCount = 0;
     let unpaidTotal = 0;
     let unpaidCount = 0;
+    let overdueTotal = 0;
+    let overdueCount = 0;
 
     allInvoices.forEach(inv => {
       const rawAmt = String(inv.amount || '0').replace(/[^0-9.]/g, '');
@@ -1179,6 +1190,11 @@ export default function SaaSSuperAdmin() {
       if (inv.status === 'PAID') {
         paidTotal += num;
         paidCount++;
+      } else if (inv.status === 'OVERDUE') {
+        overdueTotal += num;
+        overdueCount++;
+        unpaidTotal += num;
+        unpaidCount++;
       } else {
         unpaidTotal += num;
         unpaidCount++;
@@ -1189,7 +1205,9 @@ export default function SaaSSuperAdmin() {
       paidRevenueTotal: paidTotal,
       paidInvoicesCount: paidCount,
       unpaidRevenueTotal: unpaidTotal,
-      unpaidInvoicesCount: unpaidCount
+      unpaidInvoicesCount: unpaidCount,
+      overdueRevenueTotal: overdueTotal,
+      overdueInvoicesCount: overdueCount
     };
   }, [allInvoices]);
 
@@ -2226,13 +2244,15 @@ export default function SaaSSuperAdmin() {
       }, { merge: true });
 
       // Update/write corresponding invoice record in Firestore
-      const invId = `${tenantId}_INV-101`;
+      const matchedInvoice = invoices.find(inv => inv.tenantId === tenantId && (inv.status || '').toUpperCase() !== 'PAID');
+      const invId = matchedInvoice ? matchedInvoice.id : `${tenantId}_INV-101`;
+      const invNo = matchedInvoice ? (matchedInvoice.no || 'INV-101') : 'INV-101';
       const nowStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
       await setDoc(doc(db, 'invoices', invId), {
         id: invId,
         tenantId: tenantId,
         tenantName: selectedTenant?.companyName || 'Operator Workspace',
-        no: 'INV-101',
+        no: invNo,
         invoiceDate: nowStr,
         dueDate: nowStr,
         amount: `$${planPrice}.00`,
@@ -6664,6 +6684,7 @@ export default function SaaSSuperAdmin() {
                   >
                     <option value="all">All Statuses</option>
                     <option value="paid">Paid / Confirmed</option>
+                    <option value="overdue">Overdue (Past Due)</option>
                     <option value="pending">Pending Approval</option>
                     <option value="cancelled">Cancelled</option>
                   </select>
@@ -6723,6 +6744,7 @@ export default function SaaSSuperAdmin() {
                         const matchesStatus = txStatusFilter === 'all' ||
                           (txStatusFilter === 'paid' && (invStatus === 'paid' || invStatus === 'confirmed' || invStatus === 'completed')) ||
                           (txStatusFilter === 'pending' && (invStatus === 'pending')) ||
+                          (txStatusFilter === 'overdue' && (invStatus === 'overdue' || inv.status === 'OVERDUE')) ||
                           (txStatusFilter === 'cancelled' && (invStatus === 'cancelled'));
 
                         const invInterval = (inv.billingInterval || matchedTenant?.billingInterval || 'monthly').toLowerCase();
@@ -6933,6 +6955,7 @@ export default function SaaSSuperAdmin() {
                         const matchesStatus = txStatusFilter === 'all' ||
                           (txStatusFilter === 'paid' && (invStatus === 'paid' || invStatus === 'confirmed')) ||
                           (txStatusFilter === 'pending' && (invStatus === 'pending' || invStatus === 'unpaid')) ||
+                          (txStatusFilter === 'overdue' && (invStatus === 'overdue' || (inv.dueDate && new Date(inv.dueDate).getTime() < Date.now() && invStatus !== 'paid'))) ||
                           (txStatusFilter === 'cancelled' && (invStatus === 'cancelled' || invStatus === 'void'));
 
                         const searchStr = txSearch.toLowerCase().trim();
