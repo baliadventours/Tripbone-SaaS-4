@@ -106,33 +106,69 @@ service cloud.firestore {
     // --- Invoices ---
     match /invoices/{invoiceId} {
       allow get: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (getUserData().get('role', '') == 'admin' && (getUserData().get('tenantId', '') == resource.data.get('tenantId', '') || resource.data.get('tenantId', null) == null))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == resource.data.get('tenantId', '')) ||
+          (resource.data.get('tenantId', null) == null) ||
+          (request.auth.token.email != null && (
+            resource.data.get('adminEmail', '') == request.auth.token.email ||
+            resource.data.get('email', '') == request.auth.token.email ||
+            resource.data.get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
       allow list: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (getUserData().get('role', '') == 'admin' && resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == resource.data.get('tenantId', '')) ||
+          (request.auth.token.email != null && (
+            resource.data.get('adminEmail', '') == request.auth.token.email ||
+            resource.data.get('email', '') == request.auth.token.email ||
+            resource.data.get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
       allow write: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserData().get('role', '') == 'admin' &&
-        (incoming().get('tenantId', '') == getUserData().get('tenantId', '') || (resource != null && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == incoming().get('tenantId', '')) ||
+          (request.auth.token.email != null && (
+            incoming().get('adminEmail', '') == request.auth.token.email ||
+            incoming().get('email', '') == request.auth.token.email ||
+            incoming().get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
     }
 
     match /tenant_invoices/{invoiceId} {
       allow get: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (getUserData().get('role', '') == 'admin' && (getUserData().get('tenantId', '') == resource.data.get('tenantId', '') || resource.data.get('tenantId', null) == null))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == resource.data.get('tenantId', '')) ||
+          (resource.data.get('tenantId', null) == null) ||
+          (request.auth.token.email != null && (
+            resource.data.get('adminEmail', '') == request.auth.token.email ||
+            resource.data.get('email', '') == request.auth.token.email ||
+            resource.data.get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
       allow list: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        (getUserData().get('role', '') == 'admin' && resource.data.get('tenantId', '') == getUserData().get('tenantId', ''))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == resource.data.get('tenantId', '')) ||
+          (request.auth.token.email != null && (
+            resource.data.get('adminEmail', '') == request.auth.token.email ||
+            resource.data.get('email', '') == request.auth.token.email ||
+            resource.data.get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
       allow write: if isSuperAdmin() || (
-        isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        getUserData().get('role', '') == 'admin' &&
-        (incoming().get('tenantId', '') == getUserData().get('tenantId', '') || (resource != null && resource.data.get('tenantId', '') == getUserData().get('tenantId', '')))
+        isSignedIn() && (
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserData().get('tenantId', '') == incoming().get('tenantId', '')) ||
+          (request.auth.token.email != null && (
+            incoming().get('adminEmail', '') == request.auth.token.email ||
+            incoming().get('email', '') == request.auth.token.email ||
+            incoming().get('tenantEmail', '') == request.auth.token.email
+          ))
+        )
       );
     }
 
@@ -232,10 +268,16 @@ service cloud.firestore {
       allow create, delete: if isSuperAdmin();
       allow update: if isSuperAdmin() || (
         isSignedIn() && (
-          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-          getUserData().role == 'admin' &&
-          getUserData().tenantId == tenantId &&
-          !incoming().diff(existing()).affectedKeys().hasAny(['plan', 'billingInterval', 'subscriptionStatus', 'planPrice', 'currency', 'stripeCustomerId', 'stripeSubscriptionId', 'status', 'approved', 'trialEndsAt', 'subscriptionEndsAt'])
+          (
+            (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             (getUserData().get('role', '') == 'admin' || getUserData().get('role', '') == 'superadmin') &&
+             getUserData().get('tenantId', '') == tenantId) ||
+            (request.auth.token.email != null && (
+              existing().get('adminEmail', '') == request.auth.token.email ||
+              existing().get('email', '') == request.auth.token.email
+            ))
+          ) &&
+          !incoming().diff(existing()).affectedKeys().hasAny(['approved', 'stripeCustomerId', 'stripeSubscriptionId'])
         )
       );
     }

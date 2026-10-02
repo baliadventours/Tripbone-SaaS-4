@@ -45,7 +45,7 @@ export default function SaaSMarketing() {
       phone: '',
       rawPhone: '',
       whatsapp: '',
-      isWhatsappSame: true,
+      isSameAsWhatsapp: true,
       country: detected.name,
       countryCode: detected.code,
       dialCode: detected.dialCode

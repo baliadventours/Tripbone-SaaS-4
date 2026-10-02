@@ -1357,8 +1357,8 @@ export default function SaaSSuperAdmin() {
     const map = new Map<string, { country: string; countryCode: string; dialCode: string; workspaces: number; leads: number; mrr: number }>();
 
     tenants.forEach(t => {
-      const c = t.country || (t as any).countryName || 'Global / Other';
-      const code = t.countryCode || '';
+      const c = (t as any).country || (t as any).countryName || 'Global / Other';
+      const code = (t as any).countryCode || '';
       const dial = (t as any).dialCode || '';
       const mrr = t.status === 'active' ? getPlanPrice(t.plan, t.billingInterval || 'monthly', packages) : 0;
       

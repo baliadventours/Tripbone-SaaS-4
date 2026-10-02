@@ -1241,11 +1241,11 @@ const toggleAddOn = (addon: AddOn) => {
       }
       // --- END: AUTOMATED CAPACITY CHECK ---
 
-      const activeTenant = tenant?.id || (tour as any)?.tenantId || getActiveTenantId() || 'global';
-      const bookingData: Partial<Booking> = {
+      const activeTenant = (tour as any)?.tenantId || tenantId || getActiveTenantId() || 'global';
+      const bookingData: any = {
         tenantId: activeTenant,
-        tenantSlug: tenant?.slug || '',
-        tenantName: tenant?.companyName || '',
+        tenantSlug: (tour as any)?.tenantSlug || '',
+        tenantName: (tour as any)?.tenantName || '',
         tourId: tour?.id,
         tourTitle: tour?.title,
         userId: auth.currentUser?.uid || "anonymous",

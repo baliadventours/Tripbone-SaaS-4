@@ -4758,6 +4758,183 @@ export async function createServer() {
     }
   });
 
+  // API Route: Update Tenant Plan (Upgrade / Downgrade) with Server-Side Fallback
+  app.post("/api/tenant/update-plan", async (req: any, res: any) => {
+    try {
+      const { tenantId, plan, billingInterval } = req.body;
+      if (!tenantId || !plan) {
+        return res.status(400).json({ error: "Missing required parameters (tenantId, plan)" });
+      }
+
+      const effectiveInterval = getEffectiveInterval(plan, billingInterval || 'monthly');
+      const planName = formatPlanName(plan, [], effectiveInterval);
+      const planPrice = getPlanPrice(plan, effectiveInterval, []);
+
+      console.log(`[API Update Plan] Updating tenant: ${tenantId} to plan: ${plan} (${effectiveInterval})`);
+
+      getAdminApp();
+      const db = getAdminDb();
+      let updated = false;
+
+      const tenantPayload: any = {
+        plan: plan.toLowerCase(),
+        billingInterval: effectiveInterval,
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        if (db && !db._isFallback) {
+          await db.collection("tenants").doc(tenantId).set(tenantPayload, { merge: true });
+          updated = true;
+          console.log(`[API Update Plan] Updated tenant ${tenantId} via Admin SDK`);
+        }
+      } catch (sdkErr: any) {
+        console.warn(`[API Update Plan] Admin SDK set failed: ${sdkErr.message}`);
+      }
+
+      if (!updated) {
+        await writeDocViaRest("tenants", tenantId, tenantPayload, req);
+        console.log(`[API Update Plan] Updated tenant ${tenantId} via REST fallback`);
+      }
+
+      // Also update or adjust any unpaid invoice to reflect the new plan price
+      try {
+        const invId = `${tenantId}_INV-1001`;
+        const invPayload = {
+          plan: planName,
+          billingInterval: effectiveInterval,
+          amount: `$${planPrice}.00`,
+          updatedAt: new Date().toISOString()
+        };
+        if (db && !db._isFallback) {
+          await db.collection("invoices").doc(invId).set(invPayload, { merge: true });
+        } else {
+          await writeDocViaRest("invoices", invId, invPayload, req);
+        }
+      } catch (invErr: any) {
+        console.warn(`[API Update Plan] Invoice sync note: ${invErr.message}`);
+      }
+
+      return res.json({ 
+        success: true, 
+        message: `Plan updated to ${planName} successfully`,
+        plan: plan.toLowerCase(), 
+        billingInterval: effectiveInterval,
+        planPrice
+      });
+    } catch (err: any) {
+      console.error("[API Update Plan Error]:", err);
+      return res.status(500).json({ error: err.message || "Failed to update plan" });
+    }
+  });
+
+  // API Route: Generate Payable Subscription Invoice before trial ends
+  app.post("/api/tenant/generate-invoice", async (req: any, res: any) => {
+    try {
+      const { tenantId, companyName, plan, billingInterval, trialEnds } = req.body;
+      if (!tenantId) {
+        return res.status(400).json({ error: "Missing required parameter (tenantId)" });
+      }
+
+      const effectiveInterval = getEffectiveInterval(plan || 'starter', billingInterval || 'monthly');
+      const planName = formatPlanName(plan || 'starter', [], effectiveInterval);
+      const planPrice = getPlanPrice(plan || 'starter', effectiveInterval, []);
+      const isLifetime = effectiveInterval === 'lifetime';
+
+      const generatedNo = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+      const invId = `${tenantId}_${generatedNo}`;
+      const nowStr = new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+      const dueStr = isLifetime ? 'Lifetime Access' : trialEnds ? new Date(trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+      const newInvoice = {
+        id: invId,
+        tenantId,
+        tenantName: companyName || 'Operator Workspace',
+        no: generatedNo,
+        invoiceDate: nowStr,
+        dueDate: dueStr,
+        amount: `$${planPrice}.00`,
+        status: 'UNPAID',
+        plan: planName,
+        billingInterval: effectiveInterval,
+        paymentMethod: 'Card / Sandbox Gate',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      getAdminApp();
+      const db = getAdminDb();
+      let saved = false;
+
+      try {
+        if (db && !db._isFallback) {
+          await db.collection("invoices").doc(invId).set(newInvoice, { merge: true });
+          saved = true;
+        }
+      } catch (e: any) {
+        console.warn(`[Generate Invoice] Admin SDK save warning: ${e.message}`);
+      }
+
+      if (!saved) {
+        await writeDocViaRest("invoices", invId, newInvoice, req);
+      }
+
+      console.log(`[Generate Invoice] Created payable subscription invoice ${invId} for tenant ${tenantId}`);
+      return res.json({ success: true, invoice: newInvoice });
+    } catch (err: any) {
+      console.error("[Generate Invoice Error]:", err);
+      return res.status(500).json({ error: err.message || "Failed to generate invoice" });
+    }
+  });
+
+  // API Route: Mark Subscription Invoice as Paid & Activate Workspace
+  app.post("/api/tenant/pay-invoice", async (req: any, res: any) => {
+    try {
+      const { tenantId, invoiceId, paymentMethod } = req.body;
+      if (!tenantId || !invoiceId) {
+        return res.status(400).json({ error: "Missing required parameters (tenantId, invoiceId)" });
+      }
+
+      console.log(`[API Pay Invoice] Marking invoice ${invoiceId} as PAID for tenant ${tenantId}`);
+
+      getAdminApp();
+      const db = getAdminDb();
+      const nowIso = new Date().toISOString();
+
+      const invoiceUpdate = {
+        status: 'PAID',
+        paymentMethod: paymentMethod || 'Instant Card Payment',
+        paidAt: nowIso,
+        updatedAt: nowIso
+      };
+
+      const tenantUpdate = {
+        status: 'active',
+        manualPaymentPending: false,
+        subscriptionStatus: 'active',
+        updatedAt: nowIso
+      };
+
+      try {
+        if (db && !db._isFallback) {
+          await db.collection("invoices").doc(invoiceId).set(invoiceUpdate, { merge: true });
+          await db.collection("tenants").doc(tenantId).set(tenantUpdate, { merge: true });
+          console.log(`[API Pay Invoice] Successfully marked invoice ${invoiceId} as PAID via Admin SDK`);
+          return res.json({ success: true, message: "Invoice marked as PAID and workspace activated successfully!" });
+        }
+      } catch (sdkErr: any) {
+        console.warn(`[API Pay Invoice] Admin SDK write failed: ${sdkErr.message}`);
+      }
+
+      await writeDocViaRest("invoices", invoiceId, invoiceUpdate, req);
+      await writeDocViaRest("tenants", tenantId, tenantUpdate, req);
+      return res.json({ success: true, message: "Invoice marked as PAID and workspace activated successfully!" });
+    } catch (err: any) {
+      console.error("[API Pay Invoice Error]:", err);
+      return res.status(500).json({ error: err.message || "Failed to process payment" });
+    }
+  });
+
   // API Route: Creem.io Universal Webhook Receiver (supports GET/POST/HEAD/OPTIONS across all path & subpath variations)
   const creemWebhookPaths = [
     "/api/billing/webhook*",

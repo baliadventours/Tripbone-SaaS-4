@@ -482,10 +482,16 @@ export const trackPostHogDemoLeadSubmit = (data: {
   name: string;
   email: string;
   source?: string;
+  phone?: string;
+  country?: string;
+  companyName?: string;
 }) => {
   trackPostHogEvent('marketing_demo_lead_submitted', {
     lead_name: data.name,
     lead_email: data.email,
+    phone: data.phone,
+    country: data.country,
+    company_name: data.companyName,
     source: data.source || 'hero_modal',
     platform_scope: 'tripbone_main_site'
   });

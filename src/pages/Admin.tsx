@@ -6082,7 +6082,14 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
             </div>
           )}
           {activeMenu === 'billing' && (
-            <BillingView tenantData={tenantData} setTenantData={setTenantData} />
+            <BillingView 
+              tenantData={tenantData} 
+              setTenantData={setTenantData}
+              tours={tours}
+              bookings={bookings}
+              tenantInvoices={tenantInvoices}
+              currentUser={auth.currentUser}
+            />
           )}
           {activeMenu === 'backup' && (
             <div className="space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
