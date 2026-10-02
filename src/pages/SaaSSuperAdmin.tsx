@@ -1101,7 +1101,7 @@ export default function SaaSSuperAdmin() {
       const isOverdue = !isPaid && !isLifetime && (
         status === 'OVERDUE' ||
         (dueMs > 0 && dueMs < todayMs) ||
-        (matchedTenant?.trialEnds && new Date(matchedTenant.trialEnds).getTime() < todayMs && matchedTenant?.status === 'past_due')
+        (matchedTenant?.trialEnds && new Date(matchedTenant.trialEnds).getTime() < todayMs && ((matchedTenant?.status as string) === 'past_due' || (matchedTenant?.status as string) === 'suspended'))
       );
 
       if (isPaid) {
@@ -7154,11 +7154,16 @@ export default function SaaSSuperAdmin() {
 
                       return sorted.map((b) => {
                         const cust = b.customerData || {};
-                        const travelerName = cust.fullName || b.bookedBy?.name || 'Retail Traveler';
+                        const travelerName = cust.fullName || b.bookedBy?.name || (typeof b.bookedBy === 'string' ? b.bookedBy : 'Retail Traveler');
                         const travelerEmail = cust.email || b.bookedBy?.email || '';
                         const travelerPhone = cust.phone || '';
                         const dateStr = b.date || (b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'N/A');
                         const waUrl = getWhatsAppUrl(travelerPhone, `Hello ${travelerName}, regarding your booking ${b.id} for ${b.tourTitle || 'Tour'}...`);
+                        const paxCount = typeof b.pax === 'number' && b.pax > 0 
+                          ? b.pax 
+                          : (typeof b.participants === 'number' 
+                              ? b.participants 
+                              : ((Number(b.participants?.adults) || 0) + (Number(b.participants?.children) || 0)) || 1);
 
                         return (
                           <tr key={b.id} className={`text-xs transition-colors ${isDarkMode ? 'hover:bg-slate-900/40' : 'hover:bg-slate-50'}`}>
@@ -7170,7 +7175,7 @@ export default function SaaSSuperAdmin() {
                                 {b.tourTitle || 'Custom Tour / Booking'}
                               </span>
                               <span className="text-[10px] text-slate-400">
-                                {b.pax || b.participants || 1} Guests
+                                {paxCount} {paxCount === 1 ? 'Guest' : 'Guests'}
                               </span>
                             </td>
                             <td className="py-3.5 px-5">

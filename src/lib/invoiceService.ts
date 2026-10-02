@@ -272,7 +272,7 @@ export async function markTenantInvoiceAsPaid(invoice: TenantInvoice, paymentMet
 
   const log: InvoiceAuditLog = {
     id: `log_${Date.now()}`,
-    action: 'paid',
+    action: 'marked_paid',
     timestamp: now,
     actorName: auth.currentUser?.displayName || 'Admin',
     notes: `Invoice marked as PAID via ${paymentMethod}`
