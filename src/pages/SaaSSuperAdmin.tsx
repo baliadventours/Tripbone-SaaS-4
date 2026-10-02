@@ -341,6 +341,12 @@ export default function SaaSSuperAdmin() {
   const [txSubTab, setTxSubTab] = useState<'invoices' | 'commerce' | 'bookings'>('invoices');
   const [viewingInvoice, setViewingInvoice] = useState<any>(null);
   const [tenantInvoices, setTenantInvoices] = useState<any[]>([]);
+  const [adminToast, setAdminToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showAdminToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setAdminToast({ message, type });
+    setTimeout(() => setAdminToast(null), 4000);
+  };
 
   // End Users Sub Tab: 'operators' | 'travelers'
   const [userDirectorySubTab, setUserDirectorySubTab] = useState<'operators' | 'travelers'>('operators');
@@ -1413,7 +1419,13 @@ export default function SaaSSuperAdmin() {
   const handleProcessPayment = async (inv: any) => {
     const matchedTenant = tenants.find(t => t.id === inv.tenantId);
     const tenantName = matchedTenant?.companyName || inv.tenantName || inv.tenantId;
-    if (!window.confirm(`Process payment and activate subscription for ${tenantName} (Invoice #${inv.no || inv.id})?`)) return;
+    if (typeof window !== 'undefined' && window.confirm) {
+      try {
+        if (!window.confirm(`Process payment and activate subscription for ${tenantName} (Invoice #${inv.no || inv.id})?`)) return;
+      } catch (e) {
+        // Continue if confirm is restricted by iframe
+      }
+    }
     
     try {
       const invDocId = inv.id || `${inv.tenantId}_${inv.no || 'INV-101'}`;
@@ -1431,6 +1443,7 @@ export default function SaaSSuperAdmin() {
         amount: inv.amount || '$0.00',
         dueDate: dueDateVal,
         paymentMethod: 'Superadmin Processed',
+        paidAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }, { merge: true });
 
@@ -1438,10 +1451,11 @@ export default function SaaSSuperAdmin() {
         await setDoc(doc(db, 'tenants', inv.tenantId), {
           status: 'active',
           manualPaymentPending: false,
+          subscriptionStatus: 'active',
           updatedAt: new Date().toISOString()
         }, { merge: true });
 
-        setTenants(prev => prev.map(t => t.id === inv.tenantId ? { ...t, status: 'active', manualPaymentPending: false } : t));
+        setTenants(prev => prev.map(t => t.id === inv.tenantId ? { ...t, status: 'active', manualPaymentPending: false, subscriptionStatus: 'active' } : t));
       }
 
       setInvoices(prev => {
@@ -1453,10 +1467,10 @@ export default function SaaSSuperAdmin() {
         }
       });
 
-      alert("✨ Payment processed! Subscription activated for " + tenantName);
+      showAdminToast("✨ Payment processed! Subscription activated for " + tenantName);
     } catch (err: any) {
       console.error("Error processing payment:", err);
-      alert("Failed to process payment: " + (err.message || err));
+      showAdminToast("Failed to process payment: " + (err.message || err), 'error');
     }
   };
 
@@ -1490,7 +1504,7 @@ export default function SaaSSuperAdmin() {
 
   const handleExecuteRenewal = async () => {
     if (!renewForm.tenantId) {
-      alert("Please select a tenant workspace to renew.");
+      showAdminToast("Please select a tenant workspace to renew.", 'error');
       return;
     }
     setRenewLoading(true);
@@ -1551,17 +1565,23 @@ export default function SaaSSuperAdmin() {
       setInvoices(prev => [newInvoiceData, ...prev]);
 
       setIsRenewModalOpen(false);
-      alert(`🎉 Subscription renewed successfully for ${matchedTenant?.companyName || 'tenant'}! Invoice #${newInvNo} generated.`);
+      showAdminToast(`🎉 Subscription renewed successfully for ${matchedTenant?.companyName || 'tenant'}! Invoice #${newInvNo} generated.`);
     } catch (err: any) {
       console.error("Error executing renewal:", err);
-      alert("Failed to renew subscription: " + (err.message || err));
+      showAdminToast("Failed to renew subscription: " + (err.message || err), 'error');
     } finally {
       setRenewLoading(false);
     }
   };
 
   const handleCancelInvoice = async (inv: any) => {
-    if (!window.confirm(`Are you sure you want to cancel invoice #${inv.no || inv.id}?`)) return;
+    if (typeof window !== 'undefined' && window.confirm) {
+      try {
+        if (!window.confirm(`Are you sure you want to cancel invoice #${inv.no || inv.id}?`)) return;
+      } catch (e) {
+        // continue if confirm fails in iframe
+      }
+    }
     try {
       const invDocId = inv.id || `${inv.tenantId}_${inv.no || 'INV-101'}`;
       await setDoc(doc(db, 'invoices', invDocId), {
@@ -1581,25 +1601,31 @@ export default function SaaSSuperAdmin() {
       }
 
       setInvoices(prev => prev.map(item => (item.id === invDocId || item.id === inv.id) ? { ...item, status: 'CANCELLED' } : item));
-      alert("Invoice #" + (inv.no || inv.id) + " marked as CANCELLED.");
+      showAdminToast("Invoice #" + (inv.no || inv.id) + " marked as CANCELLED.");
     } catch (err: any) {
       console.error("Error cancelling invoice:", err);
-      alert("Failed to cancel invoice: " + (err.message || err));
+      showAdminToast("Failed to cancel invoice: " + (err.message || err), 'error');
     }
   };
 
   const handleDeleteInvoice = async (inv: any) => {
-    if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE invoice #${inv.no || inv.id}? This action cannot be undone.`)) return;
+    if (typeof window !== 'undefined' && window.confirm) {
+      try {
+        if (!window.confirm(`Are you sure you want to PERMANENTLY DELETE invoice #${inv.no || inv.id}? This action cannot be undone.`)) return;
+      } catch (e) {
+        // continue
+      }
+    }
     try {
       const invDocId = inv.id || `${inv.tenantId}_${inv.no || 'INV-101'}`;
       if (!inv.isSynthesized) {
         await deleteDoc(doc(db, 'invoices', invDocId));
       }
       setInvoices(prev => prev.filter(item => item.id !== invDocId && item.id !== inv.id));
-      alert("Invoice permanently deleted.");
+      showAdminToast("Invoice permanently deleted.");
     } catch (err: any) {
       console.error("Error deleting invoice:", err);
-      alert("Failed to delete invoice: " + (err.message || err));
+      showAdminToast("Failed to delete invoice: " + (err.message || err), 'error');
     }
   };
 
@@ -2541,10 +2567,10 @@ export default function SaaSSuperAdmin() {
         maxBookings: 100,
         isActive: true
       });
-      alert(editingPackageId ? 'Subscription package successfully updated!' : 'Subscription package successfully created & integrated!');
+      showAdminToast(editingPackageId ? 'Subscription package successfully updated!' : 'Subscription package successfully created & integrated!');
     } catch (err) {
       console.error('Error saving package:', err);
-      alert('Failed to save package. Ensure you have the right permissions: ' + (err as any).message);
+      showAdminToast('Failed to save package: ' + ((err as any).message || err), 'error');
     }
   };
 
@@ -3139,6 +3165,20 @@ export default function SaaSSuperAdmin() {
           box-shadow: 0 0 0 2px rgba(${brandRgb}, 0.3) !important;
         }
       `}</style>
+
+      {/* Superadmin Notification Toast Banner */}
+      {adminToast && (
+        <div className="fixed top-5 right-5 z-[99999] animate-in slide-in-from-top-4 fade-in duration-200">
+          <div className={`px-5 py-3.5 rounded-2xl shadow-2xl border flex items-center gap-3 text-xs font-bold ${
+            adminToast.type === 'success' 
+              ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-600/30' 
+              : 'bg-rose-600 text-white border-rose-500 shadow-rose-600/30'
+          }`}>
+            <span>{adminToast.message}</span>
+            <button onClick={() => setAdminToast(null)} className="ml-2 hover:opacity-80 text-white cursor-pointer font-bold">✕</button>
+          </div>
+        </div>
+      )}
 
       {/* Mobile Top Navigation Header */}
       <div className={`md:hidden flex items-center justify-between px-3.5 py-2.5 border-b sticky top-0 z-30 ${
@@ -9962,8 +10002,16 @@ export default function SaaSSuperAdmin() {
         const isLifetime = viewingInvoice.billingInterval === 'lifetime' || matchedTenant?.billingInterval === 'lifetime' || String(viewingInvoice.dueDate || '').toLowerCase().includes('lifetime');
 
         const handlePrintInvoice = () => {
-          const printWindow = window.open('', '_blank');
-          if (!printWindow) return;
+          let printWindow: Window | null = null;
+          try {
+            printWindow = window.open('', '_blank');
+          } catch {
+            printWindow = null;
+          }
+          if (!printWindow) {
+            window.print();
+            return;
+          }
           const logoSrc = globalBrand.logoUrl || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4';
           const content = `
             <!DOCTYPE html>
@@ -10086,7 +10134,7 @@ export default function SaaSSuperAdmin() {
 
         const handleSendEmailReceipt = () => {
           const emailTarget = matchedTenant?.adminEmail || viewingInvoice.tenantEmail || 'operator';
-          alert(`Invoice #${invNo} receipt notification dispatched to ${emailTarget}.`);
+          showAdminToast(`Invoice #${invNo} receipt notification dispatched to ${emailTarget}.`);
         };
 
         return (

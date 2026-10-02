@@ -1,10 +1,7 @@
 import React, { useState, useEffect, FormEvent } from "react";
 import { 
-  db, auth, getActiveTenantId 
+  db, auth, getActiveTenantId, doc, getDoc, setDoc 
 } from "../../lib/firebase";
-import { 
-  doc, getDoc, setDoc 
-} from "@/src/lib/firebase";
 import { 
   CommunicationSettings, EmailTemplate, WhatsAppTemplate 
 } from "../../types";
@@ -682,12 +679,14 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
 
   const handleWhatsAppTemplateChange = (type: keyof CommunicationSettings['whatsappTemplates'], field: 'message' | 'enabled', value: any) => {
     if (!settings) return;
+    const currentTemplates = settings.whatsappTemplates || {} as any;
+    const currentType = (currentTemplates as any)[type] || { message: '', enabled: true };
     setSettings({
       ...settings,
       whatsappTemplates: {
-        ...settings.whatsappTemplates,
+        ...currentTemplates,
         [type]: {
-          ...settings.whatsappTemplates[type],
+          ...currentType,
           [field]: value
         }
       }
@@ -695,7 +694,8 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
   };
 
   // Preview renderer with mock data
-  const renderMockEmail = (text: string) => {
+  const renderMockEmail = (text?: string) => {
+    if (!text || typeof text !== 'string') return '';
     if (!previewWithData) return text;
     return text
       .replace(/{{customerName}}/g, 'Sarah Jenkins')
@@ -851,7 +851,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                   </div>
                   <h3 className="text-xl md:text-2xl font-black tracking-tight">Email Connection Tester</h3>
                   <p className="text-xs text-orange-100 max-w-xl">
-                    Dispatch an instant test email through your active provider ({settings.emailProvider.toUpperCase()}) without creating dummy bookings.
+                    Dispatch an instant test email through your active provider ({(settings.emailProvider || 'resend').toUpperCase()}) without creating dummy bookings.
                   </p>
                 </div>
 
@@ -989,17 +989,17 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                 </>
               )}
 
-              {['resend', 'sendgrid', 'brevo', 'mailjet', 'enginemailer'].includes(settings.emailProvider) && (
+              {['resend', 'sendgrid', 'brevo', 'mailjet', 'enginemailer'].includes(settings.emailProvider || '') && (
                 <div className="space-y-2 col-span-1 md:col-span-2">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">{settings.emailProvider.toUpperCase()} API Key</label>
+                    <label className="text-xs font-bold text-gray-700 uppercase tracking-wider">{(settings.emailProvider || 'API').toUpperCase()} API Key</label>
                     <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full font-bold">Securely Encrypted</span>
                   </div>
                   <input
                     type="password"
                     value={settings.emailApiKey || ''}
                     onChange={e => setSettings({ ...settings, emailApiKey: e.target.value })}
-                    placeholder={`Enter your ${settings.emailProvider.toUpperCase()} API Key`}
+                    placeholder={`Enter your ${(settings.emailProvider || 'provider').toUpperCase()} API Key`}
                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:outline-none focus:border-primary focus:bg-white"
                   />
                 </div>
@@ -1096,7 +1096,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                         onClick={() => insertMergeTagIntoSubject('{{bookingId}}')}
                         className="text-[10px] text-primary font-bold hover:underline"
                       >
-                        + Add #{{bookingId}} to Subject
+                        + Add #&#123;&#123;bookingId&#125;&#125; to Subject
                       </button>
                     </div>
                     <input
@@ -1518,7 +1518,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-600">
                     <input
                       type="checkbox"
-                      checked={settings.whatsappTemplates.booking_confirmation.enabled}
+                      checked={settings.whatsappTemplates?.booking_confirmation?.enabled ?? true}
                       onChange={e => handleWhatsAppTemplateChange('booking_confirmation', 'enabled', e.target.checked)}
                       className="rounded text-[#075E54] focus:ring-[#075E54] h-4 w-4"
                     />
@@ -1527,7 +1527,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                 </div>
                 <textarea
                   rows={3}
-                  value={settings.whatsappTemplates.booking_confirmation.message}
+                  value={settings.whatsappTemplates?.booking_confirmation?.message || ''}
                   onChange={e => handleWhatsAppTemplateChange('booking_confirmation', 'message', e.target.value)}
                   className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-sans text-gray-900 focus:outline-none focus:border-[#075E54]"
                 />
@@ -1543,7 +1543,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-600">
                     <input
                       type="checkbox"
-                      checked={settings.whatsappTemplates.guide_assigned?.enabled ?? true}
+                      checked={settings.whatsappTemplates?.guide_assigned?.enabled ?? true}
                       onChange={e => handleWhatsAppTemplateChange('guide_assigned', 'enabled', e.target.checked)}
                       className="rounded text-[#075E54] focus:ring-[#075E54] h-4 w-4"
                     />
@@ -1552,7 +1552,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                 </div>
                 <textarea
                   rows={3}
-                  value={settings.whatsappTemplates.guide_assigned?.message || ''}
+                  value={settings.whatsappTemplates?.guide_assigned?.message || ''}
                   onChange={e => handleWhatsAppTemplateChange('guide_assigned', 'message', e.target.value)}
                   className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-sans text-gray-900 focus:outline-none focus:border-[#075E54]"
                 />
@@ -1568,7 +1568,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                   <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-600">
                     <input
                       type="checkbox"
-                      checked={settings.whatsappTemplates.admin_notification.enabled}
+                      checked={settings.whatsappTemplates?.admin_notification?.enabled ?? true}
                       onChange={e => handleWhatsAppTemplateChange('admin_notification', 'enabled', e.target.checked)}
                       className="rounded text-[#075E54] focus:ring-[#075E54] h-4 w-4"
                     />
@@ -1577,7 +1577,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                 </div>
                 <textarea
                   rows={2}
-                  value={settings.whatsappTemplates.admin_notification.message}
+                  value={settings.whatsappTemplates?.admin_notification?.message || ''}
                   onChange={e => handleWhatsAppTemplateChange('admin_notification', 'message', e.target.value)}
                   className="w-full p-3 bg-white border border-gray-200 rounded-xl text-xs font-sans text-gray-900 focus:outline-none focus:border-[#075E54]"
                 />

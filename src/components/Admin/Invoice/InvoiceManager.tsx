@@ -160,7 +160,8 @@ export default function InvoiceManager() {
       setActionNotice({ type: 'success', message: `Invoice #${invoice.invoiceNumber} deleted.` });
       setTimeout(() => setActionNotice(null), 3000);
     } catch (err: any) {
-      alert("Failed to delete invoice: " + err.message);
+      setActionNotice({ type: 'error', message: "Failed to delete invoice: " + err.message });
+      setTimeout(() => setActionNotice(null), 4000);
     }
   };
 
@@ -175,7 +176,8 @@ export default function InvoiceManager() {
 
   const handleSendEmailDirect = async (invoice: TenantInvoice) => {
     if (!invoice.customer?.email) {
-      alert("This invoice has no customer email assigned.");
+      setActionNotice({ type: 'error', message: "This invoice has no customer email assigned." });
+      setTimeout(() => setActionNotice(null), 4000);
       return;
     }
     setActionNotice({ type: 'success', message: `Sending invoice #${invoice.invoiceNumber} email...` });

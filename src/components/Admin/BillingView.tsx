@@ -18,7 +18,7 @@ import {
   DollarSign
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { db, doc, setDoc, getActiveTenantId } from "../../lib/firebase";
+import { db, doc, setDoc, getActiveTenantId, collection, query, where, onSnapshot, getDocs } from "../../lib/firebase";
 
 interface BillingViewProps {
   tenantData: any;
@@ -46,11 +46,38 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  const activeTenantId = getActiveTenantId() || tenantData?.id;
+
+  // Realtime listener for invoices scoped to this workspace
   useEffect(() => {
-    if (tenantInvoices && tenantInvoices.length > 0) {
+    if (!activeTenantId) return;
+
+    try {
+      const q = query(collection(db, 'invoices'), where('tenantId', '==', activeTenantId));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((d) => {
+          list.push({ id: d.id, ...d.data() });
+        });
+        list.sort((a, b) => new Date(b.createdAt || b.invoiceDate || 0).getTime() - new Date(a.createdAt || a.invoiceDate || 0).getTime());
+        if (list.length > 0) {
+          setInvoices(list);
+        }
+      }, (err) => {
+        console.warn("Realtime invoices listener note:", err);
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn("Error setting up invoice listener:", e);
+    }
+  }, [activeTenantId]);
+
+  useEffect(() => {
+    if (tenantInvoices && tenantInvoices.length > 0 && invoices.length === 0) {
       setInvoices(tenantInvoices);
     }
-  }, [tenantInvoices]);
+  }, [tenantInvoices, invoices.length]);
 
   // Sync billing cycle with tenantData if lifetime
   useEffect(() => {
@@ -60,8 +87,6 @@ export const BillingView: React.FC<BillingViewProps> = ({
       setBillingCycle('yearly');
     }
   }, [tenantData?.billingInterval, tenantData?.plan]);
-
-  const activeTenantId = getActiveTenantId() || tenantData?.id;
 
   // Auto-generate invoice if missing for this workspace
   useEffect(() => {
@@ -135,6 +160,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       name: 'Starter Plan',
       monthlyPrice: 49,
       yearlyPrice: 39,
+      lifetimePrice: 499,
       desc: 'Up to 10 active tours, 100 monthly bookings & core booking widgets',
       features: ['10 Active Tours', '100 Bookings / mo', 'Standard Checkout', 'Email Alerts']
     },
@@ -143,6 +169,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       name: 'Professional Plan',
       monthlyPrice: 99,
       yearlyPrice: 79,
+      lifetimePrice: 999,
       desc: 'Up to 50 tours, 500 bookings & AI guest travel assistant',
       features: ['50 Active Tours', '500 Bookings / mo', 'AI Tour Generator', 'WhatsApp Notifications', 'Multi-Language']
     },
@@ -160,6 +187,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       name: 'Enterprise Plan',
       monthlyPrice: 499,
       yearlyPrice: 399,
+      lifetimePrice: 3999,
       desc: 'Unlimited tours, unlimited bookings, dedicated support & developer APIs',
       features: ['Unlimited Tours', 'Unlimited Bookings', 'Dedicated Support', 'Webhooks & REST APIs', 'White-Label Branding']
     }
