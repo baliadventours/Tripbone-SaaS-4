@@ -1187,7 +1187,57 @@ export default function SaaSHome() {
 
   const getDynamicInvoices = useMemo(() => {
     if (!activeWorkspace) return [];
-    const dbInvoices = invoices.filter(inv => inv.tenantId === activeWorkspace.id);
+
+    const matchIds = new Set<string>();
+    if (activeWorkspace.id) {
+      matchIds.add(String(activeWorkspace.id));
+      matchIds.add(String(activeWorkspace.id).replace(/^tenant_/, ''));
+      if (!String(activeWorkspace.id).startsWith('tenant_')) {
+        matchIds.add(`tenant_${activeWorkspace.id}`);
+      }
+    }
+    if (activeWorkspace.slug) {
+      matchIds.add(String(activeWorkspace.slug));
+      matchIds.add(`tenant_${activeWorkspace.slug}`);
+    }
+    const matchArr = Array.from(matchIds).filter(Boolean);
+    const compName = (activeWorkspace.companyName || '').toLowerCase().trim();
+
+    let dbInvoices = invoices.filter(inv => {
+      const invTenantId = inv.tenantId || inv.tenant || inv.tenant_id;
+      const invDocId = inv.id || '';
+      const invCompName = (inv.tenantName || '').toLowerCase().trim();
+
+      return matchArr.includes(invTenantId) ||
+             matchArr.some(cid => invDocId.startsWith(cid + '_') || invDocId === cid) ||
+             (compName && invCompName && compName === invCompName);
+    });
+
+    if (dbInvoices.length === 0) {
+      const interval = activeWorkspace.billingInterval || 'monthly';
+      const isLifetime = interval === 'lifetime' || (activeWorkspace.plan || '').toLowerCase().includes('lifetime');
+      const planPrice = getPlanPrice(activeWorkspace.plan, interval, plans);
+      const generatedNo = `INV-${(activeWorkspace.slug || '1001').slice(-4).toUpperCase()}`;
+      const invId = `${activeWorkspace.id || activeWorkspace.slug}_${generatedNo}`;
+      const dueStr = isLifetime ? 'Lifetime Access' : (activeWorkspace.trialEnds ? new Date(activeWorkspace.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'In 7 Days');
+      
+      const syntheticInvoice = {
+        id: invId,
+        tenantId: activeWorkspace.id || `tenant_${activeWorkspace.slug}`,
+        tenantName: activeWorkspace.companyName || 'Operator Workspace',
+        no: generatedNo,
+        plan: formatPlanName(activeWorkspace.plan, plans, interval),
+        billingInterval: interval,
+        amount: `$${planPrice}.00`,
+        status: (activeWorkspace.status === 'active' && !activeWorkspace.trialEnds) ? 'PAID' : 'UNPAID',
+        dueDate: dueStr,
+        invoiceDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+        paymentMethod: 'Card / Sandbox Gate',
+        createdAt: activeWorkspace.createdAt || new Date().toISOString()
+      };
+
+      dbInvoices = [syntheticInvoice];
+    }
 
     const parseAmt = (val: any) => {
       if (typeof val === 'number') return val;
@@ -1223,7 +1273,68 @@ export default function SaaSHome() {
       }
       return dateB - dateA;
     });
-  }, [activeWorkspace, invoices, invoiceSort]);
+  }, [activeWorkspace, invoices, invoiceSort, plans]);
+
+  // Ensure an invoice is auto-generated and stored in Firestore for the active workspace if missing
+  useEffect(() => {
+    if (!activeWorkspace) return;
+    const wsId = activeWorkspace.id || activeWorkspace.slug;
+    const hasInvoice = invoices.some(inv => 
+      inv.tenantId === wsId || 
+      inv.tenantId === `tenant_${wsId}` || 
+      inv.tenantId === activeWorkspace.slug ||
+      (inv.id && (inv.id.startsWith(wsId + '_') || inv.id.startsWith(`tenant_${activeWorkspace.slug}_`)))
+    );
+
+    if (!hasInvoice) {
+      const generateMissingInvoice = async () => {
+        try {
+          const effTenantId = wsId.startsWith('tenant_') ? wsId : `tenant_${activeWorkspace.slug || wsId}`;
+          const interval = activeWorkspace.billingInterval || 'monthly';
+          const isLifetime = interval === 'lifetime' || (activeWorkspace.plan || '').toLowerCase().includes('lifetime');
+          const planPrice = getPlanPrice(activeWorkspace.plan, interval, plans);
+          const generatedNo = `INV-${(activeWorkspace.slug || '1001').slice(-4).toUpperCase()}`;
+          const invId = `${effTenantId}_${generatedNo}`;
+          const dueStr = isLifetime ? 'Lifetime Access' : (activeWorkspace.trialEnds ? new Date(activeWorkspace.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'In 7 Days');
+          
+          const invData = {
+            id: invId,
+            tenantId: effTenantId,
+            tenantName: activeWorkspace.companyName || 'Operator Workspace',
+            no: generatedNo,
+            plan: formatPlanName(activeWorkspace.plan, plans, interval),
+            billingInterval: interval,
+            amount: `$${planPrice}.00`,
+            status: (activeWorkspace.status === 'active' && !activeWorkspace.trialEnds) ? 'PAID' : 'UNPAID',
+            dueDate: dueStr,
+            invoiceDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+            paymentMethod: 'Card / Sandbox Gate',
+            createdAt: activeWorkspace.createdAt || new Date().toISOString()
+          };
+
+          try {
+            await setDoc(doc(db, 'invoices', invId), invData, { merge: true });
+          } catch (e) {}
+
+          await fetch('/api/tenant/generate-invoice', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              tenantId: effTenantId,
+              companyName: activeWorkspace.companyName || 'Operator Workspace',
+              plan: activeWorkspace.plan || 'starter',
+              billingInterval: interval,
+              trialEnds: activeWorkspace.trialEnds
+            })
+          });
+        } catch (e) {
+          console.warn("[SaaSHome] Auto generate missing invoice note:", e);
+        }
+      };
+
+      generateMissingInvoice();
+    }
+  }, [activeWorkspace, invoices, plans]);
 
   useEffect(() => {
     if (!activeWorkspace) {
