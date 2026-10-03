@@ -147,6 +147,15 @@ export default function SaaSHome() {
     return localStorage.getItem('tripbone_saas_dark_mode') === 'true';
   });
 
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('tripbone_saas_dark_mode', String(isDarkMode));
+  }, [isDarkMode]);
+
   const getWorkspaceStatus = (t: any): 'trial' | 'active' | 'inactive' | 'suspended' => {
     if (!t) return 'active';
     if (t.status === 'suspended') return 'suspended';
@@ -3774,49 +3783,62 @@ export default function SaaSHome() {
                                   onClick={() => setPreviewingInvoice(invoice)}
                                   className={cn(
                                     "transition-colors cursor-pointer group",
-                                    isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-50/80"
+                                    isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-50"
                                   )}
                                 >
-                                  <td className="py-4 px-3 font-black text-slate-900 dark:text-white">
+                                  <td className="py-4 px-3">
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setPreviewingInvoice(invoice);
                                       }}
-                                      className="font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 hover:underline cursor-pointer flex items-center gap-1.5 text-left text-xs"
+                                      className={cn(
+                                        "font-black text-xs hover:underline cursor-pointer flex items-center gap-1.5 text-left transition-colors",
+                                        isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-600 hover:text-indigo-800"
+                                      )}
                                       title="Preview invoice statement"
                                     >
                                       <span>#{invoice.no || invoice.id}</span>
                                     </button>
                                   </td>
-                                  <td className="py-4 px-3 font-medium">
-                                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wide inline-block">
+                                  <td className="py-4 px-3">
+                                    <span className={cn(
+                                      "px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide inline-block border shadow-2xs",
+                                      isDarkMode ? "bg-slate-800 text-slate-100 border-slate-700" : "bg-slate-100 text-slate-900 border-slate-300"
+                                    )}>
                                       {formatPlanName(invoice.plan || activeWorkspace?.plan, plans, invoice.billingInterval || activeWorkspace?.billingInterval)}
                                     </span>
                                   </td>
-                                  <td className="py-4 px-3 font-medium">
+                                  <td className="py-4 px-3">
                                     {isLifetime ? (
-                                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
+                                      <span className={cn(
+                                        "inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold border shadow-2xs",
+                                        isDarkMode ? "bg-emerald-950/80 text-emerald-300 border-emerald-700" : "bg-emerald-50 text-emerald-900 border-emerald-300"
+                                      )}>
                                         ✨ Lifetime Access
                                       </span>
                                     ) : (
-                                      <span className="text-slate-800 dark:text-slate-200 font-semibold text-xs">{invoice.dueDate || '-'}</span>
+                                      <span className={cn("font-semibold text-xs", isDarkMode ? "text-slate-200" : "text-slate-900")}>
+                                        {invoice.dueDate || '-'}
+                                      </span>
                                     )}
                                   </td>
-                                  <td className="py-4 px-3 font-black text-slate-900 dark:text-white text-sm">
-                                    {displayAmount}
+                                  <td className="py-4 px-3">
+                                    <span className={cn("text-sm font-black tracking-tight", isDarkMode ? "text-white" : "text-slate-950")}>
+                                      {displayAmount}
+                                    </span>
                                   </td>
                                   <td className="py-4 px-3 text-center">
                                     <span className={cn(
                                       "px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider inline-flex items-center shadow-2xs",
                                       invoice.status === 'PAID'
-                                        ? "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
+                                        ? isDarkMode ? "bg-emerald-950/70 text-emerald-300 border-emerald-800" : "bg-emerald-100 text-emerald-900 border-emerald-300"
                                         : invoice.status === 'PENDING'
-                                          ? "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800 animate-pulse"
+                                          ? isDarkMode ? "bg-amber-950/70 text-amber-300 border-amber-800 animate-pulse" : "bg-amber-100 text-amber-900 border-amber-300 animate-pulse"
                                           : invoice.status === 'CANCELLED'
-                                            ? "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
-                                            : "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800"
+                                            ? isDarkMode ? "bg-gray-800 text-gray-300 border-gray-700" : "bg-gray-100 text-gray-700 border-gray-300"
+                                            : isDarkMode ? "bg-rose-950/70 text-rose-300 border-rose-800" : "bg-rose-100 text-rose-900 border-rose-300"
                                     )}>
                                       {invoice.status || 'UNPAID'}
                                     </span>
@@ -3826,10 +3848,15 @@ export default function SaaSHome() {
                                       <button
                                         type="button"
                                         onClick={() => setPreviewingInvoice(invoice)}
-                                        className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs cursor-pointer"
+                                        className={cn(
+                                          "px-3 py-1.5 rounded-lg text-xs font-bold transition-all border flex items-center gap-1.5 shadow-2xs cursor-pointer",
+                                          isDarkMode 
+                                            ? "bg-slate-800 hover:bg-slate-700 text-slate-100 border-slate-700" 
+                                            : "bg-white hover:bg-gray-100 text-slate-800 border-gray-300"
+                                        )}
                                         title="Preview invoice statement"
                                       >
-                                        <Eye className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                                        <Eye className="w-3.5 h-3.5" />
                                         <span>Preview</span>
                                       </button>
 
@@ -3854,7 +3881,12 @@ export default function SaaSHome() {
                                           <button
                                             type="button"
                                             onClick={() => handleTenantCancelInvoice(invoice)}
-                                            className="px-2.5 py-1.5 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
+                                            className={cn(
+                                              "px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border cursor-pointer",
+                                              isDarkMode 
+                                                ? "bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-slate-300 border-slate-700" 
+                                                : "bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 text-slate-600 border-gray-300"
+                                            )}
                                           >
                                             Cancel
                                           </button>
@@ -3878,7 +3910,7 @@ export default function SaaSHome() {
             )}>
               <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-6">
                 <div>
-                  <h2 className={cn("text-sm font-bold flex items-center space-x-2", isDarkMode ? "text-white" : "text-gray-950")}>
+                  <h2 className={cn("text-sm font-bold flex items-center space-x-2", isDarkMode ? "text-white" : "text-slate-950")}>
                     <Layers className="w-5 h-5 text-indigo-500" />
                     <span>Your Sites & Subscriptions</span>
                   </h2>
@@ -3927,7 +3959,7 @@ export default function SaaSHome() {
                           "transition-colors",
                           isDarkMode ? "hover:bg-slate-800/30 text-slate-300" : "hover:bg-slate-50 text-slate-700"
                         )}>
-                          <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
+                          <td className={cn("py-4 px-4 font-bold text-sm", isDarkMode ? "text-white" : "text-slate-950")}>
                             {workspace.companyName || 'Unnamed Site'}
                           </td>
                           <td className="py-4 px-4 font-medium">
@@ -3935,15 +3967,15 @@ export default function SaaSHome() {
                               href={getStorefrontUrl(workspace.slug, workspace.customDomain)} 
                               target="_blank" 
                               rel="noopener noreferrer" 
-                              className="text-indigo-600 dark:text-indigo-400 hover:underline hover:text-indigo-700 font-semibold transition-colors"
+                              className={cn("hover:underline font-bold transition-colors", isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-600 hover:text-indigo-800")}
                             >
                               {workspace.customDomain || `${workspace.slug}.tripbone.com`}
                             </a>
                           </td>
-                          <td className="py-4 px-4 font-bold capitalize text-slate-900 dark:text-white">
+                          <td className={cn("py-4 px-4 font-bold capitalize text-xs", isDarkMode ? "text-white" : "text-slate-950")}>
                             {formatPlanName(workspace.plan, plans, workspace.billingInterval)}
                           </td>
-                          <td className="py-4 px-4 capitalize font-medium text-slate-700 dark:text-slate-300">
+                          <td className={cn("py-4 px-4 capitalize font-semibold text-xs", isDarkMode ? "text-slate-300" : "text-slate-800")}>
                             {getEffectiveInterval(workspace.plan, workspace.billingInterval)}
                           </td>
                           <td className="py-4 px-4 text-center">
