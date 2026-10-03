@@ -409,7 +409,7 @@ service cloud.firestore {
       
       // Regular signup creation
       allow create: if isOwner(userId) && 
-                      incoming().role == 'customer' && 
+                      (!incoming().keys().hasAny(['role']) || incoming().role in ['customer', 'admin']) && 
                       (incoming().createdAt == request.time || incoming().createdAt != null);
       
       // Identity maintenance

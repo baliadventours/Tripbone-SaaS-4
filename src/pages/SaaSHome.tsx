@@ -85,6 +85,7 @@ export default function SaaSHome() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showDashboard, setShowDashboard] = useState(true);
   const [ssoRedirecting, setSsoRedirecting] = useState<string | null>(null);
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
   // New Registration / OTP verification states
   const [regName, setRegName] = useState('');
@@ -466,11 +467,12 @@ export default function SaaSHome() {
   }, []);
 
   const handleLaunchSSO = async (tenantSlug: string, customDomain?: string, redirectPath?: string) => {
-    if (!currentUser) return;
+    const userObj = auth.currentUser || currentUser;
+    if (!userObj) return;
     setSsoRedirecting(tenantSlug);
     setError(null);
     try {
-      const idToken = await currentUser.getIdToken();
+      const idToken = typeof userObj.getIdToken === 'function' ? await userObj.getIdToken() : (auth.currentUser ? await auth.currentUser.getIdToken() : '');
       
       const res = await fetch('/api/auth/sso', {
         method: 'POST',
@@ -699,7 +701,7 @@ export default function SaaSHome() {
           country: regPhoneData.country,
           countryCode: regPhoneData.countryCode,
           dialCode: regPhoneData.dialCode,
-          role: 'admin',
+          role: 'customer',
           status: 'active',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
@@ -708,11 +710,22 @@ export default function SaaSHome() {
         console.warn("[SaaS Signup] Failed to write profile to Firestore:", profileErr);
       }
 
-      // Send Firebase verification email
+      // Send Tripbone Branded Welcome & Verification Emails via Mailjet API
       try {
-        await sendEmailVerification(usrCredential.user);
+        const baseHost = window.location.origin;
+        fetch(`${baseHost}/api/mail/welcome`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: loginEmail, name: regName.trim() || 'Traveler' })
+        }).catch(e => console.warn('[Mailjet] Welcome fail', e));
+
+        fetch(`${baseHost}/api/mail/verify`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: loginEmail })
+        }).catch(e => console.warn('[Mailjet] Verify fail', e));
       } catch (verErr) {
-        console.warn("[SaaS Signup] Failed to send verification email:", verErr);
+        console.warn("[SaaS Signup] Failed to trigger verification email:", verErr);
       }
 
       // Populate form data
@@ -790,9 +803,14 @@ export default function SaaSHome() {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json'
       };
-      if (currentUser) {
-        const idToken = await currentUser.getIdToken();
-        headers['Authorization'] = `Bearer ${idToken}`;
+      const userObj = auth.currentUser || currentUser;
+      if (userObj && typeof userObj.getIdToken === 'function') {
+        try {
+          const idToken = await userObj.getIdToken();
+          headers['Authorization'] = `Bearer ${idToken}`;
+        } catch (tokenErr) {
+          console.warn('[Provisioning] Could not fetch ID token:', tokenErr);
+        }
       }
 
       const response = await fetch('/api/provision-workspace', {
@@ -2193,7 +2211,7 @@ export default function SaaSHome() {
                         try {
                           await auth.currentUser?.reload();
                           if (auth.currentUser?.emailVerified) {
-                            setCurrentUser({ ...auth.currentUser });
+                            setCurrentUser(auth.currentUser);
                             setSuccess("🎉 Email verified successfully! Continuing to company setup...");
                             setStep(2);
                           } else {
@@ -2213,9 +2231,15 @@ export default function SaaSHome() {
                       type="button"
                       onClick={async () => {
                         try {
-                          if (auth.currentUser) {
-                            await sendEmailVerification(auth.currentUser);
-                            setSuccess("📧 Verification email resent! Please check your inbox.");
+                          const userEmail = auth.currentUser?.email || loginEmail;
+                          if (userEmail) {
+                            const baseHost = window.location.origin;
+                            await fetch(`${baseHost}/api/mail/verify`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ email: userEmail })
+                            });
+                            setSuccess("📧 Confirmation email dispatched from Tripbone! Please check your inbox.");
                             setError(null);
                           }
                         } catch (resendErr: any) {
@@ -2224,7 +2248,7 @@ export default function SaaSHome() {
                       }}
                       className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl border border-gray-200 transition-colors cursor-pointer"
                     >
-                      Resend Verification Email
+                      Resend Confirmation Email
                     </button>
                   </div>
 
@@ -2255,18 +2279,16 @@ export default function SaaSHome() {
                       type="text"
                       name="companyName"
                       required
-                      placeholder="Your Company Name"
+                      placeholder="Your Company Name (e.g. Bitproy Travel)"
                       value={formData.companyName}
                       onChange={(e) => {
                         const name = e.target.value;
                         const slugified = name.toLowerCase()
-                          .replace(/[^a-z0-9\s-]/g, '')
-                          .replace(/\s+/g, '-')
-                          .replace(/-+/g, '-');
+                          .replace(/[^a-z0-9]/g, '');
                         setFormData(prev => ({
                           ...prev,
                           companyName: name,
-                          slug: prev.slug === '' ? slugified : prev.slug
+                          slug: isSlugManuallyEdited ? prev.slug : slugified
                         }));
                       }}
                       className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#00b272] text-gray-900 placeholder-gray-400 transition-colors shadow-sm"
@@ -2278,11 +2300,20 @@ export default function SaaSHome() {
                     <div className="relative flex items-center shadow-sm rounded-xl overflow-hidden border border-gray-200 focus-within:border-[#00b272] bg-white">
                       <input
                         type="text"
-                        name="slug"
+                        name="workspace_subdomain_custom"
+                        id="workspace_subdomain_input"
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="none"
+                        spellCheck="false"
                         required
-                        placeholder="e.g. balisurftours"
+                        placeholder="e.g. bitproytravel"
                         value={formData.slug}
-                        onChange={handleInputChange}
+                        onChange={(e) => {
+                          setIsSlugManuallyEdited(true);
+                          const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+                          setFormData(prev => ({ ...prev, slug: cleaned }));
+                        }}
                         className="w-full pl-4 pr-32 py-3 focus:outline-none text-sm text-gray-900 placeholder-gray-400 transition-colors bg-transparent"
                       />
                       <span className="absolute right-0 top-0 bottom-0 bg-gray-100/80 px-4 flex items-center text-xs text-gray-500 font-mono border-l border-gray-200">

@@ -160,15 +160,14 @@ export default function Auth() {
     setError(null);
     setVerificationSuccessNotice(null);
     try {
-      if (auth.currentUser) {
-        await sendEmailVerification(auth.currentUser);
+      if (auth.currentUser?.email) {
         const baseHost = window.location.origin;
-        fetch(`${baseHost}/api/mail/verify`, {
+        await fetch(`${baseHost}/api/mail/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: auth.currentUser.email })
-        }).catch(() => {});
-        setVerificationSuccessNotice("📧 Fresh verification email dispatched! Please check your inbox.");
+        });
+        setVerificationSuccessNotice("📧 Fresh confirmation email dispatched from Tripbone! Please check your inbox.");
         setResendCooldown(60);
       }
     } catch (resendErr: any) {
@@ -456,14 +455,7 @@ export default function Auth() {
             });
           }
 
-          // --- Send Verification Email ---
-          try {
-            await sendEmailVerification(user);
-          } catch (verErr) {
-            console.warn('[Auth] Failed to send Firebase verification email:', verErr);
-          }
-
-          // --- MAILJET: Trigger Welcome & Verification Emails ---
+          // --- Send Tripbone Branded Welcome & Verification Emails ---
           try {
             const baseHost = window.location.origin;
             fetch(`${baseHost}/api/mail/welcome`, {
