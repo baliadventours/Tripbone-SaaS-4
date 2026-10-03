@@ -15,10 +15,15 @@ import {
   Printer,
   X,
   RefreshCw,
-  DollarSign
+  DollarSign,
+  ChevronRight,
+  TrendingUp,
+  Receipt,
+  Search,
+  Filter
 } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { db, doc, setDoc, getActiveTenantId, collection, query, where, onSnapshot, getDocs } from "../../lib/firebase";
+import { db, doc, setDoc, getActiveTenantId, collection, onSnapshot } from "../../lib/firebase";
 
 interface BillingViewProps {
   tenantData: any;
@@ -46,24 +51,64 @@ export const BillingView: React.FC<BillingViewProps> = ({
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [invoiceSearchQuery, setInvoiceSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PAID' | 'UNPAID' | 'OVERDUE'>('ALL');
 
-  const activeTenantId = getActiveTenantId() || tenantData?.id || tenantData?.slug;
+  const activeTenantId = getActiveTenantId() || tenantData?.id || tenantData?.slug || tenantData?.tenantId || '';
 
-  // Realtime listener for invoices scoped to this workspace
+  // All potential tenant ID identifiers to ensure 100% data discovery
+  const candidateTenantIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (activeTenantId) {
+      ids.add(String(activeTenantId));
+      ids.add(String(activeTenantId).replace(/^tenant_/, ''));
+      if (!String(activeTenantId).startsWith('tenant_')) {
+        ids.add(`tenant_${activeTenantId}`);
+      }
+    }
+    if (tenantData?.id) {
+      ids.add(String(tenantData.id));
+      ids.add(String(tenantData.id).replace(/^tenant_/, ''));
+      if (!String(tenantData.id).startsWith('tenant_')) {
+        ids.add(`tenant_${tenantData.id}`);
+      }
+    }
+    if (tenantData?.slug) {
+      ids.add(String(tenantData.slug));
+      ids.add(`tenant_${tenantData.slug}`);
+    }
+    if (tenantData?.tenantId) {
+      ids.add(String(tenantData.tenantId));
+      ids.add(`tenant_${tenantData.tenantId}`);
+    }
+    return Array.from(ids).filter(Boolean);
+  }, [activeTenantId, tenantData?.id, tenantData?.slug, tenantData?.tenantId]);
+
+  // Realtime listener for invoices matching any workspace tenant identifier
   useEffect(() => {
-    if (!activeTenantId) return;
-
     try {
-      const q = query(collection(db, 'invoices'), where('tenantId', '==', activeTenantId));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+      const unsubscribe = onSnapshot(collection(db, 'invoices'), (snapshot) => {
         const list: any[] = [];
         const todayTime = Date.now();
+        const compName = (tenantData?.companyName || '').toLowerCase().trim();
+
         snapshot.forEach((d) => {
           const data = d.data();
+          const docId = d.id;
+          const invoiceTenantId = data.tenantId || data.tenant || data.tenant_id;
+          const invoiceTenantName = (data.tenantName || '').toLowerCase().trim();
+
+          const matchesTenant = candidateTenantIds.length === 0 || 
+            candidateTenantIds.includes(invoiceTenantId) ||
+            candidateTenantIds.some(cid => docId.startsWith(cid + '_') || docId === cid) ||
+            (compName && invoiceTenantName && compName === invoiceTenantName);
+
+          if (!matchesTenant) return;
+
           let st = (data.status || '').toUpperCase();
           const isPaid = st === 'PAID';
           const isLife = data.billingInterval === 'lifetime' || String(data.dueDate || '').toLowerCase().includes('lifetime');
-          const dueMs = data.dueDate && !isLife ? new Date(data.dueDate).getTime() : 0;
+          const dueMs = data.dueDate && !isLife && data.dueDate !== 'Lifetime Access' ? new Date(data.dueDate).getTime() : 0;
           const isPastDue = !isPaid && !isLife && (
             st === 'OVERDUE' ||
             (dueMs > 0 && dueMs < todayTime) ||
@@ -72,10 +117,20 @@ export const BillingView: React.FC<BillingViewProps> = ({
 
           if (isPastDue && !isPaid) {
             st = 'OVERDUE';
+          } else if (!st || st === 'PENDING') {
+            st = 'UNPAID';
           }
 
-          list.push({ id: d.id, ...data, status: st, isOverdue: isPastDue });
+          list.push({ 
+            id: docId, 
+            ...data, 
+            status: st, 
+            isOverdue: isPastDue,
+            no: data.no || (docId.includes('_INV-') ? 'INV-' + docId.split('_INV-')[1] : (docId.startsWith('INV-') ? docId : `INV-${docId.slice(-4).toUpperCase()}`)),
+            amount: data.amount || (data.price ? `$${data.price}.00` : '$49.00')
+          });
         });
+
         list.sort((a, b) => new Date(b.createdAt || b.invoiceDate || 0).getTime() - new Date(a.createdAt || a.invoiceDate || 0).getTime());
         setInvoices(list);
       }, (err) => {
@@ -86,20 +141,56 @@ export const BillingView: React.FC<BillingViewProps> = ({
     } catch (e) {
       console.warn("Error setting up invoice listener:", e);
     }
-  }, [activeTenantId, tenantData?.trialEnds, tenantData?.status]);
+  }, [candidateTenantIds, tenantData?.trialEnds, tenantData?.status, tenantData?.companyName]);
 
+  // Initial synchronization fallback from prop
   useEffect(() => {
     if (tenantInvoices && tenantInvoices.length > 0 && invoices.length === 0) {
       setInvoices(tenantInvoices);
     }
   }, [tenantInvoices, invoices.length]);
 
-  // Overdue subscription invoices calculation
-  const overdueInvoices = useMemo(() => {
-    return invoices.filter(inv => inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE');
-  }, [invoices]);
+  // Plan pricing tiers
+  const pricingPlans = [
+    {
+      id: 'starter',
+      name: 'Starter Plan',
+      monthlyPrice: 49,
+      yearlyPrice: 39,
+      lifetimePrice: 499,
+      desc: 'Up to 10 active tours, 100 monthly bookings & core booking widgets',
+      features: ['10 Active Tours', '100 Bookings / mo', 'Standard Checkout', 'Email Alerts']
+    },
+    {
+      id: 'professional',
+      name: 'Professional Plan',
+      monthlyPrice: 99,
+      yearlyPrice: 79,
+      lifetimePrice: 999,
+      desc: 'Up to 50 tours, 500 bookings & AI guest travel assistant',
+      features: ['50 Active Tours', '500 Bookings / mo', 'AI Tour Generator', 'WhatsApp Notifications', 'Multi-Language']
+    },
+    {
+      id: 'business',
+      name: 'Business Plan',
+      monthlyPrice: 199,
+      yearlyPrice: 159,
+      lifetimePrice: 1999,
+      desc: 'Up to 100 tours, 2,000 bookings, custom payments & multi-currency',
+      features: ['100 Active Tours', '2,000 Bookings / mo', 'Multi-Gateway BYOPG', 'Channel Manager Sync', 'Custom Domain']
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise Plan',
+      monthlyPrice: 499,
+      yearlyPrice: 399,
+      lifetimePrice: 3999,
+      desc: 'Unlimited tours, unlimited bookings, dedicated support & developer APIs',
+      features: ['Unlimited Tours', 'Unlimited Bookings', 'Dedicated Support', 'Webhooks & REST APIs', 'White-Label Branding']
+    }
+  ];
 
-  // Sync billing cycle with tenantData if lifetime
+  // Sync billing cycle with tenantData
   useEffect(() => {
     if (tenantData?.billingInterval === 'lifetime' || (tenantData?.plan || '').toLowerCase().includes('lifetime')) {
       setBillingCycle('lifetime');
@@ -108,27 +199,60 @@ export const BillingView: React.FC<BillingViewProps> = ({
     }
   }, [tenantData?.billingInterval, tenantData?.plan]);
 
-  // Auto-generate invoice if missing for this workspace
+  // Auto-generate invoice in Firestore + API if missing for this workspace
   useEffect(() => {
     if (!activeTenantId || invoices.length > 0) return;
 
     const autoGenerateInvoice = async () => {
       try {
         setIsGeneratingInvoice(true);
+        const resolvedTenantId = activeTenantId.startsWith('tenant_') ? activeTenantId : `tenant_${activeTenantId}`;
+        const effInterval = tenantData?.billingInterval || 'monthly';
+        const effPlan = (tenantData?.plan || 'starter').toLowerCase();
+        const planObj = pricingPlans.find(p => p.id === effPlan) || pricingPlans[0];
+        const planPrice = effInterval === 'lifetime' ? planObj.lifetimePrice : effInterval === 'yearly' ? planObj.yearlyPrice * 12 : planObj.monthlyPrice;
+        const dueStr = effInterval === 'lifetime' ? 'Lifetime Access' : tenantData?.trialEnds ? new Date(tenantData.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+        const generatedNo = `INV-${Math.floor(1000 + Math.random() * 9000)}`;
+        const initialDocId = `${resolvedTenantId}_${generatedNo}`;
+
+        const initialInvData = {
+          id: initialDocId,
+          tenantId: resolvedTenantId,
+          tenantName: tenantData?.companyName || 'Operator Workspace',
+          no: generatedNo,
+          invoiceDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+          dueDate: dueStr,
+          amount: `$${planPrice}.00`,
+          status: 'UNPAID',
+          plan: `${planObj.name} (${effInterval.toUpperCase()})`,
+          billingInterval: effInterval,
+          paymentMethod: 'Card / Sandbox Gate',
+          createdAt: new Date().toISOString()
+        };
+
+        // Write directly to Firestore for instant reactive appearance
+        try {
+          await setDoc(doc(db, 'invoices', initialDocId), initialInvData, { merge: true });
+          setInvoices([initialInvData]);
+        } catch (fsErr) {
+          console.warn("Direct Firestore invoice seed warning:", fsErr);
+        }
+
+        // Call server API for persistent backend synchronization
         const res = await fetch('/api/tenant/generate-invoice', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            tenantId: activeTenantId,
+            tenantId: resolvedTenantId,
             companyName: tenantData?.companyName || 'Operator Workspace',
-            plan: tenantData?.plan || 'starter',
-            billingInterval: tenantData?.billingInterval || 'monthly',
+            plan: effPlan,
+            billingInterval: effInterval,
             trialEnds: tenantData?.trialEnds
           })
         });
         const data = await res.json();
         if (data.success && data.invoice) {
-          setInvoices([data.invoice]);
+          setInvoices(prev => prev.some(i => i.id === data.invoice.id) ? prev : [data.invoice, ...prev]);
         }
       } catch (err) {
         console.warn("Auto-generate invoice notice:", err);
@@ -173,50 +297,69 @@ export const BillingView: React.FC<BillingViewProps> = ({
     ? Math.max(0, Math.ceil((new Date(tenantData.trialEnds).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
     : 7;
 
-  // Plan pricing tiers
-  const pricingPlans = [
-    {
-      id: 'starter',
-      name: 'Starter Plan',
-      monthlyPrice: 49,
-      yearlyPrice: 39,
-      lifetimePrice: 499,
-      desc: 'Up to 10 active tours, 100 monthly bookings & core booking widgets',
-      features: ['10 Active Tours', '100 Bookings / mo', 'Standard Checkout', 'Email Alerts']
-    },
-    {
-      id: 'professional',
-      name: 'Professional Plan',
-      monthlyPrice: 99,
-      yearlyPrice: 79,
-      lifetimePrice: 999,
-      desc: 'Up to 50 tours, 500 bookings & AI guest travel assistant',
-      features: ['50 Active Tours', '500 Bookings / mo', 'AI Tour Generator', 'WhatsApp Notifications', 'Multi-Language']
-    },
-    {
-      id: 'business',
-      name: 'Business Plan',
-      monthlyPrice: 199,
-      yearlyPrice: 159,
-      lifetimePrice: 1999,
-      desc: 'Up to 100 tours, 2,000 bookings, custom payments & multi-currency',
-      features: ['100 Active Tours', '2,000 Bookings / mo', 'Multi-Gateway BYOPG', 'Channel Manager Sync', 'Custom Domain']
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise Plan',
-      monthlyPrice: 499,
-      yearlyPrice: 399,
-      lifetimePrice: 3999,
-      desc: 'Unlimited tours, unlimited bookings, dedicated support & developer APIs',
-      features: ['Unlimited Tours', 'Unlimited Bookings', 'Dedicated Support', 'Webhooks & REST APIs', 'White-Label Branding']
-    }
-  ];
+  // Active / Primary Invoice Resolution
+  const activeInvoice = useMemo(() => {
+    // 1. Highest priority: Overdue invoice
+    const overdue = invoices.find(inv => inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE');
+    if (overdue) return overdue;
+
+    // 2. Second priority: Unpaid subscription invoice
+    const unpaid = invoices.find(inv => (inv.status || '').toUpperCase() === 'UNPAID');
+    if (unpaid) return unpaid;
+
+    // 3. Third priority: Most recent paid invoice
+    if (invoices.length > 0) return invoices[0];
+
+    // 4. Fallback synthetic invoice if none yet generated
+    const effInterval = tenantData?.billingInterval || 'monthly';
+    const effPlan = (tenantData?.plan || 'starter').toLowerCase();
+    const planObj = pricingPlans.find(p => p.id === effPlan) || pricingPlans[0];
+    const planPrice = effInterval === 'lifetime' ? planObj.lifetimePrice : effInterval === 'yearly' ? planObj.yearlyPrice * 12 : planObj.monthlyPrice;
+
+    return {
+      id: `${activeTenantId || 'tenant'}_INV-1001`,
+      no: 'INV-1001',
+      plan: `${planObj.name} (${effInterval.toUpperCase()})`,
+      billingInterval: effInterval,
+      amount: `$${planPrice}.00`,
+      status: isTrial ? 'UNPAID' : 'PAID',
+      dueDate: isLifetime ? 'Lifetime Access' : (tenantData?.trialEnds ? new Date(tenantData.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'In 7 Days'),
+      invoiceDate: new Date().toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }),
+      paymentMethod: 'Card / Sandbox Gate',
+      isOverdue: false
+    };
+  }, [invoices, tenantData, activeTenantId, isTrial, isLifetime, pricingPlans]);
+
+  // Overdue subscription invoices
+  const overdueInvoices = useMemo(() => {
+    return invoices.filter(inv => inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE');
+  }, [invoices]);
+
+  // Filtered invoices for history table
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      const matchSearch = !invoiceSearchQuery.trim() || 
+        (inv.no || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase()) ||
+        (inv.plan || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase()) ||
+        (inv.amount || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase()) ||
+        (inv.dueDate || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase());
+
+      const st = (inv.status || '').toUpperCase();
+      const isPaid = st === 'PAID';
+      const isOverdue = inv.isOverdue || st === 'OVERDUE';
+      const isUnpaid = !isPaid && !isOverdue;
+
+      if (statusFilter === 'PAID') return matchSearch && isPaid;
+      if (statusFilter === 'OVERDUE') return matchSearch && isOverdue;
+      if (statusFilter === 'UNPAID') return matchSearch && isUnpaid;
+      return matchSearch;
+    });
+  }, [invoices, invoiceSearchQuery, statusFilter]);
 
   // Handle plan update (upgrade / downgrade)
   const handleUpdatePlan = async (pkg: any) => {
     if (!activeTenantId) {
-      setNotification({ type: 'error', message: 'Tenant ID not found.' });
+      setNotification({ type: 'error', message: 'Tenant workspace identifier not found.' });
       return;
     }
 
@@ -227,9 +370,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
     const planSlug = pkg.id;
 
     try {
+      const resolvedTenantId = activeTenantId.startsWith('tenant_') ? activeTenantId : `tenant_${activeTenantId}`;
+
       // 1. Direct Firestore update
       try {
-        await setDoc(doc(db, 'tenants', activeTenantId), {
+        await setDoc(doc(db, 'tenants', resolvedTenantId), {
           plan: planSlug,
           billingInterval: chosenInterval,
           updatedAt: new Date().toISOString()
@@ -243,7 +388,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: activeTenantId,
+          tenantId: resolvedTenantId,
           plan: planSlug,
           billingInterval: chosenInterval
         })
@@ -316,6 +461,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
 
     const nowIso = new Date().toISOString();
     const paidAmt = invoice.amount || '$0.00';
+    const resolvedTenantId = activeTenantId.startsWith('tenant_') ? activeTenantId : `tenant_${activeTenantId}`;
 
     try {
       // 1. Direct Firestore write
@@ -329,7 +475,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
           updatedAt: nowIso
         }, { merge: true });
 
-        await setDoc(doc(db, 'tenants', activeTenantId), {
+        await setDoc(doc(db, 'tenants', resolvedTenantId), {
           status: 'active',
           manualPaymentPending: false,
           subscriptionStatus: 'active',
@@ -345,7 +491,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: activeTenantId,
+          tenantId: resolvedTenantId,
           invoiceId: invoice.id,
           paymentMethod: method,
           amount: paidAmt
@@ -396,14 +542,15 @@ export const BillingView: React.FC<BillingViewProps> = ({
     if (!activeTenantId) return;
     setIsGeneratingInvoice(true);
     try {
+      const resolvedTenantId = activeTenantId.startsWith('tenant_') ? activeTenantId : `tenant_${activeTenantId}`;
       const res = await fetch('/api/tenant/generate-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tenantId: activeTenantId,
+          tenantId: resolvedTenantId,
           companyName: tenantData?.companyName || 'Operator Workspace',
-          plan: tenantData?.plan || 'business',
-          billingInterval: tenantData?.billingInterval || 'lifetime',
+          plan: tenantData?.plan || 'starter',
+          billingInterval: tenantData?.billingInterval || 'monthly',
           trialEnds: tenantData?.trialEnds
         })
       });
@@ -432,7 +579,8 @@ export const BillingView: React.FC<BillingViewProps> = ({
 
     setIsCancelling(true);
     try {
-      await setDoc(doc(db, 'tenants', activeTenantId), {
+      const resolvedTenantId = activeTenantId.startsWith('tenant_') ? activeTenantId : `tenant_${activeTenantId}`;
+      await setDoc(doc(db, 'tenants', resolvedTenantId), {
         subscriptionStatus: 'cancelled',
         status: 'cancelled',
         cancelledAt: new Date().toISOString(),
@@ -461,26 +609,38 @@ export const BillingView: React.FC<BillingViewProps> = ({
     }
   };
 
+  const currentPlanObj = pricingPlans.find(p => p.id === currentPlanStr) || pricingPlans[0];
+  const isCurrentPlanActivePaid = activeInvoice?.status === 'PAID' && !isTrial;
+
   return (
     <div className="space-y-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-4">
-      {/* Header */}
+      {/* ========================================================================= */}
+      {/* 1. HEADER & STATUS */}
+      {/* ========================================================================= */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-black text-gray-900 tracking-tight uppercase">Billing & Subscription</h2>
-          <p className="text-gray-500 font-medium tracking-tight">Manage your platform workspace tier, billing details, and active quotas.</p>
+          <p className="text-gray-500 font-medium tracking-tight">
+            Manage your active package tier, payable invoices, and official payment history.
+          </p>
         </div>
 
         {/* Status Pill */}
         <div className="flex items-center gap-3">
           {isTrial ? (
-            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-2xl text-xs font-bold">
+            <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-2xl text-xs font-bold shadow-xs">
               <Clock className="w-4 h-4 text-amber-600 animate-pulse" />
-              <span>Trial Period: {daysRemaining} days left ({trialEndsFormatted})</span>
+              <span>Trial Period: {daysRemaining} days remaining ({trialEndsFormatted})</span>
+            </div>
+          ) : isCurrentPlanActivePaid ? (
+            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-2xl text-xs font-bold shadow-xs">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>Active Package ({tenantData?.plan?.toUpperCase() || 'STARTER'})</span>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-2xl text-xs font-bold">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>Active Subscription ({tenantData?.plan?.toUpperCase() || 'BUSINESS'})</span>
+            <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 text-rose-800 px-4 py-2 rounded-2xl text-xs font-bold shadow-xs">
+              <AlertCircle className="w-4 h-4 text-rose-600 animate-pulse" />
+              <span>Payment Pending ({tenantData?.plan?.toUpperCase() || 'STARTER'})</span>
             </div>
           )}
         </div>
@@ -489,7 +649,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       {/* Notifications */}
       {notification && (
         <div className={cn(
-          "p-4 rounded-2xl flex items-center justify-between gap-3 text-sm font-bold shadow-sm transition-all",
+          "p-4 rounded-2xl flex items-center justify-between gap-3 text-sm font-bold shadow-sm transition-all animate-in fade-in",
           notification.type === 'success' 
             ? "bg-emerald-50 border border-emerald-200 text-emerald-900" 
             : "bg-rose-50 border border-rose-200 text-rose-900"
@@ -502,13 +662,13 @@ export const BillingView: React.FC<BillingViewProps> = ({
             )}
             <span>{notification.message}</span>
           </div>
-          <button onClick={() => setNotification(null)} className="p-1 hover:bg-black/5 rounded-lg">
+          <button onClick={() => setNotification(null)} className="p-1 hover:bg-black/5 rounded-lg cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Overdue Invoice Alert Banner */}
+      {/* Overdue Urgent Alert Banner */}
       {overdueInvoices.length > 0 && (
         <div className="bg-gradient-to-r from-rose-500/15 via-red-500/10 to-rose-500/5 border-2 border-rose-500/40 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xs animate-in fade-in">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
@@ -522,14 +682,14 @@ export const BillingView: React.FC<BillingViewProps> = ({
               </h3>
               <p className="text-sm text-gray-600 font-medium leading-relaxed">
                 Your workspace subscription invoice for <strong className="text-rose-700 font-black">{overdueInvoices[0]?.amount}</strong> was due on <strong>{overdueInvoices[0]?.dueDate}</strong>. 
-                Please complete payment now to prevent automated booking engine interruption and account suspension.
+                Please complete payment now to ensure uninterrupted booking automation and avoid account suspension.
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => setSelectedInvoiceForPayment(overdueInvoices[0])}
-                className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-rose-600/25 transition-all cursor-pointer animate-bounce"
+                className="bg-rose-600 hover:bg-rose-500 text-white font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-rose-600/25 transition-all cursor-pointer animate-pulse"
               >
                 <CreditCard className="w-4 h-4" />
                 <span>Pay Overdue Invoice ({overdueInvoices[0]?.amount})</span>
@@ -539,228 +699,115 @@ export const BillingView: React.FC<BillingViewProps> = ({
         </div>
       )}
 
-      {/* Trial Banner with Urgent Call to Pay Invoice */}
-      {isTrial && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 border-2 border-amber-400/40 rounded-3xl p-6 md:p-8 relative overflow-hidden shadow-xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
-            <div className="space-y-2 max-w-2xl">
-              <div className="inline-flex items-center gap-2 bg-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Invoice Ready Before Trial Ends</span>
+      {/* ========================================================================= */}
+      {/* 2. SECTION 1: ACTIVE PACKAGE CARD & QUOTA METERS */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-8 shadow-xs space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-orange-500/10 text-primary flex items-center justify-center font-black">
+              <Sparkles className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-primary uppercase tracking-widest bg-orange-50 px-2.5 py-0.5 rounded-md border border-orange-200/60">
+                  {tenantData?.billingInterval === 'lifetime' ? 'Lifetime Tier' : `${tenantData?.billingInterval || 'Monthly'} Subscription`}
+                </span>
+                {isTrial && (
+                  <span className="text-xs font-black text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-md border border-amber-200">
+                    7-Day Free Trial
+                  </span>
+                )}
               </div>
-              <h3 className="text-xl md:text-2xl font-black text-gray-900 tracking-tight">
-                Your Workspace Subscription Invoice Is Payable Today
+              <h3 className="text-2xl font-black text-gray-900 tracking-tight mt-1">
+                {currentPlanObj.name}
               </h3>
-              <p className="text-sm text-gray-600 font-medium leading-relaxed">
-                Your <strong>7-Day Free Trial</strong> is active until <strong>{trialEndsFormatted}</strong> ({daysRemaining} days remaining). 
-                To ensure uninterrupted booking automation, domain uptime, and AI tools, your subscription invoice is listed below and can be paid at any time before your trial expires.
+              <p className="text-xs text-gray-500 font-medium">
+                {currentPlanObj.desc}
               </p>
             </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {invoices.length > 0 && invoices.some(i => i.status !== 'PAID') && (
-                <button
-                  onClick={() => setSelectedInvoiceForPayment(invoices.find(i => i.status !== 'PAID'))}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg hover:shadow-emerald-500/20 transition-all cursor-pointer"
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Pay Subscription Invoice</span>
-                </button>
-              )}
-            </div>
           </div>
-        </div>
-      )}
 
-      {/* Quota Progress Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Active Tours Quota */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Tours</span>
-            <span className="text-xs font-black text-primary bg-orange-50 px-2 py-1 rounded-md">
-              {tourQuota >= 999999 ? 'Unlimited' : `${tourPercent}% Used`}
-            </span>
-          </div>
-          <p className="text-3xl font-black text-gray-900">
-            {tours.length} <span className="text-lg font-bold text-gray-400">/ {tourQuota >= 999999 ? 'Unlimited' : `${tourQuota} tours`}</span>
-          </p>
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-            <div 
-              className="bg-primary h-full rounded-full transition-all duration-500" 
-              style={{ width: `${tourQuota >= 999999 ? 10 : tourPercent}%` }} 
-            />
-          </div>
-        </div>
-
-        {/* Monthly Bookings Quota */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Bookings</span>
-            <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md">
-              {bookingQuota >= 999999 ? 'Unlimited' : `${bookingPercent}% Used`}
-            </span>
-          </div>
-          <p className="text-3xl font-black text-gray-900">
-            {bookings.length} <span className="text-lg font-bold text-gray-400">/ {bookingQuota >= 999999 ? 'Unlimited' : `${bookingQuota} bookings`}</span>
-          </p>
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-            <div 
-              className="bg-blue-500 h-full rounded-full transition-all duration-500" 
-              style={{ width: `${bookingQuota >= 999999 ? 10 : bookingPercent}%` }} 
-            />
-          </div>
-        </div>
-
-        {/* Developer Webhooks & API */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-xs space-y-3">
-          <div className="flex justify-between items-center">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Webhook & API Quota</span>
-            <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">100% Active</span>
-          </div>
-          <p className="text-3xl font-black text-gray-900">
-            BYOPG <span className="text-lg font-bold text-gray-400">/ Multi-Gateway</span>
-          </p>
-          <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Invoices & Payment History */}
-        <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white rounded-2xl border border-gray-100 p-6 md:p-8 shadow-xs space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-black text-gray-900 text-lg tracking-tight">Subscription Invoices</h3>
-                <p className="text-xs text-gray-400 font-medium">Payable before trial concludes to avoid suspension</p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {invoices.length === 0 && (
-                  <button
-                    onClick={handleManualGenerateInvoice}
-                    disabled={isGeneratingInvoice}
-                    className="text-xs font-black bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <RefreshCw className={cn("w-3.5 h-3.5", isGeneratingInvoice && "animate-spin")} />
-                    <span>Generate Invoice</span>
-                  </button>
-                )}
-                <span className="text-[11px] font-black text-gray-400 bg-gray-50 border border-gray-100 px-3 py-1.5 rounded-xl">
-                  {invoices.length} {invoices.length === 1 ? 'Invoice' : 'Invoices'}
-                </span>
-              </div>
-            </div>
-
-            {/* Invoices Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm text-gray-500">
-                <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-50 bg-gray-50/50">
-                  <tr>
-                    <th className="py-3 px-4">Invoice #</th>
-                    <th className="py-3 px-4">Plan & Period</th>
-                    <th className="py-3 px-4">Due Date</th>
-                    <th className="py-3 px-4">Amount</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {invoices.length === 0 ? (
-                    <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-400">
-                        <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                        <p className="font-medium text-xs">Generating your trial subscription invoice...</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    invoices.map((inv) => {
-                      const isPaid = inv.status === 'PAID' || inv.status === 'Paid';
-                      const isPending = inv.status === 'PENDING';
-                      return (
-                        <tr key={inv.id} className="hover:bg-gray-50/60 transition-colors">
-                          <td className="py-4 px-4 font-black text-gray-900 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-gray-400" />
-                            <span>{inv.no || inv.id}</span>
-                          </td>
-                          <td className="py-4 px-4 font-bold text-gray-700">
-                            <div>{inv.plan || tenantData?.plan?.toUpperCase() || 'Business Plan'}</div>
-                            <div className="text-[10px] text-gray-400 font-medium">{inv.invoiceDate || inv.date || 'Today'}</div>
-                          </td>
-                          <td className="py-4 px-4 text-xs font-bold text-gray-600">
-                            {inv.dueDate || (isTrial ? `Trial Ends ${trialEndsFormatted}` : 'Lifetime Access')}
-                          </td>
-                          <td className="py-4 px-4 font-black text-gray-900 text-sm">
-                            {inv.amount || inv.amt || '$1,999.00'}
-                          </td>
-                          <td className="py-4 px-4">
-                            {isPaid ? (
-                              <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                <span>Paid</span>
-                              </span>
-                            ) : (inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? (
-                              <span className="bg-rose-50 border border-rose-300 text-rose-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1 shadow-2xs">
-                                <AlertCircle className="w-3 h-3 text-rose-600 animate-pulse" />
-                                <span>Overdue</span>
-                              </span>
-                            ) : (
-                              <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                <span>Payable</span>
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              {!isPaid && (
-                                <button
-                                  onClick={() => setSelectedInvoiceForPayment(inv)}
-                                  className={cn(
-                                    "font-black text-[11px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm transition-all cursor-pointer",
-                                    (inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE')
-                                      ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
-                                      : "bg-emerald-600 hover:bg-emerald-500 text-white"
-                                  )}
-                                  title={(inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? "Pay Overdue Invoice" : "Pay Subscription Invoice"}
-                                >
-                                  <CreditCard className="w-3.5 h-3.5" />
-                                  <span>{(inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE') ? 'Pay Overdue' : 'Pay Now'}</span>
-                                </button>
-                              )}
-                              <button 
-                                onClick={() => setSelectedInvoiceForView(inv)}
-                                className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
-                                title="View & Download Invoice Receipt"
-                              >
-                                <Download className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="text-right">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Next Renewal / Due Date</span>
+              <span className="text-sm font-black text-gray-900">
+                {isLifetime ? 'Lifetime Access' : isTrial ? `Trial Ends ${trialEndsFormatted}` : (activeInvoice?.dueDate || 'Active')}
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Pricing Cards (Upgrade & Downgrade Plans) */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="font-black text-gray-900 text-lg tracking-tight">Upgrade / Change Tier</h3>
-            
-            {/* Interval Toggle */}
-            <div className="flex items-center bg-gray-100 p-1 rounded-xl text-[10px] font-black uppercase">
+        {/* Quotas Progress Bars */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
+          {/* Active Tours */}
+          <div className="bg-gray-50/70 rounded-2xl p-5 border border-gray-100 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Active Tours</span>
+              <span className="text-xs font-black text-primary bg-orange-50 px-2 py-0.5 rounded-md">
+                {tourQuota >= 999999 ? 'Unlimited' : `${tourPercent}% Used`}
+              </span>
+            </div>
+            <p className="text-2xl font-black text-gray-900">
+              {tours.length} <span className="text-sm font-bold text-gray-400">/ {tourQuota >= 999999 ? 'Unlimited' : `${tourQuota} tours`}</span>
+            </p>
+            <div className="w-full bg-gray-200/60 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-primary h-full rounded-full transition-all duration-500" 
+                style={{ width: `${tourQuota >= 999999 ? 10 : tourPercent}%` }} 
+              />
+            </div>
+          </div>
+
+          {/* Monthly Bookings */}
+          <div className="bg-gray-50/70 rounded-2xl p-5 border border-gray-100 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Monthly Bookings</span>
+              <span className="text-xs font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">
+                {bookingQuota >= 999999 ? 'Unlimited' : `${bookingPercent}% Used`}
+              </span>
+            </div>
+            <p className="text-2xl font-black text-gray-900">
+              {bookings.length} <span className="text-sm font-bold text-gray-400">/ {bookingQuota >= 999999 ? 'Unlimited' : `${bookingQuota} bookings`}</span>
+            </p>
+            <div className="w-full bg-gray-200/60 h-2 rounded-full overflow-hidden">
+              <div 
+                className="bg-blue-500 h-full rounded-full transition-all duration-500" 
+                style={{ width: `${bookingQuota >= 999999 ? 10 : bookingPercent}%` }} 
+              />
+            </div>
+          </div>
+
+          {/* BYOPG & Developer API */}
+          <div className="bg-gray-50/70 rounded-2xl p-5 border border-gray-100 space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Payment Gateway Access</span>
+              <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">Multi-Gateway Enabled</span>
+            </div>
+            <p className="text-2xl font-black text-gray-900">
+              BYOPG <span className="text-sm font-bold text-gray-400">/ All Gateways</span>
+            </p>
+            <div className="w-full bg-gray-200/60 h-2 rounded-full overflow-hidden">
+              <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Upgrade / Downgrade Tiers Section */}
+        <div className="pt-4 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h4 className="font-black text-gray-900 text-base tracking-tight">Change / Upgrade Package</h4>
+              <p className="text-xs text-gray-400 font-medium">Instantly switch your plan tier or adjust your billing cycle</p>
+            </div>
+
+            {/* Cycle Toggle */}
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl text-[11px] font-black uppercase">
               <button 
                 onClick={() => setBillingCycle('monthly')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-all",
-                  billingCycle === 'monthly' ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
+                  "px-3 py-1.5 rounded-lg transition-all cursor-pointer",
+                  billingCycle === 'monthly' ? "bg-white text-gray-900 shadow-xs font-black" : "text-gray-500 hover:text-gray-900"
                 )}
               >
                 Monthly
@@ -768,34 +815,36 @@ export const BillingView: React.FC<BillingViewProps> = ({
               <button 
                 onClick={() => setBillingCycle('yearly')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-all",
-                  billingCycle === 'yearly' ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
+                  "px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer",
+                  billingCycle === 'yearly' ? "bg-white text-gray-900 shadow-xs font-black" : "text-gray-500 hover:text-gray-900"
                 )}
               >
-                Yearly (-20%)
+                <span>Yearly</span>
+                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-black px-1.5 py-0.2 rounded">-20%</span>
               </button>
               <button 
                 onClick={() => setBillingCycle('lifetime')}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg transition-all",
-                  billingCycle === 'lifetime' ? "bg-white text-gray-900 shadow-xs" : "text-gray-500 hover:text-gray-900"
+                  "px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 cursor-pointer",
+                  billingCycle === 'lifetime' ? "bg-white text-gray-900 shadow-xs font-black" : "text-gray-500 hover:text-gray-900"
                 )}
               >
-                Lifetime
+                <span>Lifetime</span>
+                <span className="text-[9px] bg-purple-100 text-purple-800 font-black px-1.5 py-0.2 rounded">🔥 PROMO</span>
               </button>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {pricingPlans.map((pkg) => {
-              const isCurrent = currentPlanStr.includes(pkg.id) && (
+              const isCurrent = currentPlanStr === pkg.id && (
                 billingCycle === 'lifetime' 
-                  ? isLifetime 
-                  : !isLifetime
+                  ? (tenantData?.billingInterval === 'lifetime' || currentPlanStr.includes('lifetime'))
+                  : (tenantData?.billingInterval || 'monthly') === billingCycle
               );
 
               const priceDisplay = billingCycle === 'lifetime'
-                ? `$${pkg.lifetimePrice || 1999}`
+                ? `$${pkg.lifetimePrice}`
                 : billingCycle === 'yearly'
                 ? `$${pkg.yearlyPrice}`
                 : `$${pkg.monthlyPrice}`;
@@ -806,7 +855,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 <div 
                   key={pkg.id} 
                   className={cn(
-                    "bg-white rounded-2xl p-5 md:p-6 relative overflow-hidden space-y-3 border transition-all",
+                    "bg-white rounded-2xl p-5 relative overflow-hidden space-y-3 border transition-all flex flex-col justify-between",
                     isCurrent ? "border-2 border-orange-500 shadow-md ring-2 ring-orange-500/10" : "border-gray-100 hover:border-gray-200"
                   )}
                 >
@@ -816,24 +865,25 @@ export const BillingView: React.FC<BillingViewProps> = ({
                     </div>
                   )}
 
-                  <div>
-                    <p className={cn("text-[10px] font-black uppercase tracking-widest", isCurrent ? "text-primary" : "text-gray-400")}>
-                      {pkg.name}
-                    </p>
-                    <h4 className="text-2xl font-black text-gray-900 tracking-tight mt-0.5">
-                      {priceDisplay}
-                      <span className="text-xs font-medium text-gray-400">{periodDisplay}</span>
-                    </h4>
+                  <div className="space-y-2">
+                    <div>
+                      <p className={cn("text-[10px] font-black uppercase tracking-widest", isCurrent ? "text-primary" : "text-gray-400")}>
+                        {pkg.name}
+                      </p>
+                      <h5 className="text-xl font-black text-gray-900 tracking-tight mt-0.5">
+                        {priceDisplay}
+                        <span className="text-[11px] font-medium text-gray-400">{periodDisplay}</span>
+                      </h5>
+                    </div>
+                    <p className="text-xs text-gray-500 font-medium leading-tight">{pkg.desc}</p>
                   </div>
 
-                  <p className="text-xs text-gray-500 font-bold">{pkg.desc}</p>
-
-                  <div className="pt-1">
+                  <div className="pt-2 border-t border-gray-50">
                     <button 
                       disabled={isCurrent || isUpdatingPlan === pkg.id}
                       onClick={() => handleUpdatePlan(pkg)}
                       className={cn(
-                        "w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2",
+                        "w-full py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-1.5",
                         isCurrent 
                           ? "bg-orange-50 text-primary cursor-default" 
                           : "bg-gray-900 hover:bg-black text-white cursor-pointer shadow-sm hover:shadow"
@@ -842,7 +892,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                       {isUpdatingPlan === pkg.id ? (
                         <>
                           <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                          <span>Updating Plan...</span>
+                          <span>Updating...</span>
                         </>
                       ) : isCurrent ? (
                         <>
@@ -850,7 +900,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                           <span>Active Tier</span>
                         </>
                       ) : (
-                        <span>Select {pkg.name}</span>
+                        <span>Switch to {pkg.name.split(' ')[0]}</span>
                       )}
                     </button>
                   </div>
@@ -872,7 +922,238 @@ export const BillingView: React.FC<BillingViewProps> = ({
         </div>
       </div>
 
-      {/* Modal: Pay Invoice */}
+      {/* ========================================================================= */}
+      {/* 3. SECTION 2: ACTIVE INVOICE CARD (DEDICATED DISPLAY & PAY ACTION) */}
+      {/* ========================================================================= */}
+      {activeInvoice && (
+        <div className="bg-gradient-to-r from-slate-900 via-gray-900 to-slate-950 text-white rounded-3xl p-6 md:p-8 shadow-xl relative overflow-hidden space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-white/10 pb-6">
+            <div className="space-y-2 max-w-2xl">
+              <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md text-orange-400 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-white/10">
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Active Subscription Invoice</span>
+              </div>
+              <h3 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+                Invoice #{activeInvoice.no || activeInvoice.id}
+              </h3>
+              <p className="text-sm text-gray-300 font-medium leading-relaxed">
+                Plan: <strong className="text-white">{activeInvoice.plan || currentPlanObj.name}</strong> • Billed to: <strong className="text-white">{tenantData?.companyName || 'Operator Workspace'}</strong>
+              </p>
+            </div>
+
+            {/* Total Due & Pay Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-white/5 border border-white/10 rounded-2xl p-4 md:p-5">
+              <div>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Total Amount</span>
+                <span className="text-3xl font-black text-emerald-400 tracking-tight">{activeInvoice.amount}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {activeInvoice.status !== 'PAID' ? (
+                  <button
+                    onClick={() => setSelectedInvoiceForPayment(activeInvoice)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-wider px-6 py-3.5 rounded-xl flex items-center gap-2 shadow-lg hover:shadow-emerald-500/25 transition-all cursor-pointer font-sans"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    <span>Pay Now</span>
+                  </button>
+                ) : (
+                  <div className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-4 py-2.5 rounded-xl text-xs font-black flex items-center gap-1.5 uppercase tracking-wider">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Paid & Active</span>
+                  </div>
+                )}
+                <button
+                  onClick={() => setSelectedInvoiceForView(activeInvoice)}
+                  className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="View Official Receipt"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Receipt</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Active Invoice Details Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+            <div>
+              <span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Invoice Date</span>
+              <span className="font-bold text-white mt-0.5 block">{activeInvoice.invoiceDate || 'Today'}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Due Date</span>
+              <span className="font-bold text-amber-300 mt-0.5 block">{activeInvoice.dueDate || trialEndsFormatted}</span>
+            </div>
+            <div>
+              <span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Payment Status</span>
+              <span className={cn(
+                "mt-0.5 inline-block font-black text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-md",
+                activeInvoice.status === 'PAID' ? "bg-emerald-500/20 text-emerald-300" : activeInvoice.isOverdue ? "bg-rose-500/20 text-rose-300 animate-pulse" : "bg-amber-500/20 text-amber-300"
+              )}>
+                {activeInvoice.status || 'UNPAID'}
+              </span>
+            </div>
+            <div>
+              <span className="text-gray-400 font-bold uppercase tracking-wider block text-[10px]">Payment Gateway</span>
+              <span className="font-bold text-white mt-0.5 block">{activeInvoice.paymentMethod || 'Online Gateway / Sandbox'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4. SECTION 3: PAYMENT / INVOICE HISTORY TABLE */}
+      {/* ========================================================================= */}
+      <div className="bg-white rounded-3xl border border-gray-100 p-6 md:p-8 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 className="font-black text-gray-900 text-xl tracking-tight">Payment & Invoice History</h3>
+            <p className="text-xs text-gray-400 font-medium">Full ledger of platform subscription statements and receipts</p>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search invoices..."
+                value={invoiceSearchQuery}
+                onChange={(e) => setInvoiceSearchQuery(e.target.value)}
+                className="pl-9 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary/20 w-40 sm:w-48"
+              />
+            </div>
+
+            {/* Filter Pill */}
+            <div className="flex items-center bg-gray-100 p-1 rounded-xl text-[10px] font-black uppercase">
+              {(['ALL', 'UNPAID', 'PAID', 'OVERDUE'] as const).map((filterOpt) => (
+                <button
+                  key={filterOpt}
+                  onClick={() => setStatusFilter(filterOpt)}
+                  className={cn(
+                    "px-2.5 py-1 rounded-lg transition-all cursor-pointer",
+                    statusFilter === filterOpt ? "bg-white text-gray-900 shadow-xs font-black" : "text-gray-500 hover:text-gray-900"
+                  )}
+                >
+                  {filterOpt}
+                </button>
+              ))}
+            </div>
+
+            {invoices.length === 0 && (
+              <button
+                onClick={handleManualGenerateInvoice}
+                disabled={isGeneratingInvoice}
+                className="text-xs font-black bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RefreshCw className={cn("w-3.5 h-3.5", isGeneratingInvoice && "animate-spin")} />
+                <span>Generate Invoice</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Invoices Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-gray-500">
+            <thead className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 bg-gray-50/50">
+              <tr>
+                <th className="py-3 px-4">Invoice #</th>
+                <th className="py-3 px-4">Plan & Period</th>
+                <th className="py-3 px-4">Due Date</th>
+                <th className="py-3 px-4">Amount</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {filteredInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-10 text-center text-gray-400">
+                    <FileText className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                    <p className="font-bold text-xs text-gray-700">No invoices matching the current filter</p>
+                    <p className="font-medium text-[11px] text-gray-400 mt-0.5">All issued subscription invoices will appear here.</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredInvoices.map((inv) => {
+                  const isPaid = inv.status === 'PAID';
+                  const isOverdue = inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE';
+
+                  return (
+                    <tr key={inv.id} className="hover:bg-gray-50/70 transition-colors">
+                      <td className="py-4 px-4 font-black text-gray-900 flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-gray-400" />
+                        <span>{inv.no || inv.id}</span>
+                      </td>
+                      <td className="py-4 px-4 font-bold text-gray-700">
+                        <div>{inv.plan || tenantData?.plan?.toUpperCase() || 'Starter Plan'}</div>
+                        <div className="text-[10px] text-gray-400 font-medium">{inv.invoiceDate || 'Today'}</div>
+                      </td>
+                      <td className="py-4 px-4 text-xs font-bold text-gray-600">
+                        {inv.dueDate || (isTrial ? `Trial Ends ${trialEndsFormatted}` : 'Lifetime Access')}
+                      </td>
+                      <td className="py-4 px-4 font-black text-gray-900 text-sm">
+                        {inv.amount || '$49.00'}
+                      </td>
+                      <td className="py-4 px-4">
+                        {isPaid ? (
+                          <span className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3" />
+                            <span>Paid</span>
+                          </span>
+                        ) : isOverdue ? (
+                          <span className="bg-rose-50 border border-rose-300 text-rose-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1 shadow-2xs">
+                            <AlertCircle className="w-3 h-3 text-rose-600 animate-pulse" />
+                            <span>Overdue</span>
+                          </span>
+                        ) : (
+                          <span className="bg-amber-50 border border-amber-200 text-amber-700 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md inline-flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            <span>Payable</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {!isPaid && (
+                            <button
+                              onClick={() => setSelectedInvoiceForPayment(inv)}
+                              className={cn(
+                                "font-black text-[11px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs transition-all cursor-pointer",
+                                isOverdue
+                                  ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
+                                  : "bg-emerald-600 hover:bg-emerald-500 text-white"
+                              )}
+                              title={isOverdue ? "Pay Overdue Invoice" : "Pay Subscription Invoice"}
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>{isOverdue ? 'Pay Overdue' : 'Pay Now'}</span>
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => setSelectedInvoiceForView(inv)}
+                            className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
+                            title="View & Download Official Receipt"
+                          >
+                            <Download className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. MODAL: PAY INVOICE (INSTANT SANDBOX / CARD GATEWAY) */}
+      {/* ========================================================================= */}
       {selectedInvoiceForPayment && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 md:p-8 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95">
@@ -888,7 +1169,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
               </div>
               <button 
                 onClick={() => setSelectedInvoiceForPayment(null)}
-                className="p-2 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100"
+                className="p-2 text-gray-400 hover:text-gray-700 rounded-xl hover:bg-gray-100 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -898,7 +1179,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
             <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 space-y-3">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-400 font-bold uppercase tracking-wider">Plan & Workspace:</span>
-                <span className="font-black text-gray-800">{selectedInvoiceForPayment.plan || tenantData?.plan}</span>
+                <span className="font-black text-gray-800">{selectedInvoiceForPayment.plan || currentPlanObj.name}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-gray-400 font-bold uppercase tracking-wider">Due Date:</span>
@@ -910,7 +1191,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
               </div>
               <div className="border-t border-gray-200/60 pt-3 flex justify-between items-center">
                 <span className="text-sm font-black text-gray-900">Total Payable:</span>
-                <span className="text-2xl font-black text-emerald-600">{selectedInvoiceForPayment.amount || '$1,999.00'}</span>
+                <span className="text-2xl font-black text-emerald-600">{selectedInvoiceForPayment.amount || '$49.00'}</span>
               </div>
             </div>
 
@@ -929,20 +1210,20 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 ) : (
                   <>
                     <Zap className="w-4 h-4 text-emerald-200" />
-                    <span>Instant Payment & Activate Workspace</span>
+                    <span>Instant Payment & Settle Invoice</span>
                   </>
                 )}
               </button>
 
               <button
                 onClick={() => {
-                  const checkoutUrl = `/api/billing/mock-checkout?productId=${encodeURIComponent(tenantData?.plan || 'business')}&tenantId=${encodeURIComponent(activeTenantId)}&billingInterval=${encodeURIComponent(tenantData?.billingInterval || 'lifetime')}`;
+                  const checkoutUrl = `/api/billing/mock-checkout?productId=${encodeURIComponent(tenantData?.plan || 'starter')}&tenantId=${encodeURIComponent(activeTenantId)}&billingInterval=${encodeURIComponent(tenantData?.billingInterval || 'monthly')}`;
                   window.location.href = checkoutUrl;
                 }}
                 className="w-full py-3 px-4 bg-gray-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-2xl flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <ExternalLink className="w-4 h-4" />
-                <span>Pay via Creem / Online Card Gateway</span>
+                <span>Pay via Online Card Gateway</span>
               </button>
             </div>
 
@@ -953,7 +1234,9 @@ export const BillingView: React.FC<BillingViewProps> = ({
         </div>
       )}
 
-      {/* Modal: View & Download Invoice Receipt */}
+      {/* ========================================================================= */}
+      {/* 6. MODAL: VIEW & PRINT OFFICIAL RECEIPT */}
+      {/* ========================================================================= */}
       {selectedInvoiceForView && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 shadow-2xl relative animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
@@ -1034,17 +1317,17 @@ export const BillingView: React.FC<BillingViewProps> = ({
                   <tbody className="divide-y divide-gray-100 font-medium text-gray-700">
                     <tr>
                       <td className="py-3">
-                        <span className="font-bold text-gray-900 block">{selectedInvoiceForView.plan || 'Business Plan'}</span>
+                        <span className="font-bold text-gray-900 block">{selectedInvoiceForView.plan || currentPlanObj.name}</span>
                         <span className="text-[11px] text-gray-500">Includes Multi-Gateway BYOPG, Channel Manager, AI Tour Planner & Booking Suite</span>
                       </td>
                       <td className="py-3 text-center">1</td>
-                      <td className="py-3 text-right font-black text-gray-900">{selectedInvoiceForView.amount || '$1,999.00'}</td>
+                      <td className="py-3 text-right font-black text-gray-900">{selectedInvoiceForView.amount || '$49.00'}</td>
                     </tr>
                   </tbody>
                   <tfoot className="border-t border-gray-200 font-bold">
                     <tr>
                       <td colSpan={2} className="pt-3 text-gray-500">Subtotal</td>
-                      <td className="pt-3 text-right text-gray-900 font-black">{selectedInvoiceForView.amount || '$1,999.00'}</td>
+                      <td className="pt-3 text-right text-gray-900 font-black">{selectedInvoiceForView.amount || '$49.00'}</td>
                     </tr>
                     <tr>
                       <td colSpan={2} className="pt-1 text-gray-500">Taxes & Processing Fees (Included)</td>
@@ -1052,7 +1335,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                     </tr>
                     <tr className="text-base font-black text-gray-900">
                       <td colSpan={2} className="pt-3">Total Amount</td>
-                      <td className="pt-3 text-right text-emerald-600">{selectedInvoiceForView.amount || '$1,999.00'}</td>
+                      <td className="pt-3 text-right text-emerald-600">{selectedInvoiceForView.amount || '$49.00'}</td>
                     </tr>
                   </tfoot>
                 </table>

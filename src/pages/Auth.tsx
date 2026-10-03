@@ -11,7 +11,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, serverTimestamp, updateDoc, query, collection, where, getDocs, deleteDoc } from '@/src/lib/firebase';
-import { Mail, Lock, User, ArrowRight, Github, Chrome, Apple, Eye, EyeOff, Loader2, Sparkles, CheckCircle2, MessageSquare, Globe, ShieldCheck } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Github, Chrome, Apple, Eye, EyeOff, Loader2, Sparkles, CheckCircle2, MessageSquare, Globe, ShieldCheck, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { useSettings } from '../lib/SettingsContext';
@@ -480,6 +480,10 @@ export default function Auth() {
           } catch (mailError) {
             console.warn('[Auth] Failed to send welcome/verification emails:', mailError);
           }
+
+          const isSuperAdminEmail = ['baliadventours@gmail.com', 'admin@tripbone.com', 'kuotabox@gmail.com'].includes(user.email?.toLowerCase() || '');
+          const isTenantOwner = !!(tenant && tenant.adminEmail && user.email && (tenant.adminEmail.trim().toLowerCase() === user.email.trim().toLowerCase()));
+          const userRole: any = isTenantOwner ? 'admin' : (isSuperAdminEmail ? 'superadmin' : 'customer');
 
           let targetPath = from;
           if (from === '/' || from === '/login') {

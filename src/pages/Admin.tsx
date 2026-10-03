@@ -1331,14 +1331,40 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
       setLabels(snapshot.docs.map(d => ({ id: d.id, ...d.data() } as TourLabel)));
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'tourLabels'));
 
-    const tenantIdForInvoices = getActiveTenantId() || tenantData?.id || tenantData?.slug;
-    let unsubscribeInvoices = () => {};
-    if (tenantIdForInvoices) {
-      const q = query(collection(db, 'invoices'), where('tenantId', '==', tenantIdForInvoices));
-      unsubscribeInvoices = onSnapshot(q, (snapshot) => {
-        setTenantInvoices(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+    const unsubscribeInvoices = onSnapshot(collection(db, 'invoices'), (snapshot) => {
+      const activeId = getActiveTenantId() || tenantData?.id || tenantData?.slug || tenant?.id;
+      const candIds = new Set<string>();
+      if (activeId) {
+        candIds.add(String(activeId));
+        candIds.add(String(activeId).replace(/^tenant_/, ''));
+        if (!String(activeId).startsWith('tenant_')) candIds.add(`tenant_${activeId}`);
+      }
+      if (tenant?.id) {
+        candIds.add(String(tenant.id));
+        candIds.add(String(tenant.id).replace(/^tenant_/, ''));
+        if (!String(tenant.id).startsWith('tenant_')) candIds.add(`tenant_${tenant.id}`);
+      }
+      if (tenant?.slug) {
+        candIds.add(String(tenant.slug));
+        candIds.add(`tenant_${tenant.slug}`);
+      }
+      const candArr = Array.from(candIds).filter(Boolean);
+
+      const list: any[] = [];
+      snapshot.forEach(d => {
+        const raw = d.data();
+        const docId = d.id;
+        const matches = candArr.length === 0 || 
+          candArr.includes(raw.tenantId) || 
+          candArr.includes(raw.tenant) || 
+          candArr.includes(raw.tenant_id) || 
+          candArr.some(cid => docId.startsWith(cid + '_') || docId === cid);
+        if (matches) {
+          list.push({ id: docId, ...raw });
+        }
       });
-    }
+      setTenantInvoices(list);
+    }, (error) => console.warn("Tenant invoices listener note:", error));
 
     const unsubscribeComm = onSnapshot(doc(db, 'communicationSettings', getActiveTenantId() || 'global'), (snap) => {
       if (snap.exists()) {
