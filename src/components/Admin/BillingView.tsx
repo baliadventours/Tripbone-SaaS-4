@@ -20,10 +20,12 @@ import {
   TrendingUp,
   Receipt,
   Search,
-  Filter
+  Filter,
+  Eye
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { db, doc, setDoc, getActiveTenantId, collection, onSnapshot } from "../../lib/firebase";
+import { generateInvoiceNumber } from "../../lib/planUtils";
 
 interface BillingViewProps {
   tenantData: any;
@@ -121,12 +123,16 @@ export const BillingView: React.FC<BillingViewProps> = ({
             st = 'UNPAID';
           }
 
+          const computedNo = (data.no && /\d/.test(data.no))
+            ? (data.no.startsWith('INV-') ? data.no : `INV-${data.no}`)
+            : generateInvoiceNumber(data, invoiceTenantId || docId);
+
           list.push({ 
             id: docId, 
             ...data, 
             status: st, 
             isOverdue: isPastDue,
-            no: data.no || (docId.includes('_INV-') ? 'INV-' + docId.split('_INV-')[1] : (docId.startsWith('INV-') ? docId : `INV-${docId.slice(-4).toUpperCase()}`)),
+            no: computedNo,
             amount: data.amount || (data.price ? `$${data.price}.00` : '$49.00')
           });
         });
@@ -335,9 +341,16 @@ export const BillingView: React.FC<BillingViewProps> = ({
     return invoices.filter(inv => inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE');
   }, [invoices]);
 
+  // Invoices list for history table (fallback to activeInvoice if list is empty)
+  const displayInvoices = useMemo(() => {
+    if (invoices.length > 0) return invoices;
+    if (activeInvoice) return [activeInvoice];
+    return [];
+  }, [invoices, activeInvoice]);
+
   // Filtered invoices for history table
   const filteredInvoices = useMemo(() => {
-    return invoices.filter(inv => {
+    return displayInvoices.filter(inv => {
       const matchSearch = !invoiceSearchQuery.trim() || 
         (inv.no || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase()) ||
         (inv.plan || '').toLowerCase().includes(invoiceSearchQuery.toLowerCase()) ||
@@ -354,7 +367,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
       if (statusFilter === 'UNPAID') return matchSearch && isUnpaid;
       return matchSearch;
     });
-  }, [invoices, invoiceSearchQuery, statusFilter]);
+  }, [displayInvoices, invoiceSearchQuery, statusFilter]);
 
   // Handle plan update (upgrade / downgrade)
   const handleUpdatePlan = async (pkg: any) => {
@@ -965,11 +978,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
                 )}
                 <button
                   onClick={() => setSelectedInvoiceForView(activeInvoice)}
-                  className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="View Official Receipt"
+                  className="bg-white/10 hover:bg-white/20 text-white font-bold text-xs uppercase tracking-wider px-4 py-3.5 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border border-white/10"
+                  title="Preview Official Invoice Statement"
                 >
-                  <FileText className="w-4 h-4" />
-                  <span>Receipt</span>
+                  <Eye className="w-4 h-4" />
+                  <span>Preview Invoice</span>
                 </button>
               </div>
             </div>
@@ -1083,10 +1096,26 @@ export const BillingView: React.FC<BillingViewProps> = ({
                   const isOverdue = inv.isOverdue || (inv.status || '').toUpperCase() === 'OVERDUE';
 
                   return (
-                    <tr key={inv.id} className="hover:bg-gray-50/70 transition-colors">
-                      <td className="py-4 px-4 font-black text-gray-900 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-gray-400" />
-                        <span>{inv.no || inv.id}</span>
+                    <tr 
+                      key={inv.id} 
+                      onClick={() => setSelectedInvoiceForView(inv)}
+                      className="hover:bg-orange-50/40 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-4 px-4 font-black text-gray-900">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedInvoiceForView(inv);
+                          }}
+                          className="font-black text-gray-900 group-hover:text-primary flex items-center gap-2 cursor-pointer transition-colors text-left"
+                          title="Click to preview invoice"
+                        >
+                          <FileText className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors flex-shrink-0" />
+                          <span className="underline decoration-transparent group-hover:decoration-primary group-hover:underline transition-all">
+                            {inv.no || inv.id}
+                          </span>
+                        </button>
                       </td>
                       <td className="py-4 px-4 font-bold text-gray-700">
                         <div>{inv.plan || tenantData?.plan?.toUpperCase() || 'Starter Plan'}</div>
@@ -1117,12 +1146,22 @@ export const BillingView: React.FC<BillingViewProps> = ({
                         )}
                       </td>
                       <td className="py-4 px-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            type="button"
+                            onClick={() => setSelectedInvoiceForView(inv)}
+                            className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 font-bold text-[11px] rounded-lg flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Preview and Print Invoice"
+                          >
+                            <Eye className="h-3.5 w-3.5 text-gray-500" />
+                            <span>Preview</span>
+                          </button>
                           {!isPaid && (
                             <button
+                              type="button"
                               onClick={() => setSelectedInvoiceForPayment(inv)}
                               className={cn(
-                                "font-black text-[11px] uppercase tracking-wider px-3.5 py-1.5 rounded-lg flex items-center gap-1 shadow-xs transition-all cursor-pointer",
+                                "font-black text-[11px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 shadow-xs transition-all cursor-pointer",
                                 isOverdue
                                   ? "bg-rose-600 hover:bg-rose-500 text-white animate-pulse"
                                   : "bg-emerald-600 hover:bg-emerald-500 text-white"
@@ -1134,6 +1173,7 @@ export const BillingView: React.FC<BillingViewProps> = ({
                             </button>
                           )}
                           <button 
+                            type="button"
                             onClick={() => setSelectedInvoiceForView(inv)}
                             className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-gray-900 transition-colors cursor-pointer"
                             title="View & Download Official Receipt"

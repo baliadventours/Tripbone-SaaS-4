@@ -1077,16 +1077,17 @@ export default function SaaSSuperAdmin() {
       if (!tenantId && docId.includes('_INV-')) {
         const parts = docId.split('_INV-');
         tenantId = parts[0];
-        if (!invoiceNo) invoiceNo = 'INV-' + parts[1];
+        if (!invoiceNo && /\d/.test(parts[1])) invoiceNo = 'INV-' + parts[1];
       } else if (!tenantId && docId.startsWith('tenant_')) {
         const lastIdx = docId.lastIndexOf('_');
         if (lastIdx > 0) {
           tenantId = docId.substring(0, lastIdx);
-          if (!invoiceNo) invoiceNo = docId.substring(lastIdx + 1);
+          const suffix = docId.substring(lastIdx + 1);
+          if (!invoiceNo && /\d/.test(suffix)) invoiceNo = suffix.startsWith('INV-') ? suffix : `INV-${suffix}`;
         }
       }
-      if (!invoiceNo) {
-        invoiceNo = docId.startsWith('INV-') ? docId : (raw.number || ('INV-' + (docId.slice(-4) || '1001').toUpperCase()));
+      if (!invoiceNo || !/\d/.test(invoiceNo)) {
+        invoiceNo = generateInvoiceNumber(raw, tenantId || docId, tenants);
       }
       const matchedTenant = tenants.find(t => t.id === tenantId || t.slug === tenantId);
       const tenantName = raw.tenantName || matchedTenant?.companyName || tenantId || 'Operator Workspace';
@@ -1251,7 +1252,7 @@ export default function SaaSSuperAdmin() {
       return {
         ...inv,
         id: inv.id,
-        invoiceNumber: inv.invoiceNumber || inv.no || ('INV-' + (inv.id?.slice(-4) || '1001').toUpperCase()),
+        invoiceNumber: (inv.invoiceNumber && /\d/.test(inv.invoiceNumber)) ? inv.invoiceNumber : (inv.no && /\d/.test(inv.no)) ? inv.no : generateInvoiceNumber(inv, inv.tenantId || inv.id, tenants),
         tenantName,
         customerName,
         customerEmail,

@@ -19,7 +19,8 @@ import {
   User, Settings, Key, Receipt, Copy, Plus, MessageSquare, LogOut,
   HelpCircle, EyeOff, ChevronRight, AlertTriangle, AlertCircle, X, Megaphone,
   Map, UserCheck, Briefcase, FileText, Image, Bell, Sliders, ChevronDown,
-  LifeBuoy, Terminal, Clock, Moon, Sun, BookOpen, Tag, Gift, ArrowUpDown
+  LifeBuoy, Terminal, Clock, Moon, Sun, BookOpen, Tag, Gift, ArrowUpDown,
+  Printer
 } from 'lucide-react';
 import { Tenant } from '../types';
 import { createCreemCheckoutSession } from '../services/creemService';
@@ -37,6 +38,7 @@ export default function SaaSHome() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [closedAnnouncements, setClosedAnnouncements] = useState<string[]>([]);
   const [invoices, setInvoices] = useState<any[]>([]);
+  const [previewingInvoice, setPreviewingInvoice] = useState<any | null>(null);
   const [invoiceSort, setInvoiceSort] = useState<'latest' | 'oldest' | 'amount-desc' | 'amount-asc' | 'no-desc' | 'no-asc' | 'status'>('latest');
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [loadingTenants, setLoadingTenants] = useState(true);
@@ -1217,7 +1219,7 @@ export default function SaaSHome() {
       const interval = activeWorkspace.billingInterval || 'monthly';
       const isLifetime = interval === 'lifetime' || (activeWorkspace.plan || '').toLowerCase().includes('lifetime');
       const planPrice = getPlanPrice(activeWorkspace.plan, interval, plans);
-      const generatedNo = `INV-${(activeWorkspace.slug || '1001').slice(-4).toUpperCase()}`;
+      const generatedNo = generateInvoiceNumber({ tenantId: activeWorkspace.id }, activeWorkspace, tenants);
       const invId = `${activeWorkspace.id || activeWorkspace.slug}_${generatedNo}`;
       const dueStr = isLifetime ? 'Lifetime Access' : (activeWorkspace.trialEnds ? new Date(activeWorkspace.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'In 7 Days');
       
@@ -1293,7 +1295,7 @@ export default function SaaSHome() {
           const interval = activeWorkspace.billingInterval || 'monthly';
           const isLifetime = interval === 'lifetime' || (activeWorkspace.plan || '').toLowerCase().includes('lifetime');
           const planPrice = getPlanPrice(activeWorkspace.plan, interval, plans);
-          const generatedNo = `INV-${(activeWorkspace.slug || '1001').slice(-4).toUpperCase()}`;
+          const generatedNo = generateInvoiceNumber({ tenantId: effTenantId }, activeWorkspace, tenants);
           const invId = `${effTenantId}_${generatedNo}`;
           const dueStr = isLifetime ? 'Lifetime Access' : (activeWorkspace.trialEnds ? new Date(activeWorkspace.trialEnds).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'In 7 Days');
           
@@ -3756,8 +3758,24 @@ export default function SaaSHome() {
                                                  String(invoice.plan || '').toLowerCase().includes('lifetime');
 
                               return (
-                                <tr key={invoice.no || invoice.id}>
-                                  <td className="py-4 font-bold text-indigo-500">#{invoice.no || invoice.id}</td>
+                                <tr 
+                                  key={invoice.no || invoice.id}
+                                  onClick={() => setPreviewingInvoice(invoice)}
+                                  className="hover:bg-indigo-50/30 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                                >
+                                  <td className="py-4 font-bold text-indigo-500">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setPreviewingInvoice(invoice);
+                                      }}
+                                      className="font-bold text-indigo-500 group-hover:text-indigo-600 hover:underline cursor-pointer flex items-center gap-1.5 text-left"
+                                      title="Preview invoice statement"
+                                    >
+                                      <span>#{invoice.no || invoice.id}</span>
+                                    </button>
+                                  </td>
                                   <td className="py-4 font-medium">
                                     <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-500 font-mono text-[10px] uppercase font-bold">
                                       {formatPlanName(invoice.plan || activeWorkspace?.plan, plans, invoice.billingInterval || activeWorkspace?.billingInterval)}
@@ -3788,10 +3806,21 @@ export default function SaaSHome() {
                                     </span>
                                   </td>
                                   <td className="py-4 text-right">
-                                    <div className="flex items-center justify-end space-x-2">
+                                    <div className="flex items-center justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setPreviewingInvoice(invoice)}
+                                        className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 rounded text-[10px] font-bold transition-colors border border-gray-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+                                        title="Preview invoice statement"
+                                      >
+                                        <Eye className="w-3 h-3 text-gray-500" />
+                                        <span>Preview</span>
+                                      </button>
+
                                       {(invoice.status === 'UNPAID' || invoice.status === 'PENDING') && (
                                         <>
                                           <button
+                                            type="button"
                                             onClick={() => {
                                               setPaymentModalInvoice(invoice);
                                               setPaymentModalMethod('creem');
@@ -3801,93 +3830,19 @@ export default function SaaSHome() {
                                               setPaymentModalSuccess(false);
                                               setPaymentModalOpen(true);
                                             }}
-                                            className="px-3 py-1 bg-[#005ea6] hover:bg-[#004e8a] text-white rounded text-[10px] font-bold transition-colors shadow-sm"
+                                            className="px-3 py-1 bg-[#005ea6] hover:bg-[#004e8a] text-white rounded text-[10px] font-bold transition-colors shadow-sm cursor-pointer"
                                           >
                                             Pay
                                           </button>
                                           <button
+                                            type="button"
                                             onClick={() => handleTenantCancelInvoice(invoice)}
-                                            className="px-2.5 py-1 bg-gray-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 text-gray-600 dark:text-gray-300 rounded text-[10px] font-bold transition-colors border border-gray-200 dark:border-slate-700"
+                                            className="px-2.5 py-1 bg-gray-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 text-gray-600 dark:text-gray-300 rounded text-[10px] font-bold transition-colors border border-gray-200 dark:border-slate-700 cursor-pointer"
                                           >
                                             Cancel
                                           </button>
                                         </>
                                       )}
-
-                                      {invoice.status === 'PAID' && (
-                                    <button
-                                      onClick={() => {
-                                        const pdfTemplate = `
-                                          <html>
-                                            <head>
-                                              <title>Invoice - Tripbone</title>
-                                              <style>
-                                                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #333; max-width: 800px; margin: 0 auto; }
-                                                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #005ea6; padding-bottom: 20px; margin-bottom: 40px; }
-                                                .header h2 { margin: 0; color: #005ea6; font-size: 28px; }
-                                                .header p { margin: 5px 0; color: #666; font-size: 14px; }
-                                                .status-badge { background-color: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 9999px; font-weight: bold; font-size: 12px; display: inline-block; margin-bottom: 10px; text-transform: uppercase; border: 1px solid #10b981; }
-                                                .amount { font-size: 20px; font-weight: bold; }
-                                                table { width: 100%; border-collapse: collapse; margin-top: 40px; }
-                                                th, td { text-align: left; padding: 16px; border-bottom: 1px solid #eee; }
-                                                th { background-color: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; font-weight: 600; }
-                                                .footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid #eee; text-align: center; color: #94a3b8; font-size: 12px; }
-                                              </style>
-                                            </head>
-                                            <body>
-                                              <div class="header">
-                                                <div>
-                                                  <img src="${globalBrand?.logoUrl || settings?.logoURL || '/api/uploads/qmsB5Y9GFJLB4jiEqEF4'}" alt="Tripbone" style="height: 38px; width: auto; max-width: 170px; object-fit: contain; margin-bottom: 6px; display: block;" onerror="this.style.display='none'; var fb=document.getElementById('sh-fallback-logo'); if(fb) fb.style.display='block';" />
-                                                  <h2 id="sh-fallback-logo" style="display: none; margin: 0; color: #005ea6; font-size: 28px;">Tripbone SaaS</h2>
-                                                  <p>Invoice #${invoice.no}</p>
-                                                </div>
-                                                <div style="text-align: right;">
-                                                  <div class="status-badge" style="background-color: #d1fae5; color: #065f46; border: 1px solid #10b981;">Paid</div>
-                                                  <p>Date: ${invoice.invoiceDate}</p>
-                                                  <p>Due: ${invoice.dueDate}</p>
-                                                </div>
-                                              </div>
-                                              <div style="display: flex; justify-content: space-between; margin-bottom: 40px;">
-                                                <div>
-                                                  <p style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Billed To</p>
-                                                  <p style="margin: 0; font-weight: 500; font-size: 16px;">${activeWorkspace?.companyName || 'Tenant Workspace'}</p>
-                                                  <p style="margin: 4px 0 0 0; color: #666; font-size: 14px;">${activeWorkspace?.slug}.tripbone.com</p>
-                                                </div>
-                                                <div style="text-align: right;">
-                                                  <p style="color: #64748b; font-size: 12px; text-transform: uppercase; font-weight: bold; margin-bottom: 8px;">Amount Paid</p>
-                                                  <p style="margin: 0; font-weight: bold; font-size: 24px; color: #0f172a;">${invoice.amount}</p>
-                                                </div>
-                                              </div>
-                                              <table style="width: 100%; border-collapse: collapse; margin-top: 40px;">
-                                                <tr>
-                                                  <th style="background-color: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; font-weight: 600; text-align: left; padding: 16px; border-bottom: 1px solid #eee;">Description</th>
-                                                  <th style="background-color: #f8fafc; color: #475569; font-size: 12px; text-transform: uppercase; font-weight: 600; text-align: right; padding: 16px; border-bottom: 1px solid #eee;">Amount</th>
-                                                </tr>
-                                                <tr>
-                                                  <td style="font-size: 15px; text-align: left; padding: 16px; border-bottom: 1px solid #eee;">Tripbone ${formatPlanName(invoice.plan || activeWorkspace?.plan, plans, invoice.billingInterval || activeWorkspace?.billingInterval)} Subscription</td>
-                                                  <td style="text-align: right; font-size: 20px; font-weight: bold; padding: 16px; border-bottom: 1px solid #eee;" class="amount">${invoice.amount}</td>
-                                                </tr>
-                                              </table>
-                                              <div class="footer">
-                                                <p>Thank you for using Tripbone. If you have any questions about this invoice, please contact support@tripbone.com</p>
-                                              </div>
-                                              <script>
-                                                window.onload = () => window.print();
-                                              </script>
-                                            </body>
-                                          </html>
-                                        `;
-                                        const win = window.open('', '_blank');
-                                        if (win) {
-                                          win.document.write(pdfTemplate);
-                                          win.document.close();
-                                        }
-                                      }}
-                                      className="text-[#005ea6] hover:text-[#004e8a] font-semibold underline underline-offset-2"
-                                    >
-                                      Download PDF
-                                    </button>
-                                  )}
                                     </div>
                                   </td>
                                 </tr>
@@ -4794,6 +4749,146 @@ export default function SaaSHome() {
           )}
 
           {/* Invoice Payment Modal */}
+          {/* Invoice Preview & Official Statement Modal */}
+          {previewingInvoice && (
+            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+              <div className={cn("w-full max-w-2xl rounded-3xl shadow-2xl p-6 md:p-8 relative transition-all my-8 max-h-[90vh] overflow-y-auto", isDarkMode ? "bg-slate-900 border border-slate-800 text-white" : "bg-white text-gray-900")}>
+                {/* Header with Print and Close */}
+                <div className="flex items-center justify-between border-b pb-4 mb-6" style={{ borderColor: isDarkMode ? '#1e293b' : '#f1f5f9' }}>
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-indigo-500" />
+                    <h3 className="font-black text-lg">Official Subscription Invoice</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => window.print()}
+                      className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Printer className="w-4 h-4" />
+                      <span>Print Statement</span>
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setPreviewingInvoice(null)}
+                      className="p-1.5 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-slate-800 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Printable Invoice Container */}
+                <div className={cn("border rounded-2xl p-6 md:p-8 space-y-6", isDarkMode ? "bg-slate-800/40 border-slate-800" : "bg-slate-50/50 border-gray-100")}>
+                  {/* Branding and Invoice No */}
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-xl font-black">Tripbone SaaS Platform</h2>
+                      <p className="text-xs text-gray-500 font-medium">Enterprise Tour Operator & Booking OS</p>
+                      <p className="text-xs text-gray-400 mt-1">support@tripbone.com</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xl font-black text-indigo-500">
+                        #{previewingInvoice.no || previewingInvoice.id}
+                      </div>
+                      <div className="text-xs text-gray-500 font-bold mt-1">
+                        Date: {previewingInvoice.invoiceDate || 'Today'}
+                      </div>
+                      <div className={cn(
+                        "mt-2 inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                        previewingInvoice.status === 'PAID' ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                      )}>
+                        {previewingInvoice.status || 'UNPAID'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Billed To */}
+                  <div className="border-t border-gray-200/60 dark:border-slate-700/60 pt-4 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Billed To:</p>
+                      <h4 className="font-black text-sm mt-0.5">{activeWorkspace?.companyName || 'Operator Workspace'}</h4>
+                      <p className="text-xs text-gray-500 font-medium">{activeWorkspace?.adminEmail || currentUser?.email || 'operator@workspace.com'}</p>
+                      <p className="text-xs text-gray-400 font-medium">{activeWorkspace?.slug ? `${activeWorkspace.slug}.tripbone.com` : 'Global Workspace'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Due Date:</p>
+                      <p className="text-xs font-bold mt-0.5">{previewingInvoice.dueDate || 'In 7 Days'}</p>
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Payment Method:</p>
+                      <p className="text-xs font-bold">{previewingInvoice.paymentMethod || 'Online Gateway / Sandbox'}</p>
+                    </div>
+                  </div>
+
+                  {/* Line Items */}
+                  <div className="border-t border-gray-200/60 dark:border-slate-700/60 pt-4">
+                    <table className="w-full text-left text-xs">
+                      <thead className="border-b border-gray-200 dark:border-slate-700 font-black text-gray-400 uppercase tracking-wider">
+                        <tr>
+                          <th className="pb-2">Description</th>
+                          <th className="pb-2 text-center">Qty</th>
+                          <th className="pb-2 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-slate-800 font-medium">
+                        <tr>
+                          <td className="py-3">
+                            <span className="font-bold block">{formatPlanName(previewingInvoice.plan || activeWorkspace?.plan, plans, previewingInvoice.billingInterval || activeWorkspace?.billingInterval)}</span>
+                            <span className="text-[11px] text-gray-400">Includes Multi-Gateway BYOPG, Channel Manager, AI Tour Planner & Booking Suite</span>
+                          </td>
+                          <td className="py-3 text-center">1</td>
+                          <td className="py-3 text-right font-black">{previewingInvoice.amount || '$49.00'}</td>
+                        </tr>
+                      </tbody>
+                      <tfoot className="border-t border-gray-200 dark:border-slate-700 font-bold">
+                        <tr>
+                          <td colSpan={2} className="pt-3 text-gray-400">Subtotal</td>
+                          <td className="pt-3 text-right font-black">{previewingInvoice.amount || '$49.00'}</td>
+                        </tr>
+                        <tr>
+                          <td colSpan={2} className="pt-1 text-gray-400">Taxes & Processing Fees (Included)</td>
+                          <td className="pt-1 text-right font-black">$0.00</td>
+                        </tr>
+                        <tr className="text-base font-black">
+                          <td colSpan={2} className="pt-3">Total Amount</td>
+                          <td className="pt-3 text-right text-emerald-500">{previewingInvoice.amount || '$49.00'}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Footer Actions */}
+                <div className="flex justify-end gap-3 mt-6">
+                  {(previewingInvoice.status === 'UNPAID' || previewingInvoice.status === 'PENDING') && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPaymentModalInvoice(previewingInvoice);
+                        setPaymentModalMethod('creem');
+                        setPaymentModalTripayChannel('QRISC');
+                        setPaymentModalProofFile(null);
+                        setPaymentModalProofNotes('');
+                        setPaymentModalSuccess(false);
+                        setPaymentModalOpen(true);
+                        setPreviewingInvoice(null);
+                      }}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md transition-all"
+                    >
+                      <CreditCard className="w-4 h-4" />
+                      <span>Pay Invoice Now</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewingInvoice(null)}
+                    className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-800 dark:text-gray-200 font-bold text-xs uppercase tracking-wider rounded-xl cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {paymentModalOpen && paymentModalInvoice && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
               <div className={cn("w-full max-w-lg rounded-2xl shadow-2xl p-6 relative transition-all my-8", isDarkMode ? "bg-slate-900 border border-slate-800" : "bg-white")}>

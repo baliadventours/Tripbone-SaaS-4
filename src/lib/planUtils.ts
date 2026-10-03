@@ -199,21 +199,37 @@ export function getNextBillingDate(tenant: any): string {
 }
 
 export function generateInvoiceNumber(inv: any, tenantIndexOrId?: number | string | any, allTenants?: any[]): string {
-  if (inv && inv.no && typeof inv.no === 'string' && inv.no !== 'INV-101' && inv.no !== 'INV-00' && inv.no.trim() !== '') {
+  // If invoice already has a valid numeric invoice number
+  if (inv && inv.no && typeof inv.no === 'string' && /\d/.test(inv.no) && inv.no !== 'INV-101' && inv.no !== 'INV-00' && inv.no.trim() !== '') {
     return inv.no.startsWith('INV-') ? inv.no : `INV-${inv.no}`;
   }
 
+  // Check invoice ID for numeric suffixes like _INV-1002
+  if (inv && inv.id && typeof inv.id === 'string' && inv.id.includes('_INV-')) {
+    const part = inv.id.split('_INV-')[1];
+    if (part && /\d/.test(part)) {
+      return `INV-${part}`;
+    }
+  }
+
   const actualTenantId = (typeof tenantIndexOrId === 'object' && tenantIndexOrId !== null) 
-    ? (tenantIndexOrId.id || tenantIndexOrId.tenantId) 
+    ? (tenantIndexOrId.id || tenantIndexOrId.tenantId || tenantIndexOrId.slug) 
     : tenantIndexOrId;
 
-  if (allTenants && Array.isArray(allTenants) && allTenants.length > 0 && inv && inv.tenantId) {
+  const targetId = (inv && (inv.tenantId || inv.tenant || inv.tenant_id)) || actualTenantId;
+
+  if (allTenants && Array.isArray(allTenants) && allTenants.length > 0 && targetId) {
     const sortedTenants = [...allTenants].sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
       return dateA - dateB;
     });
-    const idx = sortedTenants.findIndex(t => t.id === inv.tenantId || t.slug === inv.tenantId);
+    const idx = sortedTenants.findIndex(t => 
+      t.id === targetId || 
+      t.slug === targetId || 
+      `tenant_${t.id}` === targetId || 
+      `tenant_${t.slug}` === targetId
+    );
     if (idx !== -1) {
       return `INV-${1001 + idx}`;
     }
@@ -223,13 +239,18 @@ export function generateInvoiceNumber(inv: any, tenantIndexOrId?: number | strin
     return `INV-${1001 + actualTenantId}`;
   }
 
-  if (typeof actualTenantId === 'string') {
+  if (typeof actualTenantId === 'string' && actualTenantId.trim() !== '') {
+    // Extract any existing numbers if available
+    const nums = actualTenantId.replace(/\D/g, '');
+    if (nums.length >= 3) {
+      return `INV-${nums.slice(-4)}`;
+    }
     let hash = 0;
     for (let i = 0; i < actualTenantId.length; i++) {
       hash = (hash << 5) - hash + actualTenantId.charCodeAt(i);
       hash |= 0;
     }
-    const offset = Math.abs(hash) % 900;
+    const offset = Math.abs(hash) % 8999;
     return `INV-${1001 + offset}`;
   }
 
