@@ -3726,23 +3726,23 @@ export default function SaaSHome() {
                     </div>
 
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
+                      <table className="w-full text-left text-xs font-sans">
                         <thead>
                           <tr className={cn(
-                            "border-b uppercase tracking-wider text-[10px] pb-3",
-                            isDarkMode ? "border-slate-800 text-slate-400" : "border-gray-200 text-gray-400"
+                            "border-b uppercase tracking-wider text-[11px] pb-3 font-bold",
+                            isDarkMode ? "border-slate-800 text-slate-400" : "border-gray-200 text-slate-600"
                           )}>
-                            <th className="pb-3 font-semibold">IN ID</th>
-                            <th className="pb-3 font-semibold">Active Package</th>
-                            <th className="pb-3 font-semibold">Due Date</th>
-                            <th className="pb-3 font-semibold">Amount</th>
-                            <th className="pb-3 font-semibold text-center">Status</th>
-                            <th className="pb-3 font-semibold text-right">Action</th>
+                            <th className="pb-3 px-3">Invoice #</th>
+                            <th className="pb-3 px-3">Package / Plan</th>
+                            <th className="pb-3 px-3">Due Date</th>
+                            <th className="pb-3 px-3">Amount</th>
+                            <th className="pb-3 px-3 text-center">Status</th>
+                            <th className="pb-3 px-3 text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className={cn(
-                          "divide-y text-gray-600",
-                          isDarkMode ? "divide-slate-800/60 text-slate-300" : "divide-gray-100 text-gray-600"
+                          "divide-y",
+                          isDarkMode ? "divide-slate-800/60 text-slate-300" : "divide-gray-100 text-slate-700"
                         )}>
                           {getDynamicInvoices.length === 0 ? (
                             <tr>
@@ -3757,63 +3757,79 @@ export default function SaaSHome() {
                                                  String(invoice.dueDate || '').toLowerCase().includes('lifetime') ||
                                                  String(invoice.plan || '').toLowerCase().includes('lifetime');
 
+                              const displayAmount = (() => {
+                                const raw = invoice.amount || invoice.totalAmount || invoice.price;
+                                if (typeof raw === 'number' && raw > 0) return `$${raw.toFixed(2)}`;
+                                if (typeof raw === 'string' && raw.trim() !== '' && raw !== '$0.00') {
+                                  return raw.startsWith('$') ? raw : `$${raw}`;
+                                }
+                                const effInterval = invoice.billingInterval || activeWorkspace?.billingInterval || 'monthly';
+                                const p = getPlanPrice(invoice.plan || activeWorkspace?.plan, effInterval, plans);
+                                return `$${p}.00`;
+                              })();
+
                               return (
                                 <tr 
                                   key={invoice.no || invoice.id}
                                   onClick={() => setPreviewingInvoice(invoice)}
-                                  className="hover:bg-indigo-50/30 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                                  className={cn(
+                                    "transition-colors cursor-pointer group",
+                                    isDarkMode ? "hover:bg-slate-800/40" : "hover:bg-slate-50/80"
+                                  )}
                                 >
-                                  <td className="py-4 font-bold text-indigo-500">
+                                  <td className="py-4 px-3 font-black text-slate-900 dark:text-white">
                                     <button
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setPreviewingInvoice(invoice);
                                       }}
-                                      className="font-bold text-indigo-500 group-hover:text-indigo-600 hover:underline cursor-pointer flex items-center gap-1.5 text-left"
+                                      className="font-black text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 hover:underline cursor-pointer flex items-center gap-1.5 text-left text-xs"
                                       title="Preview invoice statement"
                                     >
                                       <span>#{invoice.no || invoice.id}</span>
                                     </button>
                                   </td>
-                                  <td className="py-4 font-medium">
-                                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-500 font-mono text-[10px] uppercase font-bold">
+                                  <td className="py-4 px-3 font-medium">
+                                    <span className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-700 text-[11px] font-bold uppercase tracking-wide inline-block">
                                       {formatPlanName(invoice.plan || activeWorkspace?.plan, plans, invoice.billingInterval || activeWorkspace?.billingInterval)}
                                     </span>
                                   </td>
-                                  <td className="py-4 font-medium">
+                                  <td className="py-4 px-3 font-medium">
                                     {isLifetime ? (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/60">
+                                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shadow-2xs">
                                         ✨ Lifetime Access
                                       </span>
                                     ) : (
-                                      <span>{invoice.dueDate || '-'}</span>
+                                      <span className="text-slate-800 dark:text-slate-200 font-semibold text-xs">{invoice.dueDate || '-'}</span>
                                     )}
                                   </td>
-                                  <td className="py-4 font-bold text-gray-900 dark:text-white">{invoice.amount || '$0.00'}</td>
-                                  <td className="py-4 text-center">
+                                  <td className="py-4 px-3 font-black text-slate-900 dark:text-white text-sm">
+                                    {displayAmount}
+                                  </td>
+                                  <td className="py-4 px-3 text-center">
                                     <span className={cn(
-                                      "px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider inline-flex items-center",
+                                      "px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider inline-flex items-center shadow-2xs",
                                       invoice.status === 'PAID'
-                                        ? isDarkMode ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/60" : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                        ? "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/70 dark:text-emerald-300 dark:border-emerald-800"
                                         : invoice.status === 'PENDING'
-                                          ? isDarkMode ? "bg-amber-950/40 text-amber-400 border-amber-900/60 animate-pulse" : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                                          ? "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/70 dark:text-amber-300 dark:border-amber-800 animate-pulse"
                                           : invoice.status === 'CANCELLED'
-                                            ? isDarkMode ? "bg-gray-800 text-gray-400 border-gray-700" : "bg-gray-100 text-gray-500 border-gray-200"
-                                            : isDarkMode ? "bg-rose-950/40 text-rose-400 border-rose-900/60" : "bg-rose-50 text-rose-700 border-rose-200"
+                                            ? "bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                                            : "bg-rose-100 text-rose-900 border-rose-300 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800"
                                     )}>
                                       {invoice.status || 'UNPAID'}
                                     </span>
                                   </td>
-                                  <td className="py-4 text-right">
+                                  <td className="py-4 px-3 text-right">
                                     <div className="flex items-center justify-end space-x-2" onClick={(e) => e.stopPropagation()}>
                                       <button
                                         type="button"
                                         onClick={() => setPreviewingInvoice(invoice)}
-                                        className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-200 rounded text-[10px] font-bold transition-colors border border-gray-200 dark:border-slate-700 flex items-center gap-1 cursor-pointer"
+                                        className="px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs cursor-pointer"
                                         title="Preview invoice statement"
                                       >
-                                        <Eye className="w-3 h-3 text-gray-500" />
+                                        <Eye className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                                         <span>Preview</span>
                                       </button>
 
@@ -3830,14 +3846,15 @@ export default function SaaSHome() {
                                               setPaymentModalSuccess(false);
                                               setPaymentModalOpen(true);
                                             }}
-                                            className="px-3 py-1 bg-[#005ea6] hover:bg-[#004e8a] text-white rounded text-[10px] font-bold transition-colors shadow-sm cursor-pointer"
+                                            className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
                                           >
-                                            Pay
+                                            <CreditCard className="w-3.5 h-3.5" />
+                                            <span>Pay</span>
                                           </button>
                                           <button
                                             type="button"
                                             onClick={() => handleTenantCancelInvoice(invoice)}
-                                            className="px-2.5 py-1 bg-gray-100 hover:bg-rose-50 hover:text-rose-600 dark:bg-slate-800 dark:hover:bg-rose-950/30 dark:hover:text-rose-400 text-gray-600 dark:text-gray-300 rounded text-[10px] font-bold transition-colors border border-gray-200 dark:border-slate-700 cursor-pointer"
+                                            className="px-2.5 py-1.5 bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-300 dark:bg-slate-800 dark:hover:bg-rose-950/40 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold transition-all border border-slate-300 dark:border-slate-700 cursor-pointer"
                                           >
                                             Cancel
                                           </button>
@@ -3879,18 +3896,18 @@ export default function SaaSHome() {
               </div>
               
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs font-mono">
+                <table className="w-full text-left text-xs font-sans">
                   <thead>
                     <tr className={cn(
-                      "border-b uppercase tracking-wider text-[10px] pb-3",
-                      isDarkMode ? "border-slate-800 text-slate-400" : "border-gray-200 text-gray-400"
+                      "border-b uppercase tracking-wider text-[11px] pb-3 font-bold",
+                      isDarkMode ? "border-slate-800 text-slate-400" : "border-gray-200 text-slate-600"
                     )}>
-                      <th className="pb-3 font-semibold px-4">Site Name</th>
-                      <th className="pb-3 font-semibold px-4">Subdomain</th>
-                      <th className="pb-3 font-semibold px-4">Current Plan</th>
-                      <th className="pb-3 font-semibold px-4">Billing Cycle</th>
-                      <th className="pb-3 font-semibold text-center px-4">Status</th>
-                      <th className="pb-3 font-semibold text-right px-4">Action</th>
+                      <th className="pb-3 font-bold px-4">Site Name</th>
+                      <th className="pb-3 font-bold px-4">Subdomain</th>
+                      <th className="pb-3 font-bold px-4">Current Plan</th>
+                      <th className="pb-3 font-bold px-4">Billing Cycle</th>
+                      <th className="pb-3 font-bold text-center px-4">Status</th>
+                      <th className="pb-3 font-bold text-right px-4">Action</th>
                     </tr>
                   </thead>
                   <tbody className={cn(
@@ -3900,38 +3917,38 @@ export default function SaaSHome() {
                     {userWorkspaces.map(workspace => {
                       const wsStatus = getWorkspaceStatus(workspace);
                       const wsStatusBadge = 
-                        wsStatus === 'active' ? (isDarkMode ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/60" : "bg-emerald-50 text-emerald-700 border-emerald-100") :
-                        wsStatus === 'trial' ? (isDarkMode ? "bg-sky-950/40 text-sky-400 border-sky-900/60" : "bg-sky-50 text-sky-700 border-sky-100") :
-                        wsStatus === 'inactive' ? (isDarkMode ? "bg-amber-950/40 text-amber-400 border-amber-900/60" : "bg-amber-50 text-amber-700 border-amber-100") :
-                        (isDarkMode ? "bg-rose-950/40 text-rose-400 border-rose-900/60" : "bg-rose-50 text-rose-700 border-rose-100");
+                        wsStatus === 'active' ? (isDarkMode ? "bg-emerald-950/70 text-emerald-300 border-emerald-800" : "bg-emerald-100 text-emerald-900 border-emerald-300") :
+                        wsStatus === 'trial' ? (isDarkMode ? "bg-sky-950/70 text-sky-300 border-sky-800" : "bg-sky-100 text-sky-900 border-sky-300") :
+                        wsStatus === 'inactive' ? (isDarkMode ? "bg-amber-950/70 text-amber-300 border-amber-800" : "bg-amber-100 text-amber-900 border-amber-300") :
+                        (isDarkMode ? "bg-rose-950/70 text-rose-300 border-rose-800" : "bg-rose-100 text-rose-900 border-rose-300");
 
                       return (
                         <tr key={workspace.id} className={cn(
                           "transition-colors",
-                          isDarkMode ? "hover:bg-slate-800/30 text-slate-300" : "hover:bg-slate-50 text-gray-600"
+                          isDarkMode ? "hover:bg-slate-800/30 text-slate-300" : "hover:bg-slate-50 text-slate-700"
                         )}>
-                          <td className="py-4 px-4 font-bold font-sans">
+                          <td className="py-4 px-4 font-bold text-slate-900 dark:text-white">
                             {workspace.companyName || 'Unnamed Site'}
                           </td>
-                          <td className="py-4 px-4">
+                          <td className="py-4 px-4 font-medium">
                             <a 
                               href={getStorefrontUrl(workspace.slug, workspace.customDomain)} 
                               target="_blank" 
                               rel="noopener noreferrer" 
-                              className="text-indigo-600 hover:underline hover:text-indigo-700 transition-colors"
+                              className="text-indigo-600 dark:text-indigo-400 hover:underline hover:text-indigo-700 font-semibold transition-colors"
                             >
                               {workspace.customDomain || `${workspace.slug}.tripbone.com`}
                             </a>
                           </td>
-                          <td className="py-4 px-4 font-bold capitalize">
+                          <td className="py-4 px-4 font-bold capitalize text-slate-900 dark:text-white">
                             {formatPlanName(workspace.plan, plans, workspace.billingInterval)}
                           </td>
-                          <td className="py-4 px-4 capitalize">
+                          <td className="py-4 px-4 capitalize font-medium text-slate-700 dark:text-slate-300">
                             {getEffectiveInterval(workspace.plan, workspace.billingInterval)}
                           </td>
                           <td className="py-4 px-4 text-center">
                             <span className={cn(
-                              "px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wide",
+                              "px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-wider shadow-2xs inline-block",
                               wsStatusBadge
                             )}>
                               {wsStatus}
@@ -3941,10 +3958,10 @@ export default function SaaSHome() {
                             <button
                               onClick={() => setSelectedWorkspaceId(workspace.id)}
                               className={cn(
-                                "px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors",
+                                "px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer",
                                 activeWorkspace?.id === workspace.id
-                                  ? isDarkMode ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/60" : "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                  : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                                  ? "bg-emerald-600 hover:bg-emerald-500 text-white"
+                                  : isDarkMode ? "bg-slate-800 hover:bg-slate-700 text-white" : "bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-200"
                               )}
                             >
                               {activeWorkspace?.id === workspace.id ? 'Active Dashboard' : 'Manage Site'}

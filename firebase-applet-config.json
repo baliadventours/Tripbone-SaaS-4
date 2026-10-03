@@ -6,6 +6,7 @@
   "firestoreDatabaseId": "ai-studio-tripbonesaas-bc73f611-b9f1-4175-a949-14e52d815420",
   "storageBucket": "gen-lang-client-0785892115.firebasestorage.app",
   "messagingSenderId": "1087655635057",
-  "measurementId": "",
-  "oAuthClientId": "1087655635057-6gppu5fe9shbuu3tdhahbu7ukt2i6c5h.apps.googleusercontent.com"
+  "measurementId": "G-Y4B0PP0Y8F",
+  "oAuthClientId": "1087655635057-6gppu5fe9shbuu3tdhahbu7ukt2i6c5h.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }
