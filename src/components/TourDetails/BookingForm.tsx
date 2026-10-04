@@ -138,6 +138,20 @@ export default function BookingForm({ tour }: BookingFormProps) {
     }
   };
 
+  // Starting rate calculation per person
+  const startingPrice = useMemo(() => {
+    if (tour.discountPrice) return tour.discountPrice;
+    if (tour.regularPrice) return tour.regularPrice;
+    if (tour.packages && tour.packages.length > 0) {
+      const p0 = tour.packages[0];
+      if (p0.tiers && p0.tiers.length > 0) return p0.tiers[0].adultPrice;
+    }
+    return 0;
+  }, [tour]);
+
+  const totalGuests = Math.max(1, adults + children);
+  const estimatedTotal = startingPrice * totalGuests;
+
   const handleAvailabilityCheck = (e?: FormEvent | React.MouseEvent) => {
     if (e && e.preventDefault) e.preventDefault();
     setCutOffError(null);
@@ -148,36 +162,12 @@ export default function BookingForm({ tour }: BookingFormProps) {
       setDate(targetDate);
     }
 
-    let targetTime = selectedTime;
-    if (!targetTime && tour?.timeSlots && tour.timeSlots.length > 0) {
-      targetTime = tour.timeSlots[0];
-      setSelectedTime(targetTime);
-    }
-
-    // Validate cut-off time
-    const validation = validateBookingCutOff(tour, targetDate, targetTime);
-    if (!validation.isValid) {
-      setCutOffError(validation.error || "Booking cut-off time has passed for this departure. Please select another date or time.");
-      return;
-    }
-
     setIsNavigating(true);
 
-    // Navigate to checkout page
+    // Navigate to checkout page where customer picks package and time slot
     const targetTourId = tour.id || (tour as any).slug || (tour as any)._id;
-    const pkgToPass = selectedPackage || (tour.packages && tour.packages.length > 0 ? tour.packages[0] : null);
-    const pkgParam = pkgToPass ? `&package=${encodeURIComponent(pkgToPass.name)}` : '';
-    const timeParam = targetTime ? `&time=${encodeURIComponent(targetTime)}` : '';
-    navigate(`/checkout/${targetTourId}?date=${targetDate}&adults=${adults}&children=${children}${timeParam}${pkgParam}`);
+    navigate(`/checkout/${targetTourId}?date=${targetDate}&adults=${adults}&children=${children}`);
   };
-
-  // Reset selected time if the newly selected date makes that time cut-off
-  useEffect(() => {
-    if (date && selectedTime && isSlotCutOff(date, selectedTime, cutOffHours)) {
-      const nextValid = tour.timeSlots?.find(t => !isSlotCutOff(date, t, cutOffHours));
-      setSelectedTime(nextValid || '');
-    }
-  }, [date, selectedTime, cutOffHours, tour.timeSlots]);
 
   if (!tour.packages || tour.packages.length === 0) {
     return (
@@ -195,10 +185,10 @@ export default function BookingForm({ tour }: BookingFormProps) {
         <div className="flex items-baseline justify-between mb-5">
           <div className="flex items-baseline gap-1.5">
             <span className="text-2xl lg:text-3xl font-bold text-neutral-900 tracking-tight font-display">
-              <FormattedPrice amount={selectedPackage ? (calculatePackagePrice(selectedPackage) / Math.max(1, adults + children)) : (tour.discountPrice || tour.regularPrice)} />
+              <FormattedPrice amount={startingPrice} />
             </span>
             <span className="text-sm font-normal text-neutral-500">/ person</span>
-            {tour.discountPrice && (
+            {tour.discountPrice && tour.regularPrice && (
               <span className="text-xs text-neutral-400 line-through ml-1 font-medium">
                 <FormattedPrice amount={tour.regularPrice} />
               </span>
@@ -221,108 +211,44 @@ export default function BookingForm({ tour }: BookingFormProps) {
         )}
 
         <form id="tour-booking-form" onSubmit={handleAvailabilityCheck} className="space-y-4">
-          {/* Unified Airbnb Segmented Input Box */}
-          <div className="border border-neutral-300 rounded-2xl divide-y divide-neutral-200 bg-white shadow-xs focus-within:ring-2 focus-within:ring-neutral-900 transition-all">
-            {/* Package Selector (if multiple packages available) */}
-            {tour.packages && tour.packages.length > 1 && (
-              <div className="p-3 relative">
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
-                  Package
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedPackage?.name || ''}
-                    onChange={(e) => {
-                      const found = tour.packages.find(p => p.name === e.target.value);
-                      if (found) setSelectedPackage(found);
-                    }}
-                    className="w-full text-xs font-semibold text-neutral-900 bg-transparent pr-6 focus:outline-none cursor-pointer appearance-none truncate"
-                  >
-                    {tour.packages.map((pkg) => {
-                      const tierPrice = pkg.tiers && pkg.tiers.length > 0 ? pkg.tiers[0].adultPrice : 0;
-                      return (
-                        <option key={pkg.name} value={pkg.name}>
-                          {pkg.name} {tierPrice ? `($${tierPrice}/pax)` : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                </div>
-              </div>
-            )}
-
-            {/* Date and Time Row */}
-            <div className="grid grid-cols-2 divide-x divide-neutral-200 relative">
-              {/* Date Cell */}
-              <div 
-                onClick={() => {
-                  setShowDatePicker(!showDatePicker);
-                  setShowGuestPicker(false);
-                }}
-                className="p-3 cursor-pointer hover:bg-neutral-50/80 transition-colors"
-              >
+          {/* Airbnb Segmented Date & Guests Box (Package & Time chosen on step 2) */}
+          <div className="border border-neutral-300 rounded-2xl divide-y divide-neutral-200 bg-white shadow-xs focus-within:ring-2 focus-within:ring-primary transition-all overflow-hidden">
+            {/* Date Cell */}
+            <div 
+              onClick={() => {
+                setShowDatePicker(!showDatePicker);
+                setShowGuestPicker(false);
+              }}
+              className="p-3.5 cursor-pointer hover:bg-neutral-50/80 transition-colors flex items-center justify-between"
+            >
+              <div>
                 <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
                   Date
                 </label>
-                <div className="text-xs font-semibold text-neutral-900 truncate">
-                  {date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Add date'}
+                <div className="text-xs font-bold text-neutral-900 truncate">
+                  {date ? new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : 'Add date'}
                 </div>
               </div>
-
-              {/* Time Cell */}
-              <div className="p-3 relative hover:bg-neutral-50/80 transition-colors">
-                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
-                  Time
-                </label>
-                {tour.timeSlots && tour.timeSlots.length > 0 ? (
-                  <div className="relative">
-                    <select
-                      value={selectedTime}
-                      onChange={(e) => {
-                        setSelectedTime(e.target.value);
-                        setCutOffError(null);
-                      }}
-                      className="w-full text-xs font-semibold text-neutral-900 bg-transparent pr-5 focus:outline-none cursor-pointer appearance-none truncate"
-                    >
-                      {tour.timeSlots.map(t => {
-                        const slotCutOff = date ? isSlotCutOff(date, t, cutOffHours) : false;
-                        return (
-                          <option key={t} value={t} disabled={slotCutOff}>
-                            {t} {slotCutOff ? '(Closed)' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  </div>
-                ) : (
-                  <div className="text-xs font-semibold text-neutral-900 truncate">
-                    Daily Flexible
-                  </div>
-                )}
-              </div>
+              <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform duration-200", showDatePicker && "rotate-180")} />
             </div>
 
             {/* Guests Cell */}
-            <div className="p-3 relative">
-              <div 
-                onClick={() => {
-                  setShowGuestPicker(!showGuestPicker);
-                  setShowDatePicker(false);
-                }}
-                className="cursor-pointer flex items-center justify-between"
-              >
-                <div>
-                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
-                    Guests
-                  </label>
-                  <div className="text-xs font-semibold text-neutral-900">
-                    {adults + children} {adults + children === 1 ? 'guest' : 'guests'} ({adults} {adults === 1 ? 'adult' : 'adults'}{children > 0 ? `, ${children} ${children === 1 ? 'child' : 'children'}` : ''})
-                  </div>
+            <div 
+              onClick={() => {
+                setShowGuestPicker(!showGuestPicker);
+                setShowDatePicker(false);
+              }}
+              className="p-3.5 cursor-pointer hover:bg-neutral-50/80 transition-colors flex items-center justify-between"
+            >
+              <div>
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
+                  Guests
+                </label>
+                <div className="text-xs font-bold text-neutral-900">
+                  {totalGuests} {totalGuests === 1 ? 'guest' : 'guests'} ({adults} {adults === 1 ? 'adult' : 'adults'}{children > 0 ? `, ${children} ${children === 1 ? 'child' : 'children'}` : ''})
                 </div>
-                <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform duration-200", showGuestPicker && "rotate-180")} />
               </div>
+              <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform duration-200", showGuestPicker && "rotate-180")} />
             </div>
           </div>
 
@@ -388,7 +314,7 @@ export default function BookingForm({ tour }: BookingFormProps) {
                         className={cn(
                           "aspect-square rounded-full text-xs font-semibold transition-all flex flex-col items-center justify-center cursor-pointer",
                           isSelected 
-                            ? "bg-neutral-900 text-white font-bold" 
+                            ? "bg-primary text-white font-bold" 
                             : isDisabled 
                               ? "text-neutral-300 cursor-not-allowed line-through decoration-neutral-300" 
                               : "text-neutral-800 hover:bg-neutral-100"
@@ -489,7 +415,7 @@ export default function BookingForm({ tour }: BookingFormProps) {
           <button
             type="button"
             onClick={handleAvailabilityCheck}
-            disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isNavigating}
+            disabled={isSoldOut || (spotsLeft !== null && totalGuests > spotsLeft) || isNavigating}
             className="w-full py-3.5 px-6 rounded-xl bg-primary hover:opacity-95 text-white font-bold text-base shadow-md shadow-primary/20 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {isNavigating ? (
@@ -499,7 +425,7 @@ export default function BookingForm({ tour }: BookingFormProps) {
               </>
             ) : isSoldOut ? (
               'Sold out'
-            ) : (spotsLeft !== null && (adults + children) > spotsLeft) ? (
+            ) : (spotsLeft !== null && totalGuests > spotsLeft) ? (
               'Not enough spots'
             ) : (
               <span>Check availability</span>
@@ -514,26 +440,17 @@ export default function BookingForm({ tour }: BookingFormProps) {
           <div className="pt-4 border-t border-neutral-200 space-y-3 text-xs text-neutral-600">
             <div className="flex justify-between items-center">
               <span className="underline decoration-neutral-300 cursor-pointer" onClick={() => setShowPriceSummary(true)}>
-                <FormattedPrice amount={calculatePackagePrice(selectedPackage || tour.packages[0]) / Math.max(1, adults + children)} /> × {adults + children} {adults + children === 1 ? 'guest' : 'guests'}
+                <FormattedPrice amount={startingPrice} /> × {totalGuests} {totalGuests === 1 ? 'guest' : 'guests'}
               </span>
               <span className="font-semibold text-neutral-900">
-                <FormattedPrice amount={summary.packageTotal} />
+                <FormattedPrice amount={estimatedTotal} />
               </span>
             </div>
-
-            {summary.addonsTotal > 0 && (
-              <div className="flex justify-between items-center">
-                <span className="underline decoration-neutral-300">Add-ons</span>
-                <span className="font-semibold text-neutral-900">
-                  <FormattedPrice amount={summary.addonsTotal} />
-                </span>
-              </div>
-            )}
 
             <div className="border-t border-neutral-200 pt-3 flex justify-between items-center font-bold text-sm text-neutral-900">
               <span>Total before taxes</span>
               <span className="text-base font-extrabold font-display">
-                <FormattedPrice amount={summary.grandTotal} />
+                <FormattedPrice amount={estimatedTotal} />
               </span>
             </div>
           </div>

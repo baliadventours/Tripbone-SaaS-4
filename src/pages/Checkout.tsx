@@ -1817,6 +1817,36 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
                             )}
 
+                            {/* Preferred Departure Time slot selector inside package details */}
+                            {tour.timeSlots && tour.timeSlots.length > 0 && (
+                              <div className="space-y-2 pt-2 border-t border-neutral-200">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-neutral-900 uppercase tracking-wider text-[10px] block">Select Departure Time:</span>
+                                  {selectedTime && <span className="text-[10px] font-bold text-primary">{selectedTime}</span>}
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {tour.timeSlots.map(time => (
+                                    <button
+                                      key={time}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedTime(time);
+                                        setSelectedPackage(pkg);
+                                      }}
+                                      className={cn(
+                                        "px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer",
+                                        selectedTime === time
+                                          ? "bg-primary border-primary text-white shadow-xs shadow-primary/20"
+                                          : "bg-white border-neutral-300 text-neutral-700 hover:border-neutral-900"
+                                      )}
+                                    >
+                                      {time}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
                             {/* Select Package Action */}
                             <div className="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
                               <div>
@@ -1834,7 +1864,7 @@ const toggleAddOn = (addon: AddOn) => {
                                 }}
                                 className={cn(
                                   "px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs",
-                                  isSelected ? "bg-neutral-900 text-white" : "bg-white border border-neutral-300 text-neutral-800 hover:border-neutral-900"
+                                  isSelected ? "bg-primary text-white shadow-xs shadow-primary/20" : "bg-white border border-neutral-300 text-neutral-800 hover:border-neutral-900"
                                 )}
                               >
                                 {isSelected ? 'Selected' : 'Select Package'}
@@ -2475,7 +2505,7 @@ const toggleAddOn = (addon: AddOn) => {
                                             className={cn(
                                               "px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer focus:outline-none",
                                               selectedTime === time
-                                                ? "bg-neutral-900 border-neutral-900 text-white shadow-xs"
+                                                ? "bg-primary border-primary text-white shadow-xs shadow-primary/20"
                                                 : "bg-white border-neutral-300 text-neutral-700 hover:border-neutral-900"
                                             )}
                                           >
