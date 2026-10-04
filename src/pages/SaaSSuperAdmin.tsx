@@ -5016,8 +5016,10 @@ export default function SaaSSuperAdmin() {
 
                           return (
                             <tr key={inv.id} className="text-xs hover:bg-gray-50/50 dark:hover:bg-slate-900/30 transition-colors">
-                              <td className="py-3.5 px-4 font-bold text-indigo-600 dark:text-indigo-400">
-                                #{inv.no || inv.id || 'INV-00'}
+                              <td className="py-3.5 px-4 font-bold">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-mono font-black border bg-slate-100 dark:bg-slate-800 text-indigo-900 dark:text-indigo-300 border-slate-300 dark:border-slate-700">
+                                  #{inv.invoiceNumber || inv.no || inv.id || 'INV-00'}
+                                </span>
                               </td>
                               <td className="py-3.5 px-4">
                                 <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -5043,8 +5045,18 @@ export default function SaaSSuperAdmin() {
                                   </span>
                                 )}
                               </td>
-                              <td className={`py-3.5 px-4 text-right font-black ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                {inv.amount || '$0.00'}
+                              <td className={`py-3.5 px-4 text-right font-black font-mono text-sm ${isDarkMode ? 'text-white' : 'text-gray-950'}`}>
+                                {(() => {
+                                  const raw = inv.amount ?? inv.totalAmount ?? inv.price;
+                                  if (typeof raw === 'number' && raw > 0) return `$${raw.toFixed(2)}`;
+                                  if (typeof raw === 'string' && raw.trim() !== '') {
+                                    const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+                                    if (!isNaN(num) && num > 0) return `$${num.toFixed(2)}`;
+                                    if (raw.startsWith('$')) return raw;
+                                    return `$${raw}`;
+                                  }
+                                  return '$0.00';
+                                })()}
                               </td>
                               <td className="py-3.5 px-4 text-center">
                                 <div className="flex items-center justify-end space-x-1.5 flex-wrap gap-1">

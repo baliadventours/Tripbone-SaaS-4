@@ -189,77 +189,136 @@ export default function BookingForm({ tour }: BookingFormProps) {
   return (
     <>
       {/* Main Sidebar Form */}
-      <div id="package" className="rounded-[10px] border border-gray-100/80 bg-white p-6 shadow-[0_20px_50px_rgba(0,0,0,0.12),_0_0_1px_rgba(0,0,0,0.05)] scroll-mt-[116px]">
-        <div className="mb-6 flex flex-col gap-1">
-          <span className="text-xs font-bold text-primary">Live Pricing From</span>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-gray-900 tracking-tight font-display">
-              <FormattedPrice amount={tour.discountPrice || tour.regularPrice} />
-            </span>
-            {tour.discountPrice && (
-              <span className="text-sm text-gray-400 line-through decoration-secondary">
-                <FormattedPrice amount={tour.regularPrice} />
+      <div id="package" className="rounded-2xl border border-gray-200/90 bg-white p-5 md:p-6 shadow-xl shadow-gray-200/40 scroll-mt-[100px]">
+        {/* Live Pricing Header */}
+        <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3.5">
+          <div className="flex flex-col gap-0.5 text-left">
+            <span className="text-[11px] font-black uppercase tracking-wider text-primary">Live Pricing From</span>
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl lg:text-4xl font-black text-gray-950 tracking-tight font-display">
+                <FormattedPrice amount={tour.discountPrice || tour.regularPrice} />
               </span>
-            )}
+              {tour.discountPrice && (
+                <span className="text-xs text-gray-400 line-through font-bold">
+                  <FormattedPrice amount={tour.regularPrice} />
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+              <span>Best Price Guarantee</span>
+            </span>
           </div>
         </div>
 
-        {/* Booking Cut-off Operational Badge */}
-        <div className="mb-6 flex items-center gap-2.5 p-3 rounded-xl bg-orange-50/70 border border-orange-100/90 text-orange-950">
+        {/* Booking Cut-off Operational Notice */}
+        <div className="mb-4 flex items-center gap-2.5 p-2.5 rounded-xl bg-orange-50/80 border border-orange-200/80 text-orange-950">
           <Clock className="h-4 w-4 text-primary shrink-0" />
-          <div className="text-left">
-            <p className="text-[11px] font-extrabold text-gray-900 tracking-tight leading-tight">
+          <div className="text-left leading-tight">
+            <p className="text-[11px] font-extrabold text-gray-900 tracking-tight">
               {formatCutOffNotice(cutOffHours)}
             </p>
-            <p className="text-[9.5px] font-semibold text-gray-500 mt-0.5">
+            <p className="text-[9.5px] font-medium text-gray-500 mt-0.5">
               {cutOffHours > 0 
-                ? `Please complete booking at least ${cutOffHours}h prior to ensure guide & vehicle scheduling.` 
+                ? `Booking closes ${cutOffHours}h prior to schedule guide & vehicle.` 
                 : `Instant confirmation with flexible last-minute booking.`}
             </p>
           </div>
         </div>
 
         {cutOffError && (
-          <div className="mb-4 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 animate-in fade-in">
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 animate-in fade-in">
             <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            <div className="text-left text-xs font-bold leading-relaxed">
+            <div className="text-left text-xs font-bold leading-relaxed flex-1">
               {cutOffError}
             </div>
           </div>
         )}
 
-        <form id="tour-booking-form" onSubmit={handleAvailabilityCheck} className="space-y-6">
-          {/* Modern Date Picker Dropdown */}
-          <div className="space-y-4">
-            <label className="text-xs font-bold text-gray-500 text-left block">1. Select Date</label>
+        <form id="tour-booking-form" onSubmit={handleAvailabilityCheck} className="space-y-4 text-left">
+          {/* Package Selector (if multiple packages available) */}
+          {tour.packages && tour.packages.length > 1 && (
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-gray-700 flex items-center justify-between">
+                <span>1. Select Package</span>
+                <span className="text-[10px] font-bold text-gray-400">{tour.packages.length} options</span>
+              </label>
+              <div className="grid grid-cols-1 gap-1.5">
+                {tour.packages.map((pkg) => {
+                  const isSelected = selectedPackage?.name === pkg.name;
+                  const pkgTierPrice = pkg.tiers && pkg.tiers.length > 0 ? pkg.tiers[0].adultPrice : 0;
+                  return (
+                    <button
+                      key={pkg.name}
+                      type="button"
+                      onClick={() => setSelectedPackage(pkg)}
+                      className={cn(
+                        "w-full text-left p-2.5 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer group",
+                        isSelected 
+                          ? "border-primary bg-orange-50/30 shadow-xs ring-1 ring-primary/20" 
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                          isSelected ? "border-primary bg-primary" : "border-gray-300 bg-white"
+                        )}>
+                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <span className={cn("text-xs font-black", isSelected ? "text-gray-900" : "text-gray-700")}>
+                          {pkg.name}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="text-xs font-black text-primary">
+                          <FormattedPrice amount={pkgTierPrice || tour.discountPrice || tour.regularPrice} />
+                        </span>
+                        <span className="text-[9px] text-gray-400 font-bold block leading-none">/person</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Date Picker Dropdown */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 block">
+              {tour.packages && tour.packages.length > 1 ? '2' : '1'}. Departure Date
+            </label>
             <div className="relative">
               <button 
                 type="button"
                 onClick={() => setShowDatePicker(!showDatePicker)}
                 className={cn(
-                  "w-full flex items-center justify-between p-4 rounded-[10px] border-2 transition-all group",
-                  date ? "border-orange-100 bg-orange-50/20" : "border-gray-50 bg-gray-50/50 hover:border-orange-100"
+                  "w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer group",
+                  date ? "border-primary/40 bg-orange-50/20" : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
                 )}
               >
-                <div className="flex items-center gap-3">
-                  <Calendar className={cn("h-4 w-4 transition-colors", date ? "text-primary" : "text-gray-400")} />
-                  <span className={cn("text-sm font-bold", date ? "text-gray-900" : "text-gray-400")}>
-                    {date ? new Date(date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'Choose your date'}
+                <div className="flex items-center gap-2.5">
+                  <Calendar className={cn("h-4 w-4 transition-colors shrink-0", date ? "text-primary" : "text-gray-400")} />
+                  <span className={cn("text-xs md:text-sm font-bold", date ? "text-gray-900" : "text-gray-400")}>
+                    {date ? new Date(date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'Choose departure date'}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {date && (
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full flex items-center gap-1",
-                      isSoldOut ? "bg-red-50 text-red-500" : 
-                      isLowCapacity ? "bg-orange-50 text-orange-500" : 
-                      "bg-orange-50 text-primary"
+                      "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1",
+                      isSoldOut ? "bg-red-50 text-red-600 border border-red-200" : 
+                      isLowCapacity ? "bg-amber-50 text-amber-700 border border-amber-200" : 
+                      "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     )}>
                       {isSoldOut ? <X className="h-2 w-2" /> : <Check className="h-2 w-2" />}
                       {isSoldOut ? 'Sold Out' : isLowCapacity ? `${spotsLeft} left` : 'Available'}
                     </span>
                   )}
-                  <ChevronDown className={cn("h-4 w-4 transition-transform text-gray-400", showDatePicker && "rotate-180")} />
+                  <ChevronDown className={cn("h-4 w-4 transition-transform text-gray-500", showDatePicker && "rotate-180")} />
                 </div>
               </button>
 
@@ -269,31 +328,31 @@ export default function BookingForm({ tour }: BookingFormProps) {
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 5, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute top-full left-0 right-0 z-[60] bg-white rounded-[10px] shadow-2xl border border-gray-100 p-4"
+                    className="absolute top-full left-0 right-0 z-[70] bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 mt-1"
                   >
-                    <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center justify-between mb-3">
                       <button type="button" onClick={() => {
                         const d = new Date(currentMonth);
                         d.setMonth(d.getMonth() - 1);
                         setCurrentMonth(d);
-                      }} className="p-2 hover:bg-gray-50 rounded-lg transition-colors text-gray-400">
+                      }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 cursor-pointer">
                         <ChevronLeft className="h-4 w-4" />
                       </button>
-                      <span className="font-extrabold text-gray-900 tracking-tight text-xs">
+                      <span className="font-black text-gray-900 tracking-tight text-xs">
                           {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
                       </span>
                       <button type="button" onClick={() => {
                         const d = new Date(currentMonth);
                         d.setMonth(d.getMonth() + 1);
                         setCurrentMonth(d);
-                      }} className="p-2 hover:bg-gray-50 rounded-lg transition-colors text-gray-400">
+                      }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 cursor-pointer">
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
                     
-                    <div className="grid grid-cols-7 gap-1 mb-2">
+                    <div className="grid grid-cols-7 gap-1 mb-1.5">
                       {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                        <div key={d} className="text-center text-[10px] font-black text-gray-400 tracking-tighter uppercase">{d}</div>
+                        <div key={d} className="text-center text-[10px] font-black text-gray-400 tracking-tight uppercase">{d}</div>
                       ))}
                     </div>
 
@@ -322,14 +381,14 @@ export default function BookingForm({ tour }: BookingFormProps) {
                               setShowDatePicker(false);
                             }}
                             className={cn(
-                              "aspect-square rounded-[8px] text-[13px] font-bold transition-all flex flex-col items-center justify-center relative group",
-                              isSelected ? "bg-primary text-white shadow-lg" : 
-                              isDisabled ? "text-gray-300 cursor-not-allowed bg-gray-50/50 line-through decoration-gray-300/60" : "text-gray-700 hover:bg-primary/10 hover:text-primary"
+                              "aspect-square rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer",
+                              isSelected ? "bg-primary text-white shadow-md font-black" : 
+                              isDisabled ? "text-gray-300 cursor-not-allowed bg-gray-50/60 line-through decoration-gray-300" : "text-gray-800 hover:bg-orange-50 hover:text-primary"
                             )}
                           >
                             <span>{d}</span>
                             {isCutOff && !isPast && (
-                              <span className="text-[7px] font-black text-red-400/80 -mt-1 leading-none no-underline block">Closed</span>
+                              <span className="text-[7px] font-black text-red-500 -mt-1 leading-none no-underline block">Closed</span>
                             )}
                           </button>
                         );
@@ -343,18 +402,21 @@ export default function BookingForm({ tour }: BookingFormProps) {
 
           {/* Time Picker */}
           {tour.timeSlots && tour.timeSlots.length > 0 && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-top-1">
+            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-500 block text-left">2. Preferred Time</label>
+                <label className="text-xs font-black text-gray-700 block">
+                  {tour.packages && tour.packages.length > 1 ? '3' : '2'}. Departure Time
+                </label>
                 {cutOffHours > 0 && (
-                  <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-orange-400" /> Closes {cutOffHours}h prior
+                  <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-orange-500" /> Closes {cutOffHours}h prior
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-1.5">
                 {tour.timeSlots.map(time => {
                   const slotCutOff = date ? isSlotCutOff(date, time, cutOffHours) : false;
+                  const isSelected = selectedTime === time;
                   return (
                     <button
                       key={time}
@@ -366,17 +428,17 @@ export default function BookingForm({ tour }: BookingFormProps) {
                       }}
                       title={slotCutOff ? `Cut-off threshold reached (${cutOffHours}h prior)` : undefined}
                       className={cn(
-                        "py-2 rounded-lg text-xs font-semibold border transition-all cursor-pointer focus:outline-none flex flex-col items-center justify-center gap-0.5",
+                        "py-2 px-1 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer focus:outline-none flex flex-col items-center justify-center gap-0.5",
                         slotCutOff 
-                          ? "bg-gray-100/70 border-gray-200/80 text-gray-300 cursor-not-allowed line-through"
-                          : selectedTime === time
-                            ? "bg-primary border-primary text-white shadow-sm"
-                            : "bg-gray-50 border-gray-100 text-gray-600 hover:border-orange-200 hover:bg-white"
+                          ? "bg-gray-100/70 border-gray-200 text-gray-400 cursor-not-allowed line-through"
+                          : isSelected
+                            ? "bg-primary border-primary text-white shadow-sm font-black"
+                            : "bg-gray-50/80 border-gray-200 text-gray-700 hover:border-primary/50 hover:bg-white"
                       )}
                     >
                       <span>{time}</span>
                       {slotCutOff && (
-                        <span className="text-[8px] font-bold text-red-400 no-underline">Cut-off</span>
+                        <span className="text-[8px] font-bold text-red-500 no-underline leading-none">Cut-off</span>
                       )}
                     </button>
                   );
@@ -385,124 +447,135 @@ export default function BookingForm({ tour }: BookingFormProps) {
             </div>
           )}
 
-          {/* Participant Picker */}
-          <div className="space-y-4">
-            <label className="text-xs font-bold text-gray-500 block text-left">
-              {tour.timeSlots && tour.timeSlots.length > 0 ? '3' : '2'}. Participants
+          {/* Participant Picker (Desktop Side-by-Side) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-gray-700 block">
+              {tour.packages && tour.packages.length > 1 ? (tour.timeSlots && tour.timeSlots.length > 0 ? '4' : '3') : (tour.timeSlots && tour.timeSlots.length > 0 ? '3' : '2')}. Travelers
             </label>
             
-            <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-[10px] border-2 border-gray-50 transition-colors hover:border-orange-100">
-              <div className="flex flex-col">
-                <span className="font-bold text-gray-900 text-sm">Adults</span>
-                <span className="text-xs text-gray-400 font-bold">Age 12+</span>
+            <div className="grid grid-cols-2 gap-2">
+              {/* Adults Counter */}
+              <div className="flex flex-col justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-black text-gray-900 text-xs">Adults</span>
+                  <span className="text-[10px] text-gray-400 font-bold">12+ yrs</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <button 
+                    type="button" 
+                    onClick={() => setAdults(Math.max(1, adults - 1))} 
+                    className={cn(
+                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
+                      (adults <= 1 || (adults + children) <= minRequired) 
+                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
+                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
+                    )} 
+                    disabled={adults <= 1 || (adults + children) <= minRequired}
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="font-black text-base text-gray-950 font-mono">{adults}</span>
+                  <button 
+                    type="button" 
+                    disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
+                    onClick={() => setAdults(adults + 1)} 
+                    className={cn(
+                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
+                      (spotsLeft !== null && (adults + children + 1) > spotsLeft) 
+                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
+                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
+                    )}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-4">
-                <button type="button" onClick={() => setAdults(Math.max(1, adults - 1))} className={cn("h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all", (adults <= 1 || (adults + children) <= minRequired) ? "border-gray-200 text-gray-300 opacity-50 cursor-not-allowed" : "border-primary/20 text-primary hover:bg-primary/5")} disabled={adults <= 1 || (adults + children) <= minRequired}>
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-4 text-center font-black text-lg text-primary">{adults}</span>
-                <button 
-                  type="button" 
-                  disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
-                  onClick={() => setAdults(adults + 1)} 
-                  className={cn("h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all", (spotsLeft !== null && (adults + children + 1) > spotsLeft) ? "border-gray-200 text-gray-300 opacity-50 cursor-not-allowed" : "border-primary/20 text-primary hover:bg-primary/5")}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
+
+              {/* Children Counter */}
+              <div className="flex flex-col justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-black text-gray-900 text-xs">Children</span>
+                  <span className="text-[10px] text-gray-400 font-bold">3-11 yrs</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <button 
+                    type="button" 
+                    onClick={() => setChildren(Math.max(0, children - 1))} 
+                    className={cn(
+                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
+                      (children <= 0 || (adults + children) <= minRequired) 
+                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
+                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
+                    )} 
+                    disabled={children <= 0 || (adults + children) <= minRequired}
+                  >
+                    <Minus className="h-3.5 w-3.5" />
+                  </button>
+                  <span className="font-black text-base text-gray-950 font-mono">{children}</span>
+                  <button 
+                    type="button" 
+                    disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
+                    onClick={() => setChildren(children + 1)} 
+                    className={cn(
+                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
+                      (spotsLeft !== null && (adults + children + 1) > spotsLeft) 
+                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
+                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
+                    )}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50/50 rounded-[10px] border-2 border-gray-50 transition-colors hover:border-orange-100">
-              <div className="flex flex-col">
-                <span className="font-bold text-gray-900 text-sm">Children</span>
-                <span className="text-xs text-gray-400 font-bold">Age 3-11</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <button type="button" onClick={() => setChildren(Math.max(0, children - 1))} className={cn("h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all", (children <= 0 || (adults + children) <= minRequired) ? "border-gray-200 text-gray-300 opacity-50 cursor-not-allowed" : "border-primary/20 text-primary hover:bg-primary/5")} disabled={children <= 0 || (adults + children) <= minRequired}>
-                  <Minus className="h-4 w-4" />
-                </button>
-                <span className="w-4 text-center font-black text-lg text-primary">{children}</span>
-                <button 
-                  type="button" 
-                  disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
-                  onClick={() => setChildren(children + 1)} 
-                  className={cn("h-8 w-8 rounded-full border-2 flex items-center justify-center transition-all", (spotsLeft !== null && (adults + children + 1) > spotsLeft) ? "border-gray-200 text-gray-300 opacity-50 cursor-not-allowed" : "border-primary/20 text-primary hover:bg-primary/5")}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
             {(spotsLeft !== null && (adults + children) > spotsLeft) && (
-              <p className="text-[10px] text-red-500 font-bold text-center animate-pulse">
+              <p className="text-[10px] text-red-500 font-bold text-center animate-pulse mt-1">
                 Capacity Exceeded: Only {spotsLeft} spots remaining
               </p>
             )}
           </div>
 
-          {cutOffError && (
-            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5 text-red-700 animate-in fade-in">
-              <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-              <div className="text-left text-xs font-bold leading-relaxed flex-1">
-                <p>{cutOffError}</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextD = new Date();
-                    nextD.setDate(nextD.getDate() + 2);
-                    const y = nextD.getFullYear();
-                    const m = String(nextD.getMonth() + 1).padStart(2, '0');
-                    const d = String(nextD.getDate()).padStart(2, '0');
-                    setDate(`${y}-${m}-${d}`);
-                    setCutOffError(null);
-                  }}
-                  className="mt-2 text-[11px] underline text-primary font-extrabold block hover:text-orange-700 cursor-pointer"
-                >
-                  Select Next Available Date &rarr;
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Price Summary Breakdown Trigger */}
-          <div className="p-3 bg-slate-50 border border-slate-200/80 rounded-xl flex items-center justify-between">
+          {/* Price Summary Breakdown Card */}
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
             <div className="text-left">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Estimated Total</span>
-              <div className="flex items-baseline gap-1">
-                <span className="text-base font-black text-slate-900 font-display">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Total Price ({adults + children} pax)</span>
+              <div className="flex items-baseline gap-1 mt-0.5">
+                <span className="text-lg font-black text-gray-950 font-display">
                   <FormattedPrice amount={summary.grandTotal} />
                 </span>
-                <span className="text-[10px] text-slate-400 font-bold">({adults + children} pax)</span>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setShowPriceSummary(true)}
-              className="text-xs font-black text-primary hover:text-orange-700 underline flex items-center gap-0.5 cursor-pointer"
+              className="text-xs font-black text-primary hover:text-orange-700 underline flex items-center gap-0.5 cursor-pointer bg-orange-50/80 px-2.5 py-1.5 rounded-lg border border-orange-200/80"
             >
               <span>Summary</span>
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
 
+          {/* Action CTA Button */}
           <button
             type="button"
             onClick={handleAvailabilityCheck}
             disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isNavigating}
-            className="flex w-full items-center justify-center gap-3 rounded-[50px] bg-primary py-5 font-black text-white hover:bg-orange-700 hover:shadow-xl active:scale-[0.98] transition-all shadow-lg tracking-widest text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer relative z-10 select-none"
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-black text-white hover:bg-orange-700 hover:shadow-lg active:scale-[0.99] transition-all shadow-md tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer relative z-10 select-none"
           >
             {isNavigating ? (
               <>
-                <span>Processing Checkout...</span>
+                <span>Processing Booking...</span>
                 <Loader2 className="h-5 w-5 animate-spin" />
               </>
             ) : isSoldOut ? (
-              'Sold Out'
+              'Sold Out for this Date'
             ) : (spotsLeft !== null && (adults + children) > spotsLeft) ? (
-              'Not Enough Spots'
+              'Not Enough Spots Available'
             ) : (
               <>
-                <span>Check Availability</span>
-                <Rocket className="h-5 w-5" />
+                <span>Book Now / Check Availability</span>
+                <Rocket className="h-4 w-4" />
               </>
             )}
           </button>

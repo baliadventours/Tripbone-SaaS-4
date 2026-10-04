@@ -3767,14 +3767,17 @@ export default function SaaSHome() {
                                                  String(invoice.plan || '').toLowerCase().includes('lifetime');
 
                               const displayAmount = (() => {
-                                const raw = invoice.amount || invoice.totalAmount || invoice.price;
+                                const raw = invoice.amount ?? invoice.totalAmount ?? invoice.price;
                                 if (typeof raw === 'number' && raw > 0) return `$${raw.toFixed(2)}`;
-                                if (typeof raw === 'string' && raw.trim() !== '' && raw !== '$0.00') {
-                                  return raw.startsWith('$') ? raw : `$${raw}`;
+                                if (typeof raw === 'string' && raw.trim() !== '') {
+                                  const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+                                  if (!isNaN(num) && num > 0) return `$${num.toFixed(2)}`;
+                                  if (raw.startsWith('$')) return raw;
+                                  return `$${raw}`;
                                 }
                                 const effInterval = invoice.billingInterval || activeWorkspace?.billingInterval || 'monthly';
                                 const p = getPlanPrice(invoice.plan || activeWorkspace?.plan, effInterval, plans);
-                                return `$${p}.00`;
+                                return `$${p || 49}.00`;
                               })();
 
                               return (
@@ -3793,13 +3796,17 @@ export default function SaaSHome() {
                                         e.stopPropagation();
                                         setPreviewingInvoice(invoice);
                                       }}
-                                      className={cn(
-                                        "font-black text-xs hover:underline cursor-pointer flex items-center gap-1.5 text-left transition-colors",
-                                        isDarkMode ? "text-indigo-400 hover:text-indigo-300" : "text-indigo-600 hover:text-indigo-800"
-                                      )}
+                                      className="cursor-pointer flex items-center gap-1.5 text-left transition-colors"
                                       title="Preview invoice statement"
                                     >
-                                      <span>#{invoice.no || invoice.id}</span>
+                                      <span className={cn(
+                                        "inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono font-black tracking-tight border shadow-2xs transition-colors",
+                                        isDarkMode 
+                                          ? "bg-slate-800 text-indigo-300 border-slate-700 group-hover:border-indigo-400 group-hover:text-white" 
+                                          : "bg-slate-100 text-indigo-900 border-slate-300 group-hover:bg-indigo-50 group-hover:border-indigo-400 group-hover:text-indigo-950"
+                                      )}>
+                                        #{invoice.no || invoice.id}
+                                      </span>
                                     </button>
                                   </td>
                                   <td className="py-4 px-3">
@@ -3825,7 +3832,10 @@ export default function SaaSHome() {
                                     )}
                                   </td>
                                   <td className="py-4 px-3">
-                                    <span className={cn("text-sm font-black tracking-tight", isDarkMode ? "text-white" : "text-slate-950")}>
+                                    <span className={cn(
+                                      "text-sm font-black font-mono tracking-tight",
+                                      isDarkMode ? "text-white" : "text-gray-950"
+                                    )}>
                                       {displayAmount}
                                     </span>
                                   </td>

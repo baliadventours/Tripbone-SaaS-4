@@ -1108,11 +1108,11 @@ export const BillingView: React.FC<BillingViewProps> = ({
                             e.stopPropagation();
                             setSelectedInvoiceForView(inv);
                           }}
-                          className="font-black text-gray-900 group-hover:text-primary flex items-center gap-2 cursor-pointer transition-colors text-left"
+                          className="flex items-center gap-2 cursor-pointer transition-colors text-left group"
                           title="Click to preview invoice"
                         >
-                          <FileText className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors flex-shrink-0" />
-                          <span className="underline decoration-transparent group-hover:decoration-primary group-hover:underline transition-all">
+                          <FileText className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-mono font-black tracking-tight border bg-slate-100 text-indigo-950 border-slate-300 group-hover:bg-indigo-50 group-hover:border-indigo-400">
                             {inv.no || inv.id}
                           </span>
                         </button>
@@ -1124,8 +1124,18 @@ export const BillingView: React.FC<BillingViewProps> = ({
                       <td className="py-4 px-4 text-xs font-bold text-gray-600">
                         {inv.dueDate || (isTrial ? `Trial Ends ${trialEndsFormatted}` : 'Lifetime Access')}
                       </td>
-                      <td className="py-4 px-4 font-black text-gray-900 text-sm">
-                        {inv.amount || '$49.00'}
+                      <td className="py-4 px-4 font-black text-gray-950 text-sm font-mono">
+                        {(() => {
+                          const raw = inv.amount ?? inv.totalAmount ?? inv.price;
+                          if (typeof raw === 'number' && raw > 0) return `$${raw.toFixed(2)}`;
+                          if (typeof raw === 'string' && raw.trim() !== '') {
+                            const num = parseFloat(raw.replace(/[^0-9.]/g, ''));
+                            if (!isNaN(num) && num > 0) return `$${num.toFixed(2)}`;
+                            if (raw.startsWith('$')) return raw;
+                            return `$${raw}`;
+                          }
+                          return '$49.00';
+                        })()}
                       </td>
                       <td className="py-4 px-4">
                         {isPaid ? (

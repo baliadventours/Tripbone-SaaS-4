@@ -773,7 +773,7 @@ export default function TourDetail() {
               <TourInfo tour={tour} />
               <ReviewSection tourId={tour.id} />
             </div>
-            <aside className="hidden md:block lg:w-1/3 lg:sticky lg:top-[120px] h-fit self-start z-10">
+            <aside className="hidden md:block w-full md:w-[360px] lg:w-[390px] xl:w-[420px] shrink-0 md:sticky md:top-24 max-h-[calc(100vh-100px)] overflow-y-auto pr-1 no-scrollbar self-start z-20">
               <BookingForm tour={tour} />
             </aside>
           </div>
