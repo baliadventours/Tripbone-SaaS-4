@@ -471,13 +471,8 @@ export default function Checkout() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const [mobileStep, setMobileStep] = useState<'package' | 'date' | 'addons' | 'summary' | 'customer' | 'payment'>(() => {
-    const stepParam = searchParams.get('mobileStep');
-    if (stepParam && ['package', 'date', 'addons', 'summary', 'customer', 'payment'].includes(stepParam)) {
-      return stepParam as any;
-    }
-    return 'package';
-  });
+  const [showMobileGuestPicker, setShowMobileGuestPicker] = useState(false);
+  const [showMobileDatePicker, setShowMobileDatePicker] = useState(false);
 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
@@ -1455,12 +1450,9 @@ const toggleAddOn = (addon: AddOn) => {
         <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 px-4 py-3.5 flex items-center justify-between shadow-xs">
           <button
             onClick={() => {
-              if (mobileStep === 'package') navigate(-1);
-              else if (mobileStep === 'date') setMobileStep('package');
-              else if (mobileStep === 'addons') setMobileStep('date');
-              else if (mobileStep === 'summary') setMobileStep('addons');
-              else if (mobileStep === 'customer') setMobileStep('summary');
-              else if (mobileStep === 'payment') setMobileStep('customer');
+              if (step === 'selection') navigate(-1);
+              else if (step === 'customer') updateStep('selection');
+              else if (step === 'payment') updateStep('customer');
             }}
             className="p-2 rounded-full border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
             title="Back"
@@ -1470,12 +1462,9 @@ const toggleAddOn = (addon: AddOn) => {
 
           <div className="text-center min-w-0 px-2 flex-1">
             <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block">
-              {mobileStep === 'package' && 'Step 1 of 6 • Package'}
-              {mobileStep === 'date' && 'Step 2 of 6 • Date & Guests'}
-              {mobileStep === 'addons' && 'Step 3 of 6 • Options'}
-              {mobileStep === 'summary' && 'Step 4 of 6 • Summary'}
-              {mobileStep === 'customer' && 'Step 5 of 6 • Details'}
-              {mobileStep === 'payment' && 'Step 6 of 6 • Payment'}
+              {step === 'selection' && 'Step 1 of 3 • Options'}
+              {step === 'customer' && 'Step 2 of 3 • Details'}
+              {step === 'payment' && 'Step 3 of 3 • Payment'}
             </span>
             <h1 className="text-xs font-bold text-neutral-900 truncate max-w-[220px] mx-auto">
               {tour.title}
@@ -1497,73 +1486,77 @@ const toggleAddOn = (addon: AddOn) => {
             className="bg-neutral-900 h-1 transition-all duration-300"
             style={{
               width:
-                mobileStep === 'package' ? '16.6%' :
-                mobileStep === 'date' ? '33.3%' :
-                mobileStep === 'addons' ? '50%' :
-                mobileStep === 'summary' ? '66.6%' :
-                mobileStep === 'customer' ? '83.3%' : '100%'
+                step === 'selection' ? '33.3%' :
+                step === 'customer' ? '66.6%' : '100%'
             }}
           />
         </div>
 
         {/* Main Content Area */}
         <div className="flex-1 p-4 max-w-lg mx-auto w-full space-y-5">
-          {/* STEP 1: Date & Participant Picker */}
-          {mobileStep === 'date' && (
+          {/* STEP 1: Options (Date & Guests quick summary + Package + Transport + Add-ons) */}
+          {step === 'selection' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              {/* Stylized Custom Date Picker */}
-              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
-                    <Calendar className="h-5 w-5 text-neutral-700" />
-                    <h2>Select Travel Date</h2>
+              {/* Clean Airbnb Date & Travelers Modifier Card (Pre-filled, tap to edit) */}
+              <div className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-xs space-y-3 text-left">
+                <div className="flex items-center justify-between pb-2 border-b border-neutral-100">
+                  <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider">Your Trip Schedule</span>
+                  <div className="flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    <Check className="h-3 w-3 text-emerald-600" /> Confirmed
                   </div>
                 </div>
 
-                {/* Clickable Date Picker Input Field */}
-                <button
-                  type="button"
-                  onClick={() => setShowDatePicker(!showDatePicker)}
-                  className={cn(
-                    "w-full p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer text-left",
-                    showDatePicker ? "border-neutral-900 bg-neutral-50/50" : "border-neutral-200 bg-white hover:border-neutral-300"
-                  )}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-neutral-100 text-neutral-800 flex items-center justify-center shrink-0">
-                      <Calendar className="h-4 w-4" />
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider block">
-                        Travel Date
-                      </span>
-                      <span className="text-sm font-bold text-neutral-900 block">
-                        {date 
-                          ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
-                          : "Tap to choose date"}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {date && (
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        Selected
-                      </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Date Selector Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileDatePicker(!showMobileDatePicker);
+                      setShowMobileGuestPicker(false);
+                    }}
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-all cursor-pointer",
+                      showMobileDatePicker ? "border-neutral-900 bg-neutral-50/50" : "border-neutral-200 bg-white hover:border-neutral-300"
                     )}
-                    <ChevronDown className={cn("h-4 w-4 text-neutral-400 transition-transform duration-200", showDatePicker && "rotate-180 text-neutral-900")} />
-                  </div>
-                </button>
+                  >
+                    <span className="text-[9px] font-bold uppercase text-neutral-400 block tracking-wider">Dates</span>
+                    <span className="text-xs font-bold text-neutral-900 block truncate mt-0.5">
+                      {date 
+                        ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                        : "Select Date"}
+                      {selectedTime && ` • ${selectedTime}`}
+                    </span>
+                  </button>
 
-                {/* Expanded Month Calendar */}
+                  {/* Guests Selector Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowMobileGuestPicker(!showMobileGuestPicker);
+                      setShowMobileDatePicker(false);
+                    }}
+                    className={cn(
+                      "p-3 rounded-xl border text-left transition-all cursor-pointer",
+                      showMobileGuestPicker ? "border-neutral-900 bg-neutral-50/50" : "border-neutral-200 bg-white hover:border-neutral-300"
+                    )}
+                  >
+                    <span className="text-[9px] font-bold uppercase text-neutral-400 block tracking-wider">Travelers</span>
+                    <span className="text-xs font-bold text-neutral-900 block truncate mt-0.5">
+                      {adults + children} Guest{(adults + children) > 1 ? 's' : ''}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Collapsible Date Picker */}
                 <AnimatePresence>
-                  {showDatePicker && (
+                  {showMobileDatePicker && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: 'auto' }}
                       exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden"
+                      className="overflow-hidden pt-2 border-t border-neutral-100"
                     >
-                      <div className="bg-neutral-50/80 p-3.5 rounded-xl border border-neutral-200 space-y-3">
+                      <div className="bg-neutral-50/80 p-3 rounded-xl border border-neutral-200 space-y-3">
                         <div className="flex items-center justify-between">
                           <button
                             type="button"
@@ -1575,12 +1568,12 @@ const toggleAddOn = (addon: AddOn) => {
                                 setCurrentMonth(newM);
                               }
                             }}
-                            className="p-1.5 rounded-lg bg-white text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer border border-neutral-200"
+                            className="p-1 rounded bg-white text-neutral-700 border border-neutral-200 cursor-pointer"
                           >
-                            <ChevronLeft className="h-4 w-4" />
+                            <ChevronLeft className="h-3.5 w-3.5" />
                           </button>
-                          <span className="font-bold text-xs text-neutral-900 uppercase tracking-wider">
-                            {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                          <span className="font-bold text-xs text-neutral-900 uppercase">
+                            {currentMonth.toLocaleString('default', { month: 'short', year: 'numeric' })}
                           </span>
                           <button
                             type="button"
@@ -1589,363 +1582,230 @@ const toggleAddOn = (addon: AddOn) => {
                               newM.setMonth(newM.getMonth() + 1);
                               setCurrentMonth(newM);
                             }}
-                            className="p-1.5 rounded-lg bg-white text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer border border-neutral-200"
+                            className="p-1 rounded bg-white text-neutral-700 border border-neutral-200 cursor-pointer"
                           >
-                            <ChevronRight className="h-4 w-4" />
+                            <ChevronRight className="h-3.5 w-3.5" />
                           </button>
                         </div>
 
-                        {/* Day of week headers */}
-                        <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-neutral-400 uppercase tracking-wider">
-                          {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                            <div key={d} className="py-1">{d}</div>
-                          ))}
+                        <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-neutral-400 uppercase">
+                          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d}>{d}</div>)}
                         </div>
 
-                        {/* Calendar Days Grid */}
                         <div className="grid grid-cols-7 gap-1">
                           {(() => {
                             const year = currentMonth.getFullYear();
                             const month = currentMonth.getMonth();
                             const firstDay = new Date(year, month, 1).getDay();
                             const daysInMonth = new Date(year, month + 1, 0).getDate();
-                            const today = new Date(); 
-                            today.setHours(0, 0, 0, 0);
-
+                            const today = new Date(); today.setHours(0,0,0,0);
                             const cells = [];
-                            for (let i = 0; i < firstDay; i++) {
-                              cells.push(<div key={`empty-${i}`} />);
-                            }
-
+                            for (let i = 0; i < firstDay; i++) cells.push(<div key={`empty-${i}`} />);
                             for (let d = 1; d <= daysInMonth; d++) {
-                              const dateObj = new Date(year, month, d);
                               const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                              const isPast = dateObj < today;
+                              const isPast = new Date(year, month, d) < today;
                               const isSelected = date === dateStr;
-                              const effectiveCutOff = getEffectiveCutOffHours(tour);
-                              const isCutOff = isDateFullyCutOff(dateStr, tour.timeSlots, effectiveCutOff);
-                              const isDisabled = isPast || isCutOff;
-
                               cells.push(
                                 <button
                                   key={d}
                                   type="button"
-                                  disabled={isDisabled}
-                                  title={isPast ? "Past date" : isCutOff ? `Cut-off reached (${effectiveCutOff}h prior)` : undefined}
+                                  disabled={isPast}
                                   onClick={() => {
                                     setDate(dateStr);
-                                    setShowDatePicker(false);
+                                    setShowMobileDatePicker(false);
                                   }}
                                   className={cn(
-                                    "aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer",
-                                    isSelected 
-                                      ? "bg-neutral-900 text-white shadow-sm scale-105" 
-                                      : isDisabled 
-                                        ? "text-neutral-300 line-through opacity-40 cursor-not-allowed bg-neutral-50" 
-                                        : "text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-900"
+                                    "aspect-square rounded-lg flex items-center justify-center text-xs font-bold transition-all cursor-pointer",
+                                    isSelected ? "bg-neutral-900 text-white" : isPast ? "text-neutral-300 line-through opacity-40 cursor-not-allowed" : "text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-900"
                                   )}
                                 >
-                                  <span>{d}</span>
-                                  {isCutOff && !isPast && (
-                                    <span className="text-[7px] font-bold text-rose-500 no-underline leading-none">Closed</span>
-                                  )}
+                                  {d}
                                 </button>
                               );
                             }
                             return cells;
                           })()}
                         </div>
+
+                        {/* Preferred Departure Time Slots */}
+                        {tour.timeSlots && tour.timeSlots.length > 0 && (
+                          <div className="space-y-1.5 pt-2 border-t border-neutral-200">
+                            <span className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">Departure Time</span>
+                            <div className="grid grid-cols-3 gap-1.5">
+                              {tour.timeSlots.map(time => (
+                                <button
+                                  key={time}
+                                  type="button"
+                                  onClick={() => setSelectedTime(time)}
+                                  className={cn(
+                                    "py-1.5 text-xs font-semibold rounded-lg border transition-all cursor-pointer",
+                                    selectedTime === time ? "bg-neutral-900 text-white border-neutral-900" : "bg-white border-neutral-200 text-neutral-700"
+                                  )}
+                                >
+                                  {time}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Booking Cut-off Notice */}
-                {tour && (
-                  <div className="p-3 rounded-xl text-xs font-medium bg-neutral-50 border border-neutral-200 text-neutral-700 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-neutral-500 shrink-0" />
-                    <span>{formatCutOffNotice(getEffectiveCutOffHours(tour))}</span>
-                  </div>
-                )}
-
-                {/* Capacity & Availability Indicator */}
-                {date && spotsLeft !== null && (
-                  <div className={cn(
-                    "p-3 rounded-xl text-xs font-semibold flex items-center justify-between border",
-                    isSoldOut ? "bg-rose-50 border-rose-200 text-rose-700" : isLowCapacity ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
-                  )}>
-                    <span>Availability status:</span>
-                    <span className="font-bold">
-                      {isSoldOut ? 'Sold Out' : isLowCapacity ? `Only ${spotsLeft} spots left!` : `${spotsLeft} spots available`}
-                    </span>
-                  </div>
-                )}
-
-                {/* Preferred Departure Time */}
-                {tour.timeSlots && tour.timeSlots.length > 0 && (
-                  <div className="space-y-2 pt-1">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-neutral-800 block">Preferred Departure Time</label>
-                      {getEffectiveCutOffHours(tour) > 0 && (
-                        <span className="text-[10px] text-neutral-400 font-medium">
-                          Cut-off: {getEffectiveCutOffHours(tour)}h prior
-                        </span>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      {tour.timeSlots.map(time => {
-                        const effectiveCutOff = getEffectiveCutOffHours(tour);
-                        const isSlotDisabled = date ? isSlotCutOff(date, time, effectiveCutOff) : false;
-                        return (
-                          <button
-                            key={time}
-                            type="button"
-                            disabled={isSlotDisabled}
-                            title={isSlotDisabled ? `Cut-off passed (${effectiveCutOff}h prior)` : undefined}
-                            onClick={() => setSelectedTime(time)}
-                            className={cn(
-                              "py-2.5 text-xs font-semibold rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5",
-                              isSlotDisabled
-                                ? "bg-neutral-100 border-neutral-200 text-neutral-300 line-through cursor-not-allowed"
-                                : selectedTime === time
-                                  ? "bg-neutral-900 border-neutral-900 text-white shadow-xs"
-                                  : "bg-white border-neutral-200 text-neutral-700 hover:border-neutral-900 cursor-pointer"
-                            )}
-                          >
-                            <span>{time}</span>
-                            {isSlotDisabled && (
-                              <span className="text-[8px] font-bold text-rose-500 no-underline">Cut-off</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Participant Picker */}
-              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
-                  <Users className="h-5 w-5 text-neutral-700" />
-                  <h2>Select Participants</h2>
-                </div>
-
-                <div className="space-y-4 divide-y divide-neutral-100">
-                  {/* Adults */}
-                  <div className="flex items-center justify-between pt-2">
-                    <div>
-                      <span className="font-bold text-sm text-neutral-900 block">Adults</span>
-                      <span className="text-xs text-neutral-400 font-normal">Age 12+</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setAdults(Math.max(1, adults - 1))}
-                        disabled={adults <= 1 || (adults + children) <= minRequired}
-                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 disabled:opacity-30 cursor-pointer"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{adults}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
-                            alert(`Only ${spotsLeft} spots available.`);
-                            return;
-                          }
-                          setAdults(adults + 1);
-                        }}
-                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 cursor-pointer"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Children */}
-                  <div className="flex items-center justify-between pt-4">
-                    <div>
-                      <span className="font-bold text-sm text-neutral-900 block">Children</span>
-                      <span className="text-xs text-neutral-400 font-normal">Age 2-11</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setChildren(Math.max(0, children - 1))}
-                        disabled={children <= 0 || (adults + children) <= minRequired}
-                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 disabled:opacity-30 cursor-pointer"
-                      >
-                        <Minus className="h-3.5 w-3.5" />
-                      </button>
-                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{children}</span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
-                            alert(`Only ${spotsLeft} spots available.`);
-                            return;
-                          }
-                          setChildren(children + 1);
-                        }}
-                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 cursor-pointer"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Pax Summary Badge */}
-                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 flex items-center justify-between text-xs font-semibold text-neutral-700">
-                  <span>Selected Travelers:</span>
-                  <span className="font-bold text-neutral-900">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 2: Package Selection Modal (Collapsed by default, rich details on expand) */}
-          {mobileStep === 'package' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="space-y-1">
-                <h2 className="text-lg font-bold text-neutral-900">Choose Package</h2>
-                <p className="text-xs text-neutral-500">Tap a package to view complete details, group rates & inclusions.</p>
-              </div>
-
-              <div className="space-y-3">
-                {tour.packages.map((pkg, idx) => {
-                  const isSelected = selectedPackage?.name === pkg.name;
-                  const isExpanded = expandedPackage === pkg.name;
-                  const pkgTotal = calculatePackagePrice(pkg);
-                  const minReq = pkg.tiers && pkg.tiers.length > 0 ? Math.min(...pkg.tiers.map(t => t.minParticipants)) : 1;
-                  const isUnderMin = (adults + children) < minReq;
-
-                  return (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "border rounded-2xl overflow-hidden bg-white transition-all",
-                        isSelected ? "border-2 border-neutral-900 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
-                      )}
+                {/* Collapsible Guest Picker */}
+                <AnimatePresence>
+                  {showMobileGuestPicker && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden pt-2 border-t border-neutral-100"
                     >
-                      {/* Collapsed view: Package Name & Price/Person */}
-                      <div
-                        onClick={() => {
-                          if (isExpanded) {
-                            setExpandedPackage(null);
-                          } else {
-                            setSelectedPackage(pkg);
-                            setExpandedPackage(pkg.name);
-                          }
-                        }}
-                        className="flex items-center justify-between p-4 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={cn(
-                            "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                            isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
-                          )}>
-                            {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
+                      <div className="bg-neutral-50/80 p-3 rounded-xl border border-neutral-200 space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-neutral-900 block">Adults</span>
+                            <span className="text-[10px] text-neutral-400">Age 12+</span>
                           </div>
-                          <h3 className="font-bold text-sm text-neutral-900 leading-snug">{pkg.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setAdults(Math.max(1, adults - 1))}
+                              disabled={adults <= 1 || (adults + children) <= minRequired}
+                              className="h-7 w-7 rounded-lg border border-neutral-300 bg-white font-bold text-xs disabled:opacity-30 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-bold w-4 text-center">{adults}</span>
+                            <button
+                              type="button"
+                              onClick={() => setAdults(adults + 1)}
+                              className="h-7 w-7 rounded-lg border border-neutral-300 bg-white font-bold text-xs cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <span className="font-bold text-neutral-900 text-sm">
-                              <FormattedPrice amount={getPackagePricePerPerson(pkg)} />
-                            </span>
-                            <span className="text-[10px] text-neutral-400 block font-normal">/ person</span>
+                        <div className="flex items-center justify-between pt-2 border-t border-neutral-200">
+                          <div>
+                            <span className="text-xs font-bold text-neutral-900 block">Children</span>
+                            <span className="text-[10px] text-neutral-400">Age 2-11</span>
                           </div>
-                          <div className="p-1 rounded-full text-neutral-400">
-                            <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setChildren(Math.max(0, children - 1))}
+                              disabled={children <= 0 || (adults + children) <= minRequired}
+                              className="h-7 w-7 rounded-lg border border-neutral-300 bg-white font-bold text-xs disabled:opacity-30 cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="text-xs font-bold w-4 text-center">{children}</span>
+                            <button
+                              type="button"
+                              onClick={() => setChildren(children + 1)}
+                              className="h-7 w-7 rounded-lg border border-neutral-300 bg-white font-bold text-xs cursor-pointer"
+                            >
+                              +
+                            </button>
                           </div>
                         </div>
                       </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
 
-                      {/* Expanded View: Rich details */}
-                      {isExpanded && (
-                        <div className="p-4 border-t border-neutral-200 bg-neutral-50/50 space-y-4 text-xs">
-                          {/* Minimum Travelers Restriction Warning */}
-                          {isUnderMin && (
-                            <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-left">
-                              <div className="flex items-start gap-2">
-                                <Info className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
-                                <div>
-                                  <p className="text-xs font-bold text-rose-700">Requirement Notice</p>
-                                  <p className="text-[11px] text-rose-600 font-medium mt-0.5">
-                                    Requires at least <span className="font-bold underline">{minReq} travelers</span>. Currently selected: <span className="font-bold">{adults + children} pax</span>.
-                                  </p>
-                                </div>
-                              </div>
+              {/* Package Selection */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-bold text-neutral-900">Select Package</h2>
+                  <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
+                    {tour.packages.length} Option{tour.packages.length > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {tour.packages.map((pkg, idx) => {
+                    const isSelected = selectedPackage?.name === pkg.name;
+                    const isExpanded = expandedPackage === pkg.name;
+                    const pkgTotal = calculatePackagePrice(pkg);
+                    const minReq = pkg.tiers && pkg.tiers.length > 0 ? Math.min(...pkg.tiers.map(t => t.minParticipants)) : 1;
+                    const isUnderMin = (adults + children) < minReq;
+
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "border rounded-2xl overflow-hidden bg-white transition-all",
+                          isSelected ? "border-2 border-neutral-900 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
+                        )}
+                      >
+                        {/* Collapsed Header */}
+                        <div
+                          onClick={() => {
+                            if (isExpanded) {
+                              setExpandedPackage(null);
+                            } else {
+                              setSelectedPackage(pkg);
+                              setExpandedPackage(pkg.name);
+                            }
+                          }}
+                          className="flex items-center justify-between p-4 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                              isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
+                            )}>
+                              {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                             </div>
-                          )}
-
-                          {/* Package Description */}
-                          {(pkg.details || (pkg as any).description) && (
-                            <p className="text-neutral-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-neutral-200">
-                              {pkg.details || (pkg as any).description}
-                            </p>
-                          )}
-
-                          {/* Dynamic Group Rates Breakdown */}
-                          {pkg.tiers && pkg.tiers.length > 0 && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-neutral-600 uppercase text-[10px] tracking-wider">Group Rates & Tier Pricing</span>
-                                <span className="text-[9px] font-bold text-neutral-800 bg-neutral-200/80 px-2 py-0.5 rounded font-mono">
-                                  Current: {adults} adult{adults > 1 ? 's' : ''}
-                                </span>
-                              </div>
-                              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden divide-y divide-neutral-100">
-                                {pkg.tiers.map((tier, tIdx) => {
-                                  const isActive = adults >= tier.minParticipants && adults <= tier.maxParticipants;
-                                  return (
-                                    <div
-                                      key={tIdx}
-                                      className={cn(
-                                        "p-2.5 flex items-center justify-between text-[11px] transition-colors",
-                                        isActive ? "bg-neutral-100/70 font-semibold" : "text-neutral-600"
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-1.5">
-                                        <span>
-                                          {tier.maxParticipants >= 99 
-                                            ? `${tier.minParticipants}+ pax` 
-                                            : tier.minParticipants === tier.maxParticipants 
-                                              ? `${tier.minParticipants} pax` 
-                                              : `${tier.minParticipants}-${tier.maxParticipants} pax`}
-                                        </span>
-                                        {isActive && (
-                                          <span className="text-[8px] font-bold text-neutral-900 bg-neutral-200 px-1.5 py-0.5 rounded uppercase">
-                                            Active
-                                          </span>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-3 font-bold text-neutral-900">
-                                        <span>Adult: <FormattedPrice amount={tier.adultPrice} /></span>
-                                        {tier.childPrice > 0 && <span className="text-neutral-500">Child: <FormattedPrice amount={tier.childPrice} /></span>}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Free Cancellation Guarantee */}
-                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 p-2.5 rounded-xl text-emerald-800 text-[11px] font-medium">
-                            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                            <span>Free cancellation prior to travel date</span>
+                            <h3 className="font-bold text-sm text-neutral-900 leading-snug">{pkg.name}</h3>
                           </div>
 
-                          {/* Inclusions & Exclusions */}
-                          <div className="space-y-3 pt-2 border-t border-neutral-200/80">
+                          <div className="flex items-center gap-2">
+                            <div className="text-right">
+                              <span className="font-bold text-neutral-900 text-sm">
+                                <FormattedPrice amount={getPackagePricePerPerson(pkg)} />
+                              </span>
+                              <span className="text-[10px] text-neutral-400 block font-normal">/ person</span>
+                            </div>
+                            <div className="p-1 rounded-full text-neutral-400">
+                              <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Expanded Details */}
+                        {isExpanded && (
+                          <div className="p-4 border-t border-neutral-200 bg-neutral-50/50 space-y-3.5 text-xs text-left">
+                            {isUnderMin && (
+                              <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-left">
+                                <p className="text-xs font-bold text-rose-700">Requirement Notice</p>
+                                <p className="text-[11px] text-rose-600 font-medium mt-0.5">
+                                  Requires at least <span className="font-bold underline">{minReq} travelers</span>. Currently: {adults + children} pax.
+                                </p>
+                              </div>
+                            )}
+
+                            {(pkg.details || (pkg as any).description) && (
+                              <p className="text-neutral-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-neutral-200">
+                                {pkg.details || (pkg as any).description}
+                              </p>
+                            )}
+
+                            {/* Free Cancellation Guarantee */}
+                            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 p-2.5 rounded-xl text-emerald-800 text-[11px] font-medium">
+                              <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                              <span>Free cancellation before travel date</span>
+                            </div>
+
+                            {/* Inclusions */}
                             {pkg.inclusions && pkg.inclusions.filter(Boolean).length > 0 && (
-                              <div className="space-y-1.5">
-                                <span className="font-bold text-neutral-900 uppercase tracking-wider text-[10px] block">What's Included:</span>
+                              <div className="space-y-1.5 pt-1">
+                                <span className="font-bold text-neutral-900 uppercase tracking-wider text-[10px] block">Inclusions:</span>
                                 <ul className="space-y-1">
                                   {pkg.inclusions.filter(Boolean).map((inc, i) => (
                                     <li key={i} className="flex items-start gap-1.5 text-neutral-700 text-xs">
@@ -1957,69 +1817,46 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
                             )}
 
-                            {pkg.exclusions && pkg.exclusions.filter(Boolean).length > 0 && (
-                              <div className="space-y-1.5 pt-1">
-                                <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px] block">What's Excluded:</span>
-                                <ul className="space-y-1">
-                                  {pkg.exclusions.filter(Boolean).map((exc, i) => (
-                                    <li key={i} className="flex items-start gap-1.5 text-neutral-400 text-xs line-through">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-neutral-300 mt-1.5 shrink-0" />
-                                      <span>{exc}</span>
-                                    </li>
-                                  ))}
-                                </ul>
+                            {/* Select Package Action */}
+                            <div className="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
+                              <div>
+                                <span className="text-[10px] text-neutral-400 font-medium block uppercase">Calculated Total</span>
+                                <span className="font-bold text-base text-neutral-900">
+                                  <FormattedPrice amount={pkgTotal} />
+                                </span>
                               </div>
-                            )}
-                          </div>
 
-                          {/* Price & Action Button */}
-                          <div className="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
-                            <div>
-                              <span className="text-[10px] text-neutral-400 font-medium block uppercase">Calculated Total</span>
-                              <span className="font-bold text-base text-neutral-900">
-                                <FormattedPrice amount={pkgTotal} />
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedPackage(pkg);
+                                  setExpandedPackage(pkg.name);
+                                }}
+                                className={cn(
+                                  "px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs",
+                                  isSelected ? "bg-neutral-900 text-white" : "bg-white border border-neutral-300 text-neutral-800 hover:border-neutral-900"
+                                )}
+                              >
+                                {isSelected ? 'Selected' : 'Select Package'}
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedPackage(pkg);
-                                setExpandedPackage(pkg.name);
-                              }}
-                              className={cn(
-                                "px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs",
-                                isSelected ? "bg-neutral-900 text-white" : "bg-white border border-neutral-300 text-neutral-800 hover:border-neutral-900"
-                              )}
-                            >
-                              {isSelected ? 'Selected' : 'Select Package'}
-                            </button>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
 
-          {/* STEP 3: Transports & Add-ons */}
-          {mobileStep === 'addons' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              {/* Transport Selection */}
+              {/* Transportation Selection */}
               {availableTransports.length > 0 && (
                 <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
                   <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
                     <Car className="h-5 w-5 text-neutral-700" />
                     <h2>Transportation Option</h2>
                   </div>
-                  <p className="text-xs text-neutral-500 font-medium">
-                    Select your preferred transfer or meeting arrangement. Vehicles accommodate <span className="text-neutral-900 font-bold">{adults + children}</span> traveler(s).
-                  </p>
 
-                  <div className="space-y-3">
-                    {/* 1. Own Transport */}
+                  <div className="space-y-2.5">
                     {availableTransports.some(t => t.type === 'meet') && (
                       <div
                         onClick={() => {
@@ -2032,34 +1869,26 @@ const toggleAddOn = (addon: AddOn) => {
                           }));
                         }}
                         className={cn(
-                          "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
-                          selectedTransportType === 'meet'
-                            ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
-                            : "border-neutral-200 hover:border-neutral-300"
+                          "p-3.5 rounded-xl border transition-all cursor-pointer bg-white flex items-center justify-between",
+                          selectedTransportType === 'meet' ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs" : "border-neutral-200 hover:border-neutral-300"
                         )}
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                              selectedTransportType === 'meet' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
-                            )}>
-                              <MapPin className="h-4 w-4" />
-                            </div>
-                            <div>
-                              <h3 className="font-bold text-neutral-900 text-xs">Own Transport</h3>
-                              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Self-Arrival</p>
-                            </div>
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+                            selectedTransportType === 'meet' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
+                          )}>
+                            <MapPin className="h-4 w-4" />
                           </div>
-                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Free</span>
+                          <div>
+                            <h3 className="font-bold text-neutral-900 text-xs">Own Transport</h3>
+                            <p className="text-[10px] text-neutral-400">Self-arrival to location</p>
+                          </div>
                         </div>
-                        <p className="text-[11px] text-neutral-500 font-medium pl-11">
-                          Come directly to our operation basecamp on your own. No pickup service.
-                        </p>
+                        <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">Free</span>
                       </div>
                     )}
 
-                    {/* 2. Shared Transfer */}
                     {availableTransports.some(t => t.type === 'shared') && (() => {
                       const sOpt = availableTransports.find(t => t.type === 'shared');
                       return (
@@ -2067,404 +1896,168 @@ const toggleAddOn = (addon: AddOn) => {
                           onClick={() => {
                             setSelectedTransportType('shared');
                             if (sOpt) setSelectedTransport(sOpt);
-                            setCustomerData(prev => {
-                              const activeMp = selectedPackage?.meetingPoint || tour?.meetingPoint || "Meet directly at our adventure basecamp.";
-                              const isMeetingPoint = prev.pickupAddress === activeMp || prev.pickupAddress === tour?.meetingPoint || prev.pickupAddress === "Meet directly at our adventure basecamp.";
-                              return {
-                                ...prev,
-                                pickupAddress: isMeetingPoint ? "" : prev.pickupAddress
-                              };
-                            });
                           }}
                           className={cn(
-                            "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
-                            selectedTransportType === 'shared'
-                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
-                              : "border-neutral-200 hover:border-neutral-300"
+                            "p-3.5 rounded-xl border transition-all cursor-pointer bg-white flex items-center justify-between",
+                            selectedTransportType === 'shared' ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs" : "border-neutral-200 hover:border-neutral-300"
                           )}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                selectedTransportType === 'shared' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
-                              )}>
-                                <Bus className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-neutral-900 text-xs">Shared Transfer</h3>
-                                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Shuttle service</p>
-                              </div>
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+                              selectedTransportType === 'shared' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
+                            )}>
+                              <Bus className="h-4 w-4" />
                             </div>
-                            <span className="text-xs font-bold text-neutral-900">
-                              {sOpt ? <FormattedPrice amount={sOpt.price} /> : "Available"}/pax
-                            </span>
+                            <div>
+                              <h3 className="font-bold text-neutral-900 text-xs">Shared Transfer</h3>
+                              <p className="text-[10px] text-neutral-400">Hotel shuttle pickup</p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-neutral-500 font-medium pl-11">
-                            Pickup & drop-off shared with other travelers. Fixed timings by area.
-                          </p>
+                          <span className="text-xs font-bold text-neutral-900">
+                            {sOpt ? <FormattedPrice amount={sOpt.price} /> : "Available"}/pax
+                          </span>
                         </div>
                       );
                     })()}
 
-                    {/* 3. Private Transfer */}
                     {availableTransports.some(t => t.type === 'private') && (() => {
                       const pOpts = availableTransports.filter(t => t.type === 'private');
-                      const totalParticipants = adults + children;
-                      const matchingCars = pOpts.filter(t => t.maxCapacity === undefined || t.maxCapacity === null || totalParticipants <= t.maxCapacity);
-                      const lowestPrice = matchingCars.length > 0 
-                        ? Math.min(...matchingCars.map(c => c.price)) 
-                        : pOpts.length > 0 ? Math.min(...pOpts.map(c => c.price)) : 0;
+                      const totalPax = adults + children;
+                      const matching = pOpts.filter(t => t.maxCapacity === undefined || t.maxCapacity === null || totalPax <= t.maxCapacity);
+                      const lowest = matching.length > 0 ? Math.min(...matching.map(c => c.price)) : 0;
 
                       return (
                         <div
                           onClick={() => {
                             setSelectedTransportType('private');
-                            const bestPrivateOpt = matchingCars[0] || pOpts[0];
-                            if (bestPrivateOpt) setSelectedTransport(bestPrivateOpt);
-                            setCustomerData(prev => {
-                              const activeMp = selectedPackage?.meetingPoint || tour?.meetingPoint || "Meet directly at our adventure basecamp.";
-                              const isMeetingPoint = prev.pickupAddress === activeMp || prev.pickupAddress === tour?.meetingPoint || prev.pickupAddress === "Meet directly at our adventure basecamp.";
-                              return {
-                                ...prev,
-                                pickupAddress: isMeetingPoint ? "" : prev.pickupAddress
-                              };
-                            });
+                            const best = matching[0] || pOpts[0];
+                            if (best) setSelectedTransport(best);
                           }}
                           className={cn(
-                            "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
-                            selectedTransportType === 'private'
-                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
-                              : "border-neutral-200 hover:border-neutral-300"
+                            "p-3.5 rounded-xl border transition-all cursor-pointer bg-white flex items-center justify-between",
+                            selectedTransportType === 'private' ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs" : "border-neutral-200 hover:border-neutral-300"
                           )}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={cn(
-                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                selectedTransportType === 'private' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
-                              )}>
-                                <Car className="h-4 w-4" />
-                              </div>
-                              <div>
-                                <h3 className="font-bold text-neutral-900 text-xs">Private Transfer</h3>
-                                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Dedicated vehicle</p>
-                              </div>
+                          <div className="flex items-center gap-3">
+                            <div className={cn(
+                              "h-7 w-7 rounded-lg flex items-center justify-center shrink-0",
+                              selectedTransportType === 'private' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
+                            )}>
+                              <Car className="h-4 w-4" />
                             </div>
-                            <span className="text-xs font-bold text-neutral-900">
-                              {lowestPrice > 0 ? <>From <FormattedPrice amount={lowestPrice} />/car</> : "Available"}
-                            </span>
+                            <div>
+                              <h3 className="font-bold text-neutral-900 text-xs">Private Transfer</h3>
+                              <p className="text-[10px] text-neutral-400">Dedicated private car</p>
+                            </div>
                           </div>
-                          <p className="text-[11px] text-neutral-500 font-medium pl-11">
-                            AC vehicle with professional driver exclusively for your group.
-                          </p>
+                          <span className="text-xs font-bold text-neutral-900">
+                            {lowest > 0 ? <>From <FormattedPrice amount={lowest} />/car</> : "Available"}
+                          </span>
                         </div>
                       );
                     })()}
                   </div>
 
-                  {/* Meeting Point Card */}
-                  {selectedTransportType === 'meet' && (() => {
-                    const activeMpText = selectedPackage?.meetingPoint || tour?.meetingPoint;
-                    const mp = parseMeetingPoint(activeMpText, selectedPackage?.name || tour?.title);
-                    return (
-                      <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3.5 text-left space-y-2">
-                        <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider block">Meeting Point Location:</span>
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 shrink-0 text-neutral-700 mt-0.5" />
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-bold text-neutral-900 block">{mp.venue}</span>
-                            {mp.address && mp.address !== mp.venue && (
-                              <p className="text-[11px] text-neutral-600 font-medium">{mp.address}</p>
-                            )}
-                          </div>
-                        </div>
-                        {mp.url && (
-                          <div className="pt-2 border-t border-neutral-200">
-                            <a
-                              href={mp.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-bold text-neutral-900 underline hover:text-neutral-600 break-all inline-block"
-                            >
-                              Open in Google Maps →
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Pickup Areas & Hotel Address */}
+                  {/* Pickup Hotel input */}
                   {selectedTransportType !== 'meet' && (
-                    <div className="space-y-3 pt-2">
-                      {(selectedPackage?.pickupAreas || tour?.pickupAreas) && (
-                        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-left flex items-start gap-2.5">
-                          <Car className="h-4 w-4 text-neutral-600 shrink-0 mt-0.5" />
-                          <div>
-                            <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider block">
-                              Pick Up Areas Served ({selectedPackage?.name || "Package"}):
-                            </span>
-                            <p className="text-xs text-neutral-700 font-medium leading-relaxed">
-                              {selectedPackage?.pickupAreas || tour?.pickupAreas}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="space-y-1.5 text-left">
-                        <label className="text-xs font-bold text-neutral-800 block">
-                          Hotel Name & Address (For Pickup)
-                        </label>
-                        <textarea
-                          rows={2}
-                          value={customerData.pickupAddress}
-                          onChange={(e) => setCustomerData(prev => ({ ...prev, pickupAddress: e.target.value }))}
-                          placeholder="Enter hotel name, lobby address or villa location..."
-                          className="w-full text-xs p-3 border border-neutral-200 rounded-xl bg-white focus:border-neutral-900 focus:outline-none transition-all font-medium"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Vehicle selection for private transport */}
-                  {selectedTransportType === 'private' && (
-                    <div className="space-y-3 pt-3 border-t border-neutral-100 text-left">
-                      <div>
-                        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Select Your Vehicle</h3>
-                        <p className="text-[10px] text-neutral-500 font-normal">Matching group size of {adults + children} pax</p>
-                      </div>
-
-                      <div className="space-y-2">
-                        {availableTransports
-                          .filter(t => t.type === 'private')
-                          .map((t, idx) => {
-                            const isSelected = selectedTransport?.id === t.id;
-                            const totalParticipants = adults + children;
-                            const hasCapacity = t.maxCapacity === undefined || t.maxCapacity === null || totalParticipants <= t.maxCapacity;
-
-                            if (!hasCapacity) return null;
-
-                            return (
-                              <div
-                                key={t.id || idx}
-                                onClick={() => setSelectedTransport(t)}
-                                className={cn(
-                                  "p-3 rounded-xl border transition-all bg-white cursor-pointer flex items-center justify-between",
-                                  isSelected ? "border-2 border-neutral-900 bg-neutral-50/50" : "border-neutral-200 hover:border-neutral-300"
-                                )}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className={cn(
-                                    "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                                    isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
-                                  )}>
-                                    {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                                  </div>
-                                  <div>
-                                    <span className="font-bold text-xs text-neutral-900 block">{t.name}</span>
-                                    <span className="text-[10px] text-neutral-400 font-medium">Up to {t.maxCapacity || 6} Pax</span>
-                                  </div>
-                                </div>
-
-                                <span className="font-bold text-xs text-neutral-900">
-                                  <FormattedPrice amount={t.price} />/car
-                                </span>
-                              </div>
-                            );
-                          })}
-                      </div>
+                    <div className="space-y-1.5 pt-2 border-t border-neutral-100 text-left">
+                      <label className="text-xs font-bold text-neutral-800 block">
+                        Hotel Name & Address for Pickup
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={customerData.pickupAddress}
+                        onChange={(e) => setCustomerData(prev => ({ ...prev, pickupAddress: e.target.value }))}
+                        placeholder="Enter your hotel name or villa address..."
+                        className="w-full text-xs p-3 border border-neutral-200 rounded-xl bg-white focus:border-neutral-900 focus:outline-none transition-all font-medium"
+                      />
                     </div>
                   )}
                 </div>
               )}
 
-              {/* Add-ons List */}
-              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
-                    <Plus className="h-5 w-5 text-neutral-700" />
-                    <h2>Add-on Extras</h2>
-                  </div>
-                  <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Optional</span>
-                </div>
-
-                <div className="space-y-3">
-                  {tour.addOns && tour.addOns.length > 0 && tour.addOns.map(addon => {
-                    const existing = selectedAddOns.find(a => a.id === addon.id);
-                    const qty = existing ? existing.quantity : 0;
-
-                    return (
-                      <div key={addon.id} className="p-3.5 rounded-xl border border-neutral-200 flex items-center justify-between bg-white">
-                        <div>
-                          <span className="font-bold text-xs text-neutral-900 block">{addon.name}</span>
-                          <span className="text-[10px] text-neutral-500 font-medium">
-                            <FormattedPrice amount={addon.price} /> {addon.unit ? `/ ${addon.unit}` : ''}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {qty === 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => toggleAddOn(addon)}
-                              className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-900 hover:text-white text-neutral-800 font-bold text-xs rounded-lg transition-colors cursor-pointer"
-                            >
-                              + Add
-                            </button>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => updateAddOnQuantity(addon.id, -1)}
-                                className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
-                              >
-                                -
-                              </button>
-                              <span className="font-bold text-xs w-5 text-center">{qty}</span>
-                              <button
-                                type="button"
-                                onClick={() => updateAddOnQuantity(addon.id, 1)}
-                                className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
-                              >
-                                +
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Option: No Add-Ons */}
-                  <div
-                    onClick={() => setSelectedAddOns([])}
-                    className={cn(
-                      "p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all bg-white",
-                      selectedAddOns.length === 0
-                        ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
-                        : "border-neutral-200 hover:border-neutral-300"
-                    )}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                        selectedAddOns.length === 0 ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
-                      )}>
-                        {selectedAddOns.length === 0 && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
-                      </div>
-                      <div>
-                        <span className="font-bold text-xs text-neutral-900 block">No Add-Ons</span>
-                        <span className="text-[10px] text-neutral-400 font-normal">Continue with tour package items only</span>
-                      </div>
+              {/* Add-on Extras */}
+              {tour.addOns && tour.addOns.length > 0 && (
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-3.5 text-left">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
+                      <Plus className="h-5 w-5 text-neutral-700" />
+                      <h2>Add-on Extras</h2>
                     </div>
+                    <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Optional</span>
+                  </div>
 
-                    {selectedAddOns.length === 0 && (
-                      <span className="text-[9px] font-bold uppercase text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded">
-                        Selected
-                      </span>
-                    )}
+                  <div className="space-y-2.5">
+                    {tour.addOns.map(addon => {
+                      const existing = selectedAddOns.find(a => a.id === addon.id);
+                      const qty = existing ? existing.quantity : 0;
+
+                      return (
+                        <div key={addon.id} className="p-3 rounded-xl border border-neutral-200 flex items-center justify-between bg-white">
+                          <div>
+                            <span className="font-bold text-xs text-neutral-900 block">{addon.name}</span>
+                            <span className="text-[10px] text-neutral-500 font-medium">
+                              <FormattedPrice amount={addon.price} /> {addon.unit ? `/ ${addon.unit}` : ''}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {qty === 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => toggleAddOn(addon)}
+                                className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-900 hover:text-white text-neutral-800 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                              >
+                                + Add
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => updateAddOnQuantity(addon.id, -1)}
+                                  className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
+                                >
+                                  -
+                                </button>
+                                <span className="font-bold text-xs w-4 text-center">{qty}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => updateAddOnQuantity(addon.id, 1)}
+                                  className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
-          {/* STEP 4: Booking Summary Modal */}
-          {mobileStep === 'summary' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          {/* STEP 2: Customer Contact Details */}
+          {step === 'customer' && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200 text-left">
               <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
-                <h2 className="font-bold text-base text-neutral-900">Booking Summary</h2>
-
-                <div className="flex gap-3 pb-3 border-b border-neutral-100">
-                  <img src={tour.featuredImage} alt={tour.title} className="h-16 w-16 object-cover rounded-xl shrink-0" />
-                  <div>
-                    <h3 className="font-bold text-neutral-900 line-clamp-1">{tour.title}</h3>
-                    <p className="text-neutral-500 font-medium mt-0.5">Package: {selectedPackage?.name}</p>
-                    <p className="text-neutral-500 font-normal">Date: {date} {selectedTime ? `(${selectedTime})` : ''}</p>
-                  </div>
+                <div>
+                  <h2 className="font-bold text-base text-neutral-900">Lead Traveler Information</h2>
+                  <p className="text-xs text-neutral-500 mt-0.5">We will send confirmation and vouchers to these contact details.</p>
                 </div>
 
-                <div className="space-y-2 font-normal text-neutral-600">
-                  <div className="flex justify-between">
-                    <span>Travelers:</span>
-                    <span className="font-semibold text-neutral-900">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Package Total:</span>
-                    <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.packageTotal} /></span>
-                  </div>
-                  {summary.transportTotal > 0 && (
-                    <div className="flex justify-between">
-                      <span>Transport Service:</span>
-                      <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.transportTotal} /></span>
-                    </div>
-                  )}
-                  {summary.addonsTotal > 0 && (
-                    <div className="flex justify-between">
-                      <span>Add-ons Total:</span>
-                      <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.addonsTotal} /></span>
-                    </div>
-                  )}
-                  {summary.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-semibold">
-                      <span>Discount:</span>
-                      <span>-<FormattedPrice amount={summary.discount} /></span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Coupon Code Input */}
-                <div className="pt-3 border-t border-neutral-100 space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="Coupon Code"
-                      value={couponInput}
-                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      className="flex-1 px-3 py-2 border border-neutral-200 rounded-xl font-bold uppercase text-xs focus:outline-none focus:border-neutral-900"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleApplyCoupon}
-                      disabled={isValidatingCoupon}
-                      className="px-4 py-2 bg-neutral-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-black disabled:opacity-50"
-                    >
-                      {isValidatingCoupon ? 'Checking...' : 'Apply'}
-                    </button>
-                  </div>
-                  {couponError && <p className="text-[11px] text-rose-600 font-bold">{couponError}</p>}
-                  {appliedCoupon && (
-                    <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg text-[11px] font-bold flex justify-between items-center">
-                      <span>Coupon Applied: {appliedCoupon.code}</span>
-                      <button type="button" onClick={() => setAppliedCoupon(null)} className="text-rose-600 font-bold underline">Remove</button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-3 border-t border-neutral-100 flex justify-between items-baseline">
-                  <span className="font-bold text-neutral-900 text-sm">Grand Total:</span>
-                  <span className="font-bold text-xl text-neutral-900"><FormattedPrice amount={summary.grandTotal} /></span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 5: Customer Details */}
-          {mobileStep === 'customer' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
-                <h2 className="font-bold text-base text-neutral-900">Customer Contact Details</h2>
-
-                <div className="space-y-3">
+                <div className="space-y-3.5">
                   <div>
                     <label className="font-semibold text-neutral-700 block mb-1">Full Name *</label>
                     <input
                       type="text"
                       value={customerData.fullName}
                       onChange={(e) => setCustomerData({ ...customerData, fullName: e.target.value })}
-                      placeholder="John Doe"
-                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                      placeholder="e.g. Sarah Connor"
+                      className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
@@ -2474,62 +2067,74 @@ const toggleAddOn = (addon: AddOn) => {
                       type="email"
                       value={customerData.email}
                       onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
-                      placeholder="john@example.com"
-                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                      placeholder="sarah@example.com"
+                      className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="font-semibold text-neutral-700 block mb-1">Phone Number *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Phone Number (with WhatsApp) *</label>
                     <input
                       type="tel"
                       value={customerData.phone}
                       onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
-                      placeholder="+123456789"
-                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                      placeholder="+1 (555) 000-0000"
+                      className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="font-semibold text-neutral-700 block mb-1">Nationality *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Nationality / Country of Residence *</label>
                     <input
                       type="text"
                       value={customerData.nationality}
                       onChange={(e) => setCustomerData({ ...customerData, nationality: e.target.value })}
-                      placeholder="United States"
-                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                      placeholder="e.g. Australia, United States, Germany..."
+                      className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   {selectedTransportType !== 'meet' && (
                     <div>
-                      <label className="font-semibold text-neutral-700 block mb-1">Pickup Hotel / Address</label>
+                      <label className="font-semibold text-neutral-700 block mb-1">Hotel Pickup Address</label>
                       <input
                         type="text"
                         value={customerData.pickupAddress}
                         onChange={(e) => setCustomerData({ ...customerData, pickupAddress: e.target.value })}
-                        placeholder="Hotel name or street address"
-                        className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                        placeholder="Hotel name or villa street address"
+                        className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                       />
                     </div>
                   )}
+
+                  <div>
+                    <label className="font-semibold text-neutral-700 block mb-1">Special Requirements (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={customerData.specialRequirements}
+                      onChange={(e) => setCustomerData({ ...customerData, specialRequirements: e.target.value })}
+                      placeholder="Dietary requirements, physical limitations, infant seat, etc."
+                      className="w-full px-3.5 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* STEP 6: Payment Selection */}
-          {mobileStep === 'payment' && (
-            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
+          {/* STEP 3: Payment & Confirmation */}
+          {step === 'payment' && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200 text-left">
+              {/* Payment Methods */}
               <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
                 <h2 className="font-bold text-base text-neutral-900">Select Payment Method</h2>
 
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   {[
-                    { id: 'card', name: 'Credit / Debit Card', desc: 'Instant online payment' },
-                    { id: 'paypal', name: 'PayPal', desc: 'Pay safely with PayPal balance or card' },
-                    { id: 'bank_transfer', name: 'Bank Transfer / QRIS', desc: 'Manual transfer confirmation' },
-                    { id: 'pay_on_arrival', name: 'Pay on Arrival', desc: 'Pay cash or card on day of tour' },
+                    { id: 'card', name: 'Credit / Debit Card', desc: 'Secure online payment via Stripe' },
+                    { id: 'paypal', name: 'PayPal', desc: 'Pay with PayPal balance or linked card' },
+                    { id: 'bank_transfer', name: 'Bank Transfer / QRIS', desc: 'Instant virtual account or QR payment' },
+                    { id: 'pay_on_arrival', name: 'Pay on Arrival', desc: 'Cash or card at start of tour' },
                   ].map(pm => (
                     <div
                       key={pm.id}
@@ -2554,17 +2159,81 @@ const toggleAddOn = (addon: AddOn) => {
                     </div>
                   ))}
                 </div>
+              </div>
 
-                <div className="pt-3 border-t border-neutral-100 flex items-center gap-2">
+              {/* Order Summary & Coupon Card */}
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-3.5 text-xs">
+                <h3 className="font-bold text-neutral-900 text-sm">Price Breakdown</h3>
+
+                <div className="space-y-2 text-neutral-600">
+                  <div className="flex justify-between">
+                    <span>{selectedPackage?.name} ({adults} adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} child` : ''}):</span>
+                    <span className="font-bold text-neutral-900"><FormattedPrice amount={summary.packageTotal} /></span>
+                  </div>
+                  {summary.transportTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span>Transport ({selectedTransport?.name}):</span>
+                      <span className="font-bold text-neutral-900"><FormattedPrice amount={summary.transportTotal} /></span>
+                    </div>
+                  )}
+                  {summary.addonsTotal > 0 && (
+                    <div className="flex justify-between">
+                      <span>Add-ons:</span>
+                      <span className="font-bold text-neutral-900"><FormattedPrice amount={summary.addonsTotal} /></span>
+                    </div>
+                  )}
+                  {summary.discount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-bold">
+                      <span>Coupon Discount:</span>
+                      <span>-<FormattedPrice amount={summary.discount} /></span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Coupon Code Input */}
+                <div className="pt-3 border-t border-neutral-100 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="Coupon Code"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      className="flex-1 px-3 py-2 border border-neutral-200 rounded-xl font-bold uppercase text-xs focus:outline-none focus:border-neutral-900"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyCoupon}
+                      disabled={isValidatingCoupon || !couponInput}
+                      className="px-4 py-2 bg-neutral-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-black disabled:opacity-40"
+                    >
+                      {isValidatingCoupon ? 'Checking...' : 'Apply'}
+                    </button>
+                  </div>
+                  {couponError && <p className="text-[11px] text-rose-600 font-bold">{couponError}</p>}
+                  {appliedCoupon && (
+                    <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg text-[11px] font-bold flex justify-between items-center border border-emerald-200">
+                      <span>Coupon: {appliedCoupon.code}</span>
+                      <button type="button" onClick={() => setAppliedCoupon(null)} className="text-rose-600 font-bold underline">Remove</button>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-3 border-t border-neutral-100 flex justify-between items-baseline">
+                  <span className="font-bold text-neutral-900 text-sm">Total (USD):</span>
+                  <span className="font-black text-xl text-neutral-900"><FormattedPrice amount={summary.grandTotal} /></span>
+                </div>
+
+                {/* Terms Agreement */}
+                <div className="pt-3 border-t border-neutral-100 flex items-start gap-2.5">
                   <input
                     type="checkbox"
                     id="termsCheckMobile"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="h-4 w-4 rounded text-neutral-900 border-neutral-300 focus:ring-neutral-900"
+                    className="h-4 w-4 rounded text-neutral-900 border-neutral-300 focus:ring-neutral-900 mt-0.5"
                   />
-                  <label htmlFor="termsCheckMobile" className="text-[11px] text-neutral-600 font-medium">
-                    I agree to the <a href="/terms" className="underline font-bold text-neutral-900">Terms & Conditions</a> and Cancellation Policy.
+                  <label htmlFor="termsCheckMobile" className="text-[11px] text-neutral-600 font-normal leading-snug">
+                    I agree to the <a href="/terms" className="underline font-bold text-neutral-900">Terms & Conditions</a> and understand the free cancellation policy.
                   </label>
                 </div>
               </div>
@@ -2591,65 +2260,28 @@ const toggleAddOn = (addon: AddOn) => {
               </span>
             </button>
 
-            {mobileStep === 'package' && (
+            {step === 'selection' && (
               <button
                 type="button"
-                onClick={() => setMobileStep('date')}
+                onClick={() => updateStep('customer')}
                 disabled={!selectedPackage}
                 className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                Choose Date & Guests
+                Continue to Details
               </button>
             )}
 
-            {mobileStep === 'date' && (
+            {step === 'customer' && (
               <button
                 type="button"
-                onClick={() => setMobileStep('addons')}
-                disabled={!date}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
-              >
-                Continue to Options
-              </button>
-            )}
-
-            {mobileStep === 'addons' && (
-              <button
-                type="button"
-                onClick={() => setMobileStep('summary')}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
-              >
-                Review Summary
-              </button>
-            )}
-
-            {mobileStep === 'summary' && (
-              <button
-                type="button"
-                onClick={() => setMobileStep('customer')}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
-              >
-                Enter Details
-              </button>
-            )}
-
-            {mobileStep === 'customer' && (
-              <button
-                type="button"
-                onClick={() => {
-                  if (!customerData.fullName || !customerData.email || !customerData.phone) {
-                    alert("Please fill in required fields (Name, Email, Phone).");
-                    return;
-                  }
-                  setMobileStep('payment');
-                }}
+                onClick={() => updateStep('payment')}
                 className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 Continue to Payment
               </button>
             )}
 
-            {mobileStep === 'payment' && (
+            {step === 'payment' && (
               <button
                 type="button"
                 onClick={() => handleFinalBooking()}
