@@ -1802,6 +1802,71 @@ const toggleAddOn = (addon: AddOn) => {
                               <span>Free cancellation before travel date</span>
                             </div>
 
+                            {/* Dynamic Group Rates / Price Table Section */}
+                            {pkg.tiers && pkg.tiers.length > 0 && (
+                              <div className="space-y-2 pt-1">
+                                <div className="flex items-center justify-between text-left">
+                                  <h4 className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider">Dynamic Group Rates</h4>
+                                  <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded font-mono">
+                                    Active: {adults} pax
+                                  </span>
+                                </div>
+                                
+                                <div className="w-full">
+                                  <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden divide-y divide-neutral-100">
+                                    {pkg.tiers.map((tier, tIdx) => {
+                                      const count = adults;
+                                      const isActive = count >= tier.minParticipants && count <= tier.maxParticipants;
+                                      return (
+                                        <div 
+                                          key={tIdx} 
+                                          className={cn(
+                                            "flex items-center justify-between px-3 py-2 text-xs transition-colors",
+                                            isActive 
+                                              ? "bg-neutral-100/80 text-neutral-900 font-semibold" 
+                                              : "text-neutral-600 hover:bg-neutral-50"
+                                          )}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <span className={cn("text-xs", isActive ? "font-bold text-neutral-900" : "text-neutral-600")}>
+                                              {tier.maxParticipants >= 99 
+                                                ? `${tier.minParticipants}+ people` 
+                                                : tier.minParticipants === tier.maxParticipants 
+                                                  ? `${tier.minParticipants} person`
+                                                  : `${tier.minParticipants}-${tier.maxParticipants} people`
+                                              }
+                                            </span>
+                                            {isActive && (
+                                              <span className="text-[8px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                Active
+                                              </span>
+                                            )}
+                                          </div>
+                                          
+                                          <div className="flex items-center gap-3 text-neutral-600">
+                                            <div className="flex items-center gap-1">
+                                              <span className="text-[10px] text-neutral-400 font-normal">Adult:</span>
+                                              <span className={cn("font-bold text-xs", isActive ? "text-primary" : "text-neutral-700")}>
+                                                <FormattedPrice amount={tier.adultPrice} />
+                                              </span>
+                                            </div>
+                                            {tier.childPrice !== undefined && tier.childPrice > 0 && (
+                                              <div className="flex items-center gap-1">
+                                                <span className="text-[10px] text-neutral-400 font-normal">Child:</span>
+                                                <span className={cn("font-bold text-xs", isActive ? "text-primary" : "text-neutral-700")}>
+                                                  <FormattedPrice amount={tier.childPrice} />
+                                                </span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
                             {/* Inclusions */}
                             {pkg.inclusions && pkg.inclusions.filter(Boolean).length > 0 && (
                               <div className="space-y-1.5 pt-1">

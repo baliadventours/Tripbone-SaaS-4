@@ -252,6 +252,66 @@ export default function PriceSummaryModal({
                 </div>
               )}
 
+              {/* Dynamic Group Rates Tier Table */}
+              {selectedPackage && selectedPackage.tiers && selectedPackage.tiers.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-slate-600 block">
+                      Group Rates Table
+                    </label>
+                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full font-mono">
+                      Active: {adults + children} pax
+                    </span>
+                  </div>
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100 text-xs">
+                    {selectedPackage.tiers.map((tier, idx) => {
+                      const totalPax = adults + children;
+                      const isActive = totalPax >= tier.minParticipants && totalPax <= tier.maxParticipants;
+                      return (
+                        <div
+                          key={idx}
+                          className={cn(
+                            "flex items-center justify-between px-3.5 py-2 transition-colors",
+                            isActive ? "bg-primary/5 text-slate-900 font-semibold" : "text-slate-600 hover:bg-slate-50"
+                          )}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span>
+                              {tier.maxParticipants >= 99
+                                ? `${tier.minParticipants}+ people`
+                                : tier.minParticipants === tier.maxParticipants
+                                  ? `${tier.minParticipants} person`
+                                  : `${tier.minParticipants}-${tier.maxParticipants} people`}
+                            </span>
+                            {isActive && (
+                              <span className="text-[8px] font-bold text-primary bg-primary/15 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <span className="text-[10px] text-slate-400 mr-1">Adult:</span>
+                              <span className={cn("font-bold", isActive ? "text-primary" : "text-slate-800")}>
+                                <FormattedPrice amount={tier.adultPrice} />
+                              </span>
+                            </div>
+                            {tier.childPrice !== undefined && tier.childPrice > 0 && (
+                              <div>
+                                <span className="text-[10px] text-slate-400 mr-1">Child:</span>
+                                <span className={cn("font-bold", isActive ? "text-primary" : "text-slate-800")}>
+                                  <FormattedPrice amount={tier.childPrice} />
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Traveler Quick Controls */}
               <div className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-200/80 space-y-3">
                 <div className="flex items-center justify-between">
