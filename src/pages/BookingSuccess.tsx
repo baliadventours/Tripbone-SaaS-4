@@ -113,61 +113,58 @@ export default function BookingSuccess() {
 
   if (booking.status !== 'confirmed') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 pt-32 pb-20 font-sans">
+      <div className="min-h-screen bg-neutral-50/60 flex items-center justify-center p-4 pt-28 pb-20 font-sans text-neutral-900">
         <div className="max-w-xl w-full">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-[40px] p-10 md:p-16 shadow-2xl shadow-gray-200 text-center relative overflow-hidden"
+            className="bg-white rounded-3xl p-8 md:p-12 shadow-xl shadow-neutral-900/[0.04] border border-neutral-200 text-center relative overflow-hidden"
           >
-            {/* Decorative background circle */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-[100px] -mr-10 -mt-10" />
-            
             <div className="relative z-10">
-              <div className="h-20 w-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-10 shadow-inner">
+              <div className="h-16 w-16 bg-amber-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-amber-200/60">
                 {booking.status === 'pending' || booking.status === 'review_required' ? (
-                  <Clock className="h-10 w-10 text-amber-500 animate-pulse" />
+                  <Clock className="h-8 w-8 text-amber-600 animate-pulse" />
                 ) : (
-                  <XCircle className="h-10 w-10 text-red-500" />
+                  <XCircle className="h-8 w-8 text-rose-500" />
                 )}
               </div>
 
-              <h1 className="text-2xl md:text-3xl font-black text-gray-900 mb-6 tracking-tight uppercase">
+              <h1 className="text-xl md:text-2xl font-bold text-neutral-900 mb-4 tracking-tight">
                 {booking.status === 'pending' || booking.status === 'review_required' ? 'Booking Processing' : 'Booking ' + booking.status}
               </h1>
 
               {booking.id && (
-                <div className="mb-8 p-4 bg-gray-50 rounded-2xl border border-gray-100 inline-block">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Booking Reference</span>
-                  <span className="text-xl font-black text-primary font-mono tracking-tighter">#{booking.id}</span>
+                <div className="mb-6 px-4 py-2.5 bg-neutral-50 rounded-xl border border-neutral-200 inline-block">
+                  <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">Booking Reference</span>
+                  <span className="text-lg font-mono font-bold text-neutral-900 tracking-tight">#{booking.id}</span>
                 </div>
               )}
 
-              <div className="space-y-6 text-gray-500 font-medium leading-relaxed mb-12">
+              <div className="space-y-4 text-neutral-600 font-normal leading-relaxed mb-8 text-sm">
                 {booking.status === 'pending' || booking.status === 'review_required' ? (
                   <>
-                    <p className="text-gray-900 font-bold">
-                      Check your inbox! We've sent an email to <span className="text-primary">{booking.customerData?.email || 'your email address'}</span> with:
+                    <p className="text-neutral-900 font-semibold">
+                      Check your inbox! We've sent confirmation to <span className="font-bold text-neutral-900">{booking.customerData?.email || 'your email address'}</span> with:
                     </p>
                     
-                    <ul className="text-left bg-gray-50/50 p-6 rounded-2xl space-y-3 text-sm">
-                      <li className="flex gap-3">
-                        <CheckCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                    <ul className="text-left bg-neutral-50 p-4 rounded-xl space-y-2.5 text-xs text-neutral-700 border border-neutral-100">
+                      <li className="flex gap-2.5 items-center">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                         Detailed summary of your trip details
                       </li>
-                      <li className="flex gap-3">
-                        <CheckCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                        Step-by-step instructions on how to pay
+                      <li className="flex gap-2.5 items-center">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                        Step-by-step instructions on payment verification
                       </li>
-                      <li className="flex gap-3">
-                        <CheckCircle className="h-5 w-5 text-orange-500 flex-shrink-0" />
+                      <li className="flex gap-2.5 items-center">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
                         Voucher download link (after payment is verified)
                       </li>
                     </ul>
 
-                    <div className="pt-6 border-t border-gray-100">
-                      <p className="text-xs italic bg-orange-50 text-orange-700 p-4 rounded-xl">
-                        <strong>Pro-Tip:</strong> To track your booking and manage your trips easily, we recommend <Link to="/auth?mode=signup" className="underline font-black">signing up</Link> using the same email you used for this booking.
+                    <div className="pt-2">
+                      <p className="text-xs bg-neutral-100/70 text-neutral-700 p-3 rounded-xl border border-neutral-200/60">
+                        <strong>Pro-Tip:</strong> To track your booking and manage your trips easily, you can <Link to="/auth?mode=signup" className="underline font-bold text-neutral-900">sign up</Link> using the same email.
                       </p>
                     </div>
                   </>
@@ -176,24 +173,24 @@ export default function BookingSuccess() {
                 )}
               </div>
 
-              <div className="grid gap-3">
+              <div className="grid gap-2.5">
                 <Link 
                   to="/customer/bookings" 
-                  className="w-full h-14 bg-gray-900 text-white rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest shadow-xl shadow-gray-200 hover:bg-gray-800 transition-all group"
+                  className="w-full h-12 bg-neutral-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider hover:bg-black transition-all cursor-pointer"
                 >
-                  Go to Dashboard <Icons.ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  Go to Dashboard <Icons.ArrowRight className="h-4 w-4" />
                 </Link>
                 
                 <Link 
                   to={`/track-booking?id=${booking.id}`}
-                  className="w-full h-14 bg-white border-2 border-gray-100 text-gray-900 rounded-2xl flex items-center justify-center gap-2 font-black text-[10px] uppercase tracking-widest hover:border-primary hover:text-primary transition-all"
+                  className="w-full h-12 bg-white border border-neutral-300 text-neutral-800 rounded-xl flex items-center justify-center gap-2 font-bold text-xs hover:bg-neutral-50 transition-all cursor-pointer"
                 >
-                  Track Without Account <Icons.Search className="h-4 w-4" />
+                  Track Without Account <Icons.Search className="h-3.5 w-3.5" />
                 </Link>
 
                 <Link 
                   to="/" 
-                  className="w-full h-14 bg-gray-50 text-gray-400 rounded-2xl flex items-center justify-center font-black text-[10px] uppercase tracking-widest hover:text-gray-600 transition-all"
+                  className="w-full h-10 text-neutral-500 rounded-xl flex items-center justify-center font-medium text-xs hover:text-neutral-900 transition-all cursor-pointer"
                 >
                   Return Home
                 </Link>
@@ -206,25 +203,25 @@ export default function BookingSuccess() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] py-12 px-4 selection:bg-primary/20 booking-success-page print:p-0 print:bg-white text-gray-900">
-      <div className="mx-auto max-w-4xl print:max-w-none">
+    <div className="min-h-screen bg-neutral-50/60 py-10 px-4 booking-success-page print:p-0 print:bg-white text-neutral-900">
+      <div className="mx-auto max-w-3xl print:max-w-none">
         
         {/* Header Actions - Hidden on Print */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6 no-print">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 no-print">
           <div className="text-center md:text-left">
-            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Booking Confirmed</h1>
-            <p className="text-sm font-medium text-gray-500 mt-1">Your adventure is ready. Print your voucher below.</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900 tracking-tight">Booking Confirmed</h1>
+            <p className="text-sm font-normal text-neutral-500 mt-1">Your adventure is ready. Print or save your official voucher below.</p>
           </div>
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             <button 
               onClick={() => window.print()}
-              className="flex items-center gap-2 rounded-full bg-gray-900 px-8 py-3.5 text-xs font-black text-white transition-all hover:bg-black active:scale-95 shadow-xl hover:shadow-black/20"
+              className="flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-bold text-white transition-all hover:bg-black cursor-pointer shadow-xs"
             >
               Print Voucher
             </button>
             <Link 
               to="/"
-              className="flex items-center gap-2 rounded-full bg-white border border-gray-200 px-8 py-3.5 text-xs font-black text-gray-600 transition-all hover:bg-gray-50 active:scale-95"
+              className="flex items-center gap-2 rounded-xl bg-white border border-neutral-300 px-6 py-3 text-xs font-bold text-neutral-700 transition-all hover:bg-neutral-50 cursor-pointer"
             >
               Explore More
             </Link>
@@ -233,14 +230,14 @@ export default function BookingSuccess() {
 
         {/* THE VOUCHER CARD */}
         <motion.div 
-          initial={{ opacity: 0, y: 30 }}
+          initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-[40px] shadow-[0_48px_96px_-24px_rgba(0,0,0,0.08)] overflow-hidden border border-gray-100 voucher-card print:border-gray-200 print:shadow-none print:rounded-[20px]"
+          className="bg-white rounded-3xl shadow-xl shadow-neutral-900/[0.04] overflow-hidden border border-neutral-200 voucher-card print:border-neutral-200 print:shadow-none print:rounded-2xl"
         >
           {/* Header Branding */}
-          <div className="p-8 md:p-12 border-b border-gray-50 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-8 bg-gray-50/30 print:p-8 print:bg-white">
-            <div className="flex flex-col md:flex-row items-center gap-6">
-              <div className="h-20 w-20 rounded-2xl bg-white p-3 shadow-sm flex items-center justify-center print:h-16 print:w-16">
+          <div className="p-6 md:p-8 border-b border-neutral-100 flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-6 bg-neutral-50/40 print:p-6 print:bg-white">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <div className="h-16 w-16 rounded-xl bg-white p-2 shadow-xs border border-neutral-100 flex items-center justify-center print:h-14 print:w-14">
                 {settings?.logoURL ? (
                   <img 
                     src={settings.logoURL} 
@@ -249,64 +246,64 @@ export default function BookingSuccess() {
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="h-full w-full bg-primary rounded-xl flex items-center justify-center text-white font-black text-2xl">
+                  <div className="h-full w-full bg-neutral-900 rounded-lg flex items-center justify-center text-white font-bold text-xl">
                     {settings?.siteName?.charAt(0)}
                   </div>
                 )}
               </div>
               <div className="space-y-1">
-                <h2 className="text-2xl font-black text-gray-900 tracking-tighter uppercase">{settings?.siteName}</h2>
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-widest">
-                  Official Experience Voucher
+                <h2 className="text-xl font-bold text-neutral-900 tracking-tight">{settings?.siteName}</h2>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200/60">
+                  <CheckCircle className="h-3 w-3 text-emerald-600" /> Official Experience Voucher
                 </div>
               </div>
             </div>
             
             <div className="md:text-right">
-              <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-2">Voucher Reference</p>
-              <div className="inline-block px-5 py-2 bg-white rounded-xl border border-gray-100 shadow-sm">
-                <p className="text-xl font-mono font-black text-primary tracking-tighter">#{booking.id.slice(-8).toUpperCase()}</p>
+              <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1">Voucher Reference</p>
+              <div className="inline-block px-3.5 py-1.5 bg-white rounded-xl border border-neutral-200 shadow-xs">
+                <p className="text-base font-mono font-bold text-neutral-900 tracking-tight">#{booking.id.slice(-8).toUpperCase()}</p>
               </div>
             </div>
           </div>
 
-          <div className="p-8 md:p-12 print:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-12 print:gap-8">
+          <div className="p-6 md:p-8 print:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_1fr] gap-8 print:gap-6">
               
               {/* Details Column */}
-              <div className="space-y-10">
+              <div className="space-y-6">
                 <div className="voucher-section">
-                  <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-4">You're going to</h3>
-                  <h4 className="text-3xl md:text-4xl font-black text-gray-900 leading-tight tracking-tight print:text-2xl">{booking.tourTitle}</h4>
-                  <div className="flex items-center gap-2 mt-3 p-3 bg-gray-50 rounded-xl border border-gray-100 w-fit">
-                    <CheckCircle className="h-4 w-4 text-orange-500" />
-                    <span className="text-xs font-bold text-gray-600">{booking.packageName}</span>
+                  <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5">You're going to</h3>
+                  <h4 className="text-2xl md:text-3xl font-bold text-neutral-900 leading-tight tracking-tight print:text-xl">{booking.tourTitle}</h4>
+                  <div className="flex items-center gap-2 mt-2.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-200/80 w-fit">
+                    <CheckCircle className="h-3.5 w-3.5 text-neutral-700" />
+                    <span className="text-xs font-semibold text-neutral-800">{booking.packageName}</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 voucher-section">
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Date</p>
-                    <p className="text-base font-black text-gray-900">{booking.date}</p>
+                <div className="grid grid-cols-2 gap-4 voucher-section bg-neutral-50/60 p-4 rounded-2xl border border-neutral-100">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Date</p>
+                    <p className="text-sm font-bold text-neutral-900">{booking.date}</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Arrival</p>
-                    <p className="text-base font-black text-gray-900">{booking.time || "TBA"}</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Time</p>
+                    <p className="text-sm font-bold text-neutral-900">{booking.time || "TBA"}</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Guest(s)</p>
-                    <p className="text-base font-black text-gray-900">{(booking.participants?.adults || 0) + (booking.participants?.children || 0)} Persons</p>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Guests</p>
+                    <p className="text-sm font-bold text-neutral-900">{(booking.participants?.adults || 0) + (booking.participants?.children || 0)} Persons</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Payment</p>
-                    <p className={`text-base font-black ${booking.paymentStatus === 'paid' ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Payment</p>
+                    <p className={`text-sm font-bold ${booking.paymentStatus === 'paid' ? 'text-emerald-600' : 'text-amber-600'}`}>
                       {booking.paymentStatus === 'paid' ? 'Fully Paid' : 'Pending'}
                     </p>
                   </div>
                 </div>
 
                 {/* Transport & Location Details */}
-                <div className="pt-6 border-t border-gray-50 space-y-3 voucher-section">
+                <div className="pt-4 border-t border-neutral-100 space-y-2.5 voucher-section">
                   {(() => {
                     const isMeetingPoint = !booking.customerData?.pickupAddress || 
                       booking.selectedTransport?.type === 'meet' ||
@@ -327,26 +324,26 @@ export default function BookingSuccess() {
                       const mp = parseMeetingPoint(rawMp, booking.packageName || booking.tourTitle);
                       return (
                         <>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                             Meeting Point Location
                           </p>
-                          <div className="bg-gray-50 rounded-2xl p-5 border border-gray-100 text-left space-y-2.5">
+                          <div className="bg-neutral-50 rounded-2xl p-4 border border-neutral-200/80 text-left space-y-2">
                             <div className="flex items-start gap-2">
-                              <Icons.MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                              <div className="space-y-1">
-                                <span className="text-sm font-black text-slate-900 block">{mp.venue}</span>
+                              <Icons.MapPin className="h-4 w-4 shrink-0 text-neutral-700 mt-0.5" />
+                              <div className="space-y-0.5">
+                                <span className="text-xs font-bold text-neutral-900 block">{mp.venue}</span>
                                 {mp.address && mp.address !== mp.venue && (
-                                  <p className="text-xs text-gray-500 font-bold leading-relaxed">{mp.address}</p>
+                                  <p className="text-xs text-neutral-500 font-medium leading-relaxed">{mp.address}</p>
                                 )}
                               </div>
                             </div>
-                            <div className="pl-6 border-t border-gray-200/50 pt-2">
-                              <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-1">Direct Google Maps Link:</span>
+                            <div className="pl-6 border-t border-neutral-200/60 pt-2">
+                              <span className="text-[9px] font-bold text-neutral-400 uppercase tracking-wider block mb-0.5">Direct Google Maps Link:</span>
                               <a 
                                 href={mp.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs font-extrabold text-primary hover:underline break-all inline-block"
+                                className="text-xs font-bold text-neutral-900 underline break-all inline-block hover:text-black"
                               >
                                 {mp.url}
                               </a>
@@ -357,11 +354,11 @@ export default function BookingSuccess() {
                     } else {
                       return (
                         <>
-                          <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                          <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                             Hotel Pickup Address
                           </p>
-                          <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-                            <p className="text-sm font-bold text-gray-900 leading-relaxed">
+                          <div className="bg-neutral-50 rounded-2xl p-3.5 border border-neutral-200/80">
+                            <p className="text-xs font-bold text-neutral-900 leading-relaxed">
                               {booking.customerData?.pickupAddress || ""}
                             </p>
                           </div>
@@ -371,15 +368,15 @@ export default function BookingSuccess() {
                   })()}
                 </div>
 
-                <div className="pt-8 border-t border-gray-50 voucher-section">
-                  <h3 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.3em] mb-5">Lead Guest Details</h3>
-                  <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-lg font-black text-gray-400">
-                      {booking.customerData?.fullName || "N/A".charAt(0)}
+                <div className="pt-4 border-t border-neutral-100 voucher-section">
+                  <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">Lead Guest Details</h3>
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center text-sm font-bold text-neutral-700">
+                      {(booking.customerData?.fullName || "G").charAt(0)}
                     </div>
                     <div>
-                      <p className="text-lg font-black text-gray-900">{booking.customerData?.fullName || "N/A"}</p>
-                      <div className="flex items-center gap-4 text-xs font-bold text-gray-500 mt-0.5">
+                      <p className="text-sm font-bold text-neutral-900">{booking.customerData?.fullName || "N/A"}</p>
+                      <div className="flex items-center gap-3 text-xs font-medium text-neutral-500 mt-0.5">
                         <span>{booking.customerData?.phone || ""}</span>
                       </div>
                     </div>
@@ -388,30 +385,30 @@ export default function BookingSuccess() {
               </div>
 
               {/* QR & Info Column */}
-              <div className="space-y-10">
-                <div className="bg-gray-900 rounded-[32px] p-8 text-center text-white print:bg-white print:text-black print:border print:border-gray-100 print:rounded-2xl voucher-section">
-                  <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.3em] mb-6 print:text-gray-400">Check-in Scan</p>
-                  <div className="bg-white p-4 rounded-2xl inline-block mb-6 shadow-xl print:shadow-none print:border print:border-gray-100">
+              <div className="space-y-6">
+                <div className="bg-neutral-900 rounded-3xl p-6 text-center text-white print:bg-white print:text-black print:border print:border-neutral-200 print:rounded-2xl voucher-section">
+                  <p className="text-[10px] font-bold text-white/50 uppercase tracking-wider mb-4 print:text-neutral-400">Check-in Scan</p>
+                  <div className="bg-white p-3 rounded-2xl inline-block mb-4 shadow-sm print:shadow-none print:border print:border-neutral-200">
                     <QRCode 
                       value={`${window.location.origin}/admin/booking/${booking.id}`}
-                      size={140}
+                      size={130}
                       style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                       viewBox={`0 0 256 256`}
                     />
                   </div>
-                  <p className="text-[9px] font-bold text-white/60 leading-relaxed uppercase tracking-tighter print:text-gray-400">
-                    Present this code at the terminal or to your guide.
+                  <p className="text-[10px] font-medium text-white/60 leading-relaxed print:text-neutral-500">
+                    Present this code at terminal or to your guide.
                   </p>
                 </div>
 
-                <div className="p-6 bg-gray-50 rounded-[24px] border border-gray-100 print:bg-white voucher-section">
-                  <div className="flex justify-between items-center mb-6">
-                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Price</span>
-                    <span className="text-2xl font-black text-gray-900 tracking-tighter"><FormattedPrice amount={booking.totalAmount} /></span>
+                <div className="p-5 bg-neutral-50 rounded-2xl border border-neutral-200/80 print:bg-white voucher-section">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Total Price</span>
+                    <span className="text-xl font-bold text-neutral-900 tracking-tight"><FormattedPrice amount={booking.totalAmount} /></span>
                   </div>
-                  <div className="pt-6 border-t border-gray-200">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Support</p>
-                    <div className="space-y-3">
+                  <div className="pt-4 border-t border-neutral-200">
+                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-2.5">Support</p>
+                    <div className="space-y-2.5">
                        {settings?.supportPhone && (
                          <button 
                            onClick={() => {
@@ -421,20 +418,24 @@ export default function BookingSuccess() {
                              const link = getWhatsAppLink(settings.supportPhone!, message);
                              window.open(link, '_blank');
                            }}
-                           className="flex items-center gap-3 w-full p-3 rounded-xl bg-orange-50 text-orange-700 hover:bg-orange-100 transition-all text-xs font-black uppercase tracking-tight"
+                           className="flex items-center justify-center gap-2 w-full p-2.5 rounded-xl bg-neutral-900 text-white hover:bg-black transition-all text-xs font-bold cursor-pointer"
                          >
-                           <Icons.MessageSquare className="h-4 w-4" />
-                           Contact Support (WA)
+                           <Icons.MessageSquare className="h-3.5 w-3.5" />
+                           Contact Support (WhatsApp)
                          </button>
                        )}
-                       <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
-                         <Icons.Phone className="h-3 w-3 text-primary" />
-                         {settings?.supportPhone}
-                       </div>
-                       <div className="flex items-center gap-2 text-xs font-bold text-gray-700">
-                         <Icons.Mail className="h-3 w-3 text-primary" />
-                         {settings?.supportEmail}
-                       </div>
+                       {settings?.supportPhone && (
+                         <div className="flex items-center gap-2 text-xs font-medium text-neutral-700">
+                           <Icons.Phone className="h-3 w-3 text-neutral-400" />
+                           {settings.supportPhone}
+                         </div>
+                       )}
+                       {settings?.supportEmail && (
+                         <div className="flex items-center gap-2 text-xs font-medium text-neutral-700">
+                           <Icons.Mail className="h-3 w-3 text-neutral-400" />
+                           {settings.supportEmail}
+                         </div>
+                       )}
                     </div>
                   </div>
                 </div>
@@ -442,15 +443,15 @@ export default function BookingSuccess() {
             </div>
           </div>
 
-          <div className="bg-gray-50 py-6 px-12 border-t border-gray-100 text-center print:bg-white print:py-4">
-             <p className="text-[9px] font-black text-gray-300 uppercase tracking-[0.6em]">
+          <div className="bg-neutral-50 py-4 px-8 border-t border-neutral-100 text-center print:bg-white">
+             <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">
                Thank you for choosing {settings?.siteName}
              </p>
           </div>
         </motion.div>
 
-        <div className="mt-8 text-center no-print">
-          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+        <div className="mt-6 text-center no-print">
+          <p className="text-[11px] text-neutral-400 font-medium">
             A copy has been sent to {booking.customerData?.email || ""}
           </p>
         </div>

@@ -1450,9 +1450,9 @@ const toggleAddOn = (addon: AddOn) => {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans pb-28">
+      <div className="min-h-screen bg-neutral-50 text-neutral-900 flex flex-col font-sans pb-28 text-left">
         {/* Mobile Header */}
-        <div className="bg-white border-b border-slate-100 sticky top-0 z-50 px-4 py-3 flex items-center justify-between shadow-xs">
+        <div className="bg-white border-b border-neutral-200 sticky top-0 z-50 px-4 py-3.5 flex items-center justify-between shadow-xs">
           <button
             onClick={() => {
               if (mobileStep === 'package') navigate(-1);
@@ -1462,37 +1462,39 @@ const toggleAddOn = (addon: AddOn) => {
               else if (mobileStep === 'customer') setMobileStep('summary');
               else if (mobileStep === 'payment') setMobileStep('customer');
             }}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
+            className="p-2 rounded-full border border-neutral-200 hover:bg-neutral-100 text-neutral-700 transition-colors cursor-pointer"
+            title="Back"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-4 w-4" />
           </button>
 
-          <div className="text-center min-w-0 px-2">
-            <span className="text-[10px] font-black uppercase text-primary tracking-widest block">
-              {mobileStep === 'package' && 'Step 1 of 6'}
-              {mobileStep === 'date' && 'Step 2 of 6'}
-              {mobileStep === 'addons' && 'Step 3 of 6'}
-              {mobileStep === 'summary' && 'Step 4 of 6'}
-              {mobileStep === 'customer' && 'Step 5 of 6'}
-              {mobileStep === 'payment' && 'Step 6 of 6'}
+          <div className="text-center min-w-0 px-2 flex-1">
+            <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block">
+              {mobileStep === 'package' && 'Step 1 of 6 • Package'}
+              {mobileStep === 'date' && 'Step 2 of 6 • Date & Guests'}
+              {mobileStep === 'addons' && 'Step 3 of 6 • Options'}
+              {mobileStep === 'summary' && 'Step 4 of 6 • Summary'}
+              {mobileStep === 'customer' && 'Step 5 of 6 • Details'}
+              {mobileStep === 'payment' && 'Step 6 of 6 • Payment'}
             </span>
-            <h1 className="text-xs font-bold text-slate-800 truncate max-w-[200px]">
+            <h1 className="text-xs font-bold text-neutral-900 truncate max-w-[220px] mx-auto">
               {tour.title}
             </h1>
           </div>
 
           <button
             onClick={() => navigate(-1)}
-            className="p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors cursor-pointer"
+            className="p-2 rounded-full border border-neutral-200 hover:bg-neutral-100 text-neutral-400 hover:text-neutral-700 transition-colors cursor-pointer"
+            title="Cancel"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Step Progress Bar */}
-        <div className="w-full bg-slate-100 h-1">
+        <div className="w-full bg-neutral-100 h-1">
           <div
-            className="bg-primary h-1 transition-all duration-300"
+            className="bg-neutral-900 h-1 transition-all duration-300"
             style={{
               width:
                 mobileStep === 'package' ? '16.6%' :
@@ -1510,10 +1512,10 @@ const toggleAddOn = (addon: AddOn) => {
           {mobileStep === 'date' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
               {/* Stylized Custom Date Picker */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-left">
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-900 font-extrabold text-base">
-                    <Calendar className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
+                    <Calendar className="h-5 w-5 text-neutral-700" />
                     <h2>Select Travel Date</h2>
                   </div>
                 </div>
@@ -1523,19 +1525,19 @@ const toggleAddOn = (addon: AddOn) => {
                   type="button"
                   onClick={() => setShowDatePicker(!showDatePicker)}
                   className={cn(
-                    "w-full p-4 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer text-left bg-slate-50 hover:bg-white",
-                    showDatePicker ? "border-primary bg-white shadow-xs" : "border-slate-200 hover:border-slate-300"
+                    "w-full p-3.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer text-left",
+                    showDatePicker ? "border-neutral-900 bg-neutral-50/50" : "border-neutral-200 bg-white hover:border-neutral-300"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-orange-50 border border-orange-100 text-primary flex items-center justify-center shrink-0 font-extrabold">
-                      <Calendar className="h-5 w-5" />
+                    <div className="h-9 w-9 rounded-lg bg-neutral-100 text-neutral-800 flex items-center justify-center shrink-0">
+                      <Calendar className="h-4 w-4" />
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                      <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider block">
                         Travel Date
                       </span>
-                      <span className="text-sm font-black text-slate-900 block">
+                      <span className="text-sm font-bold text-neutral-900 block">
                         {date 
                           ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
                           : "Tap to choose date"}
@@ -1544,11 +1546,11 @@ const toggleAddOn = (addon: AddOn) => {
                   </div>
                   <div className="flex items-center gap-2">
                     {date && (
-                      <span className="text-[10px] font-extrabold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                         Selected
                       </span>
                     )}
-                    <ChevronDown className={cn("h-5 w-5 text-slate-400 transition-transform duration-200", showDatePicker && "rotate-180 text-primary")} />
+                    <ChevronDown className={cn("h-4 w-4 text-neutral-400 transition-transform duration-200", showDatePicker && "rotate-180 text-neutral-900")} />
                   </div>
                 </button>
 
@@ -1561,7 +1563,7 @@ const toggleAddOn = (addon: AddOn) => {
                       exit={{ opacity: 0, height: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
+                      <div className="bg-neutral-50/80 p-3.5 rounded-xl border border-neutral-200 space-y-3">
                         <div className="flex items-center justify-between">
                           <button
                             type="button"
@@ -1573,11 +1575,11 @@ const toggleAddOn = (addon: AddOn) => {
                                 setCurrentMonth(newM);
                               }
                             }}
-                            className="p-1.5 rounded-lg bg-white text-slate-600 hover:text-slate-900 transition-colors cursor-pointer border border-slate-200"
+                            className="p-1.5 rounded-lg bg-white text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer border border-neutral-200"
                           >
                             <ChevronLeft className="h-4 w-4" />
                           </button>
-                          <span className="font-black text-xs text-slate-800 uppercase tracking-wider">
+                          <span className="font-bold text-xs text-neutral-900 uppercase tracking-wider">
                             {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
                           </span>
                           <button
@@ -1587,14 +1589,14 @@ const toggleAddOn = (addon: AddOn) => {
                               newM.setMonth(newM.getMonth() + 1);
                               setCurrentMonth(newM);
                             }}
-                            className="p-1.5 rounded-lg bg-white text-slate-600 hover:text-slate-900 transition-colors cursor-pointer border border-slate-200"
+                            className="p-1.5 rounded-lg bg-white text-neutral-600 hover:text-neutral-900 transition-colors cursor-pointer border border-neutral-200"
                           >
                             <ChevronRight className="h-4 w-4" />
                           </button>
                         </div>
 
                         {/* Day of week headers */}
-                        <div className="grid grid-cols-7 gap-1 text-center font-black text-[10px] text-slate-400 uppercase tracking-wider">
+                        <div className="grid grid-cols-7 gap-1 text-center font-bold text-[10px] text-neutral-400 uppercase tracking-wider">
                           {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
                             <div key={d} className="py-1">{d}</div>
                           ))}
@@ -1632,20 +1634,20 @@ const toggleAddOn = (addon: AddOn) => {
                                   title={isPast ? "Past date" : isCutOff ? `Cut-off reached (${effectiveCutOff}h prior)` : undefined}
                                   onClick={() => {
                                     setDate(dateStr);
-                                    setShowDatePicker(false); // Disappears/collapses upon selection
+                                    setShowDatePicker(false);
                                   }}
                                   className={cn(
-                                    "aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-black transition-all cursor-pointer",
+                                    "aspect-square rounded-xl flex flex-col items-center justify-center text-xs font-bold transition-all cursor-pointer",
                                     isSelected 
-                                      ? "bg-primary text-white shadow-md shadow-primary/20 scale-105" 
+                                      ? "bg-neutral-900 text-white shadow-sm scale-105" 
                                       : isDisabled 
-                                        ? "text-slate-300 line-through opacity-40 cursor-not-allowed bg-slate-50" 
-                                        : "text-slate-800 bg-white border border-slate-200 hover:border-primary hover:bg-orange-50"
+                                        ? "text-neutral-300 line-through opacity-40 cursor-not-allowed bg-neutral-50" 
+                                        : "text-neutral-800 bg-white border border-neutral-200 hover:border-neutral-900"
                                   )}
                                 >
                                   <span>{d}</span>
                                   {isCutOff && !isPast && (
-                                    <span className="text-[7px] font-black text-rose-500 no-underline leading-none">Closed</span>
+                                    <span className="text-[7px] font-bold text-rose-500 no-underline leading-none">Closed</span>
                                   )}
                                 </button>
                               );
@@ -1660,8 +1662,8 @@ const toggleAddOn = (addon: AddOn) => {
 
                 {/* Booking Cut-off Notice */}
                 {tour && (
-                  <div className="p-3 rounded-xl text-xs font-semibold bg-orange-50/70 border border-orange-200/80 text-orange-950 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary shrink-0" />
+                  <div className="p-3 rounded-xl text-xs font-medium bg-neutral-50 border border-neutral-200 text-neutral-700 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-neutral-500 shrink-0" />
                     <span>{formatCutOffNotice(getEffectiveCutOffHours(tour))}</span>
                   </div>
                 )}
@@ -1669,11 +1671,11 @@ const toggleAddOn = (addon: AddOn) => {
                 {/* Capacity & Availability Indicator */}
                 {date && spotsLeft !== null && (
                   <div className={cn(
-                    "p-3 rounded-xl text-xs font-bold flex items-center justify-between border",
+                    "p-3 rounded-xl text-xs font-semibold flex items-center justify-between border",
                     isSoldOut ? "bg-rose-50 border-rose-200 text-rose-700" : isLowCapacity ? "bg-amber-50 border-amber-200 text-amber-800" : "bg-emerald-50 border-emerald-200 text-emerald-800"
                   )}>
                     <span>Availability status:</span>
-                    <span className="font-black">
+                    <span className="font-bold">
                       {isSoldOut ? 'Sold Out' : isLowCapacity ? `Only ${spotsLeft} spots left!` : `${spotsLeft} spots available`}
                     </span>
                   </div>
@@ -1683,9 +1685,9 @@ const toggleAddOn = (addon: AddOn) => {
                 {tour.timeSlots && tour.timeSlots.length > 0 && (
                   <div className="space-y-2 pt-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold text-slate-700 block">Preferred Departure Time</label>
+                      <label className="text-xs font-bold text-neutral-800 block">Preferred Departure Time</label>
                       {getEffectiveCutOffHours(tour) > 0 && (
-                        <span className="text-[10px] text-slate-400 font-bold">
+                        <span className="text-[10px] text-neutral-400 font-medium">
                           Cut-off: {getEffectiveCutOffHours(tour)}h prior
                         </span>
                       )}
@@ -1702,17 +1704,17 @@ const toggleAddOn = (addon: AddOn) => {
                             title={isSlotDisabled ? `Cut-off passed (${effectiveCutOff}h prior)` : undefined}
                             onClick={() => setSelectedTime(time)}
                             className={cn(
-                              "py-2.5 text-xs font-bold rounded-xl border-2 transition-all flex flex-col items-center justify-center gap-0.5",
+                              "py-2.5 text-xs font-semibold rounded-xl border transition-all flex flex-col items-center justify-center gap-0.5",
                               isSlotDisabled
-                                ? "bg-slate-100 border-slate-200 text-slate-300 line-through cursor-not-allowed"
+                                ? "bg-neutral-100 border-neutral-200 text-neutral-300 line-through cursor-not-allowed"
                                 : selectedTime === time
-                                  ? "bg-primary border-primary text-white shadow-sm"
-                                  : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 cursor-pointer"
+                                  ? "bg-neutral-900 border-neutral-900 text-white shadow-xs"
+                                  : "bg-white border-neutral-200 text-neutral-700 hover:border-neutral-900 cursor-pointer"
                             )}
                           >
                             <span>{time}</span>
                             {isSlotDisabled && (
-                              <span className="text-[8px] font-black text-rose-500 no-underline">Cut-off</span>
+                              <span className="text-[8px] font-bold text-rose-500 no-underline">Cut-off</span>
                             )}
                           </button>
                         );
@@ -1723,29 +1725,29 @@ const toggleAddOn = (addon: AddOn) => {
               </div>
 
               {/* Participant Picker */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-                <div className="flex items-center gap-2 text-slate-900 font-extrabold text-base">
-                  <Users className="h-5 w-5 text-primary" />
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4">
+                <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
+                  <Users className="h-5 w-5 text-neutral-700" />
                   <h2>Select Participants</h2>
                 </div>
 
-                <div className="space-y-4 divide-y divide-slate-100">
+                <div className="space-y-4 divide-y divide-neutral-100">
                   {/* Adults */}
                   <div className="flex items-center justify-between pt-2">
                     <div>
-                      <span className="font-extrabold text-sm text-slate-900 block">Adults</span>
-                      <span className="text-xs text-slate-400 font-medium">Age 12+</span>
+                      <span className="font-bold text-sm text-neutral-900 block">Adults</span>
+                      <span className="text-xs text-neutral-400 font-normal">Age 12+</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setAdults(Math.max(1, adults - 1))}
                         disabled={adults <= 1 || (adults + children) <= minRequired}
-                        className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center font-black text-slate-600 disabled:opacity-40 cursor-pointer"
+                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 disabled:opacity-30 cursor-pointer"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="font-black text-base w-6 text-center text-slate-900">{adults}</span>
+                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{adults}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1755,7 +1757,7 @@ const toggleAddOn = (addon: AddOn) => {
                           }
                           setAdults(adults + 1);
                         }}
-                        className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center font-black text-slate-600 cursor-pointer"
+                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -1765,19 +1767,19 @@ const toggleAddOn = (addon: AddOn) => {
                   {/* Children */}
                   <div className="flex items-center justify-between pt-4">
                     <div>
-                      <span className="font-extrabold text-sm text-slate-900 block">Children</span>
-                      <span className="text-xs text-slate-400 font-medium">Age 2-11</span>
+                      <span className="font-bold text-sm text-neutral-900 block">Children</span>
+                      <span className="text-xs text-neutral-400 font-normal">Age 2-11</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
                         onClick={() => setChildren(Math.max(0, children - 1))}
                         disabled={children <= 0 || (adults + children) <= minRequired}
-                        className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center font-black text-slate-600 disabled:opacity-40 cursor-pointer"
+                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 disabled:opacity-30 cursor-pointer"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <span className="font-black text-base w-6 text-center text-slate-900">{children}</span>
+                      <span className="font-bold text-sm w-6 text-center text-neutral-900">{children}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -1787,7 +1789,7 @@ const toggleAddOn = (addon: AddOn) => {
                           }
                           setChildren(children + 1);
                         }}
-                        className="h-9 w-9 rounded-full border border-slate-200 flex items-center justify-center font-black text-slate-600 cursor-pointer"
+                        className="h-8 w-8 rounded-full border border-neutral-300 hover:border-neutral-900 flex items-center justify-center font-bold text-neutral-700 cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -1796,9 +1798,9 @@ const toggleAddOn = (addon: AddOn) => {
                 </div>
 
                 {/* Pax Summary Badge */}
-                <div className="bg-orange-50/80 border border-orange-100 rounded-xl p-3 flex items-center justify-between text-xs font-bold text-orange-950">
-                  <span>Total Pax Breakdown:</span>
-                  <span className="font-black">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
+                <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 flex items-center justify-between text-xs font-semibold text-neutral-700">
+                  <span>Selected Travelers:</span>
+                  <span className="font-bold text-neutral-900">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
                 </div>
               </div>
             </div>
@@ -1808,8 +1810,8 @@ const toggleAddOn = (addon: AddOn) => {
           {mobileStep === 'package' && (
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="space-y-1">
-                <h2 className="text-lg font-black text-slate-900">Choose Package</h2>
-                <p className="text-xs text-slate-500">Tap a package to view complete details, group rates & inclusions.</p>
+                <h2 className="text-lg font-bold text-neutral-900">Choose Package</h2>
+                <p className="text-xs text-neutral-500">Tap a package to view complete details, group rates & inclusions.</p>
               </div>
 
               <div className="space-y-3">
@@ -1824,8 +1826,8 @@ const toggleAddOn = (addon: AddOn) => {
                     <div
                       key={idx}
                       className={cn(
-                        "border-2 rounded-2xl overflow-hidden bg-white shadow-xs transition-all",
-                        isSelected ? "border-primary ring-2 ring-primary/20 shadow-md" : "border-slate-200"
+                        "border rounded-2xl overflow-hidden bg-white transition-all",
+                        isSelected ? "border-2 border-neutral-900 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
                       )}
                     >
                       {/* Collapsed view: Package Name & Price/Person */}
@@ -1838,43 +1840,43 @@ const toggleAddOn = (addon: AddOn) => {
                             setExpandedPackage(pkg.name);
                           }
                         }}
-                        className="flex items-center justify-between p-4 cursor-pointer bg-white hover:bg-slate-50 transition-colors"
+                        className="flex items-center justify-between p-4 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className={cn(
                             "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                            isSelected ? "border-primary bg-primary" : "border-slate-300"
+                            isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
                           )}>
                             {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                           </div>
-                          <h3 className="font-extrabold text-sm text-slate-900 leading-snug">{pkg.name}</h3>
+                          <h3 className="font-bold text-sm text-neutral-900 leading-snug">{pkg.name}</h3>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <div className="text-right">
-                            <span className="font-black text-slate-900 text-sm">
+                            <span className="font-bold text-neutral-900 text-sm">
                               <FormattedPrice amount={getPackagePricePerPerson(pkg)} />
                             </span>
-                            <span className="text-[10px] text-slate-400 block font-bold">/ person</span>
+                            <span className="text-[10px] text-neutral-400 block font-normal">/ person</span>
                           </div>
-                          <div className="p-1 rounded-full bg-slate-100 text-slate-500">
+                          <div className="p-1 rounded-full text-neutral-400">
                             <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
                           </div>
                         </div>
                       </div>
 
-                      {/* Expanded View: Rich details matching desktop */}
+                      {/* Expanded View: Rich details */}
                       {isExpanded && (
-                        <div className="p-4 border-t border-slate-200 bg-slate-50/50 space-y-4 text-xs">
+                        <div className="p-4 border-t border-neutral-200 bg-neutral-50/50 space-y-4 text-xs">
                           {/* Minimum Travelers Restriction Warning */}
                           {isUnderMin && (
                             <div className="bg-rose-50 border border-rose-200 rounded-xl p-3 text-left">
                               <div className="flex items-start gap-2">
                                 <Info className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                                 <div>
-                                  <p className="text-xs font-black text-rose-700 uppercase tracking-wider">Requirement Notice</p>
+                                  <p className="text-xs font-bold text-rose-700">Requirement Notice</p>
                                   <p className="text-[11px] text-rose-600 font-medium mt-0.5">
-                                    Requires at least <span className="font-black underline">{minReq} travelers</span>. Currently selected: <span className="font-black">{adults + children} pax</span>.
+                                    Requires at least <span className="font-bold underline">{minReq} travelers</span>. Currently selected: <span className="font-bold">{adults + children} pax</span>.
                                   </p>
                                 </div>
                               </div>
@@ -1883,7 +1885,7 @@ const toggleAddOn = (addon: AddOn) => {
 
                           {/* Package Description */}
                           {(pkg.details || (pkg as any).description) && (
-                            <p className="text-slate-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-slate-100">
+                            <p className="text-neutral-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-neutral-200">
                               {pkg.details || (pkg as any).description}
                             </p>
                           )}
@@ -1892,12 +1894,12 @@ const toggleAddOn = (addon: AddOn) => {
                           {pkg.tiers && pkg.tiers.length > 0 && (
                             <div className="space-y-2">
                               <div className="flex items-center justify-between">
-                                <span className="font-black text-slate-700 uppercase text-[10px] tracking-wider">Group Rates & Tier Pricing</span>
-                                <span className="text-[9px] font-black text-primary bg-orange-50 px-2 py-0.5 rounded border border-orange-200 font-mono">
+                                <span className="font-bold text-neutral-600 uppercase text-[10px] tracking-wider">Group Rates & Tier Pricing</span>
+                                <span className="text-[9px] font-bold text-neutral-800 bg-neutral-200/80 px-2 py-0.5 rounded font-mono">
                                   Current: {adults} adult{adults > 1 ? 's' : ''}
                                 </span>
                               </div>
-                              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden divide-y divide-slate-100">
+                              <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden divide-y divide-neutral-100">
                                 {pkg.tiers.map((tier, tIdx) => {
                                   const isActive = adults >= tier.minParticipants && adults <= tier.maxParticipants;
                                   return (
@@ -1905,7 +1907,7 @@ const toggleAddOn = (addon: AddOn) => {
                                       key={tIdx}
                                       className={cn(
                                         "p-2.5 flex items-center justify-between text-[11px] transition-colors",
-                                        isActive ? "bg-orange-50/60 font-bold" : "text-slate-600"
+                                        isActive ? "bg-neutral-100/70 font-semibold" : "text-neutral-600"
                                       )}
                                     >
                                       <div className="flex items-center gap-1.5">
@@ -1917,14 +1919,14 @@ const toggleAddOn = (addon: AddOn) => {
                                               : `${tier.minParticipants}-${tier.maxParticipants} pax`}
                                         </span>
                                         {isActive && (
-                                          <span className="text-[8px] font-black text-primary bg-orange-100 px-1.5 py-0.5 rounded uppercase">
+                                          <span className="text-[8px] font-bold text-neutral-900 bg-neutral-200 px-1.5 py-0.5 rounded uppercase">
                                             Active
                                           </span>
                                         )}
                                       </div>
-                                      <div className="flex items-center gap-3 font-extrabold text-slate-800">
+                                      <div className="flex items-center gap-3 font-bold text-neutral-900">
                                         <span>Adult: <FormattedPrice amount={tier.adultPrice} /></span>
-                                        {tier.childPrice > 0 && <span className="text-slate-500">Child: <FormattedPrice amount={tier.childPrice} /></span>}
+                                        {tier.childPrice > 0 && <span className="text-neutral-500">Child: <FormattedPrice amount={tier.childPrice} /></span>}
                                       </div>
                                     </div>
                                   );
@@ -1934,20 +1936,20 @@ const toggleAddOn = (addon: AddOn) => {
                           )}
 
                           {/* Free Cancellation Guarantee */}
-                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-100 p-2.5 rounded-xl text-emerald-800 text-[11px] font-bold">
+                          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200/60 p-2.5 rounded-xl text-emerald-800 text-[11px] font-medium">
                             <Check className="h-4 w-4 text-emerald-600 shrink-0" />
                             <span>Free cancellation prior to travel date</span>
                           </div>
 
                           {/* Inclusions & Exclusions */}
-                          <div className="space-y-3 pt-2 border-t border-slate-200/80">
+                          <div className="space-y-3 pt-2 border-t border-neutral-200/80">
                             {pkg.inclusions && pkg.inclusions.filter(Boolean).length > 0 && (
                               <div className="space-y-1.5">
-                                <span className="font-black text-slate-800 uppercase tracking-wider text-[10px] block">What's Included:</span>
+                                <span className="font-bold text-neutral-900 uppercase tracking-wider text-[10px] block">What's Included:</span>
                                 <ul className="space-y-1">
                                   {pkg.inclusions.filter(Boolean).map((inc, i) => (
-                                    <li key={i} className="flex items-start gap-1.5 text-slate-600 text-xs">
-                                      <Check className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
+                                    <li key={i} className="flex items-start gap-1.5 text-neutral-700 text-xs">
+                                      <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
                                       <span>{inc}</span>
                                     </li>
                                   ))}
@@ -1957,11 +1959,11 @@ const toggleAddOn = (addon: AddOn) => {
 
                             {pkg.exclusions && pkg.exclusions.filter(Boolean).length > 0 && (
                               <div className="space-y-1.5 pt-1">
-                                <span className="font-black text-rose-700 uppercase tracking-wider text-[10px] block">What's Excluded:</span>
+                                <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px] block">What's Excluded:</span>
                                 <ul className="space-y-1">
                                   {pkg.exclusions.filter(Boolean).map((exc, i) => (
-                                    <li key={i} className="flex items-start gap-1.5 text-slate-400 text-xs line-through">
-                                      <span className="h-1.5 w-1.5 rounded-full bg-rose-300 mt-1.5 shrink-0" />
+                                    <li key={i} className="flex items-start gap-1.5 text-neutral-400 text-xs line-through">
+                                      <span className="h-1.5 w-1.5 rounded-full bg-neutral-300 mt-1.5 shrink-0" />
                                       <span>{exc}</span>
                                     </li>
                                   ))}
@@ -1971,10 +1973,10 @@ const toggleAddOn = (addon: AddOn) => {
                           </div>
 
                           {/* Price & Action Button */}
-                          <div className="pt-3 border-t border-slate-200 flex items-center justify-between gap-3">
+                          <div className="pt-3 border-t border-neutral-200 flex items-center justify-between gap-3">
                             <div>
-                              <span className="text-[10px] text-slate-400 font-bold block uppercase">Calculated Total</span>
-                              <span className="font-black text-base text-slate-900 font-display">
+                              <span className="text-[10px] text-neutral-400 font-medium block uppercase">Calculated Total</span>
+                              <span className="font-bold text-base text-neutral-900">
                                 <FormattedPrice amount={pkgTotal} />
                               </span>
                             </div>
@@ -1986,11 +1988,11 @@ const toggleAddOn = (addon: AddOn) => {
                                 setExpandedPackage(pkg.name);
                               }}
                               className={cn(
-                                "px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-sm",
-                                isSelected ? "bg-primary text-white" : "bg-slate-900 text-white hover:bg-slate-800"
+                                "px-5 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xs",
+                                isSelected ? "bg-neutral-900 text-white" : "bg-white border border-neutral-300 text-neutral-800 hover:border-neutral-900"
                               )}
                             >
-                              {isSelected ? 'Package Selected' : 'Select Package'}
+                              {isSelected ? 'Selected' : 'Select Package'}
                             </button>
                           </div>
                         </div>
@@ -2007,13 +2009,13 @@ const toggleAddOn = (addon: AddOn) => {
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
               {/* Transport Selection */}
               {availableTransports.length > 0 && (
-                <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-left">
-                  <div className="flex items-center gap-2 text-slate-900 font-extrabold text-base">
-                    <Car className="h-5 w-5 text-primary" />
+                <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
+                  <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
+                    <Car className="h-5 w-5 text-neutral-700" />
                     <h2>Transportation Option</h2>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Select your preferred transfer or meeting arrangement. Vehicles accommodate <span className="text-primary font-black">{adults + children}</span> traveler(s).
+                  <p className="text-xs text-neutral-500 font-medium">
+                    Select your preferred transfer or meeting arrangement. Vehicles accommodate <span className="text-neutral-900 font-bold">{adults + children}</span> traveler(s).
                   </p>
 
                   <div className="space-y-3">
@@ -2030,28 +2032,28 @@ const toggleAddOn = (addon: AddOn) => {
                           }));
                         }}
                         className={cn(
-                          "p-4 rounded-xl border-2 transition-all cursor-pointer bg-white relative flex flex-col gap-2",
+                          "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
                           selectedTransportType === 'meet'
-                            ? "border-primary bg-orange-50/20 shadow-xs"
-                            : "border-slate-200 hover:border-slate-300"
+                            ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                            : "border-neutral-200 hover:border-neutral-300"
                         )}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className={cn(
-                              "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                              selectedTransportType === 'meet' ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                              "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                              selectedTransportType === 'meet' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
                             )}>
-                              <MapPin className="h-5 w-5" />
+                              <MapPin className="h-4 w-4" />
                             </div>
                             <div>
-                              <h3 className="font-extrabold text-slate-900 text-xs">Own Transport</h3>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Self-Arrival</p>
+                              <h3 className="font-bold text-neutral-900 text-xs">Own Transport</h3>
+                              <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Self-Arrival</p>
                             </div>
                           </div>
-                          <span className="text-xs font-black text-primary">Free</span>
+                          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Free</span>
                         </div>
-                        <p className="text-[11px] text-slate-500 font-medium pl-12">
+                        <p className="text-[11px] text-neutral-500 font-medium pl-11">
                           Come directly to our operation basecamp on your own. No pickup service.
                         </p>
                       </div>
@@ -2075,30 +2077,30 @@ const toggleAddOn = (addon: AddOn) => {
                             });
                           }}
                           className={cn(
-                            "p-4 rounded-xl border-2 transition-all cursor-pointer bg-white relative flex flex-col gap-2",
+                            "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
                             selectedTransportType === 'shared'
-                              ? "border-primary bg-orange-50/20 shadow-xs"
-                              : "border-slate-200 hover:border-slate-300"
+                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                              : "border-neutral-200 hover:border-neutral-300"
                           )}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={cn(
-                                "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                selectedTransportType === 'shared' ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                                selectedTransportType === 'shared' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
                               )}>
-                                <Bus className="h-5 w-5" />
+                                <Bus className="h-4 w-4" />
                               </div>
                               <div>
-                                <h3 className="font-extrabold text-slate-900 text-xs">Shared Transfer</h3>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Shuttle service</p>
+                                <h3 className="font-bold text-neutral-900 text-xs">Shared Transfer</h3>
+                                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Shuttle service</p>
                               </div>
                             </div>
-                            <span className="text-xs font-black text-primary">
+                            <span className="text-xs font-bold text-neutral-900">
                               {sOpt ? <FormattedPrice amount={sOpt.price} /> : "Available"}/pax
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-medium pl-12">
+                          <p className="text-[11px] text-neutral-500 font-medium pl-11">
                             Pickup & drop-off shared with other travelers. Fixed timings by area.
                           </p>
                         </div>
@@ -2130,30 +2132,30 @@ const toggleAddOn = (addon: AddOn) => {
                             });
                           }}
                           className={cn(
-                            "p-4 rounded-xl border-2 transition-all cursor-pointer bg-white relative flex flex-col gap-2",
+                            "p-4 rounded-xl border transition-all cursor-pointer bg-white relative flex flex-col gap-2",
                             selectedTransportType === 'private'
-                              ? "border-primary bg-orange-50/20 shadow-xs"
-                              : "border-slate-200 hover:border-slate-300"
+                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                              : "border-neutral-200 hover:border-neutral-300"
                           )}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
                               <div className={cn(
-                                "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
-                                selectedTransportType === 'private' ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                                selectedTransportType === 'private' ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600"
                               )}>
-                                <Car className="h-5 w-5" />
+                                <Car className="h-4 w-4" />
                               </div>
                               <div>
-                                <h3 className="font-extrabold text-slate-900 text-xs">Private Transfer</h3>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Dedicated car</p>
+                                <h3 className="font-bold text-neutral-900 text-xs">Private Transfer</h3>
+                                <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Dedicated vehicle</p>
                               </div>
                             </div>
-                            <span className="text-xs font-black text-primary">
+                            <span className="text-xs font-bold text-neutral-900">
                               {lowestPrice > 0 ? <>From <FormattedPrice amount={lowestPrice} />/car</> : "Available"}
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-500 font-medium pl-12">
+                          <p className="text-[11px] text-neutral-500 font-medium pl-11">
                             AC vehicle with professional driver exclusively for your group.
                           </p>
                         </div>
@@ -2161,29 +2163,29 @@ const toggleAddOn = (addon: AddOn) => {
                     })()}
                   </div>
 
-                  {/* Own Transport meeting point location card */}
+                  {/* Meeting Point Card */}
                   {selectedTransportType === 'meet' && (() => {
                     const activeMpText = selectedPackage?.meetingPoint || tour?.meetingPoint;
                     const mp = parseMeetingPoint(activeMpText, selectedPackage?.name || tour?.title);
                     return (
-                      <div className="bg-orange-50/70 border border-orange-200 rounded-xl p-3.5 text-left space-y-2">
-                        <span className="text-[10px] font-black text-primary uppercase tracking-wider block">Meeting Point Location:</span>
+                      <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3.5 text-left space-y-2">
+                        <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider block">Meeting Point Location:</span>
                         <div className="flex items-start gap-2">
-                          <MapPin className="h-4 w-4 shrink-0 text-primary mt-0.5" />
-                          <div className="space-y-1">
-                            <span className="text-xs font-extrabold text-slate-900 block">{mp.venue}</span>
+                          <MapPin className="h-4 w-4 shrink-0 text-neutral-700 mt-0.5" />
+                          <div className="space-y-0.5">
+                            <span className="text-xs font-bold text-neutral-900 block">{mp.venue}</span>
                             {mp.address && mp.address !== mp.venue && (
-                              <p className="text-[11px] text-slate-600 font-bold">{mp.address}</p>
+                              <p className="text-[11px] text-neutral-600 font-medium">{mp.address}</p>
                             )}
                           </div>
                         </div>
                         {mp.url && (
-                          <div className="pt-2 border-t border-orange-200/50">
+                          <div className="pt-2 border-t border-neutral-200">
                             <a
                               href={mp.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs font-extrabold text-primary hover:underline break-all inline-block"
+                              className="text-xs font-bold text-neutral-900 underline hover:text-neutral-600 break-all inline-block"
                             >
                               Open in Google Maps →
                             </a>
@@ -2193,26 +2195,25 @@ const toggleAddOn = (addon: AddOn) => {
                     );
                   })()}
 
-                  {/* Pickup Areas Served & Hotel Address Input for Transfers */}
+                  {/* Pickup Areas & Hotel Address */}
                   {selectedTransportType !== 'meet' && (
                     <div className="space-y-3 pt-2">
                       {(selectedPackage?.pickupAreas || tour?.pickupAreas) && (
-                        <div className="bg-blue-50/70 border border-blue-200/60 rounded-xl p-3 text-left flex items-start gap-2.5">
-                          <Car className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                        <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-3 text-left flex items-start gap-2.5">
+                          <Car className="h-4 w-4 text-neutral-600 shrink-0 mt-0.5" />
                           <div>
-                            <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider block">
                               Pick Up Areas Served ({selectedPackage?.name || "Package"}):
                             </span>
-                            <p className="text-xs text-slate-700 font-semibold leading-relaxed">
+                            <p className="text-xs text-neutral-700 font-medium leading-relaxed">
                               {selectedPackage?.pickupAreas || tour?.pickupAreas}
                             </p>
                           </div>
                         </div>
                       )}
 
-                      {/* Hotel Address Input */}
                       <div className="space-y-1.5 text-left">
-                        <label className="text-xs font-extrabold text-slate-800 block">
+                        <label className="text-xs font-bold text-neutral-800 block">
                           Hotel Name & Address (For Pickup)
                         </label>
                         <textarea
@@ -2220,18 +2221,18 @@ const toggleAddOn = (addon: AddOn) => {
                           value={customerData.pickupAddress}
                           onChange={(e) => setCustomerData(prev => ({ ...prev, pickupAddress: e.target.value }))}
                           placeholder="Enter hotel name, lobby address or villa location..."
-                          className="w-full text-xs p-3 border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-primary focus:outline-none transition-all font-medium"
+                          className="w-full text-xs p-3 border border-neutral-200 rounded-xl bg-white focus:border-neutral-900 focus:outline-none transition-all font-medium"
                         />
                       </div>
                     </div>
                   )}
 
-                  {/* Private Transfer Car Model Selection */}
+                  {/* Vehicle selection for private transport */}
                   {selectedTransportType === 'private' && (
-                    <div className="space-y-3 pt-3 border-t border-slate-100 text-left">
+                    <div className="space-y-3 pt-3 border-t border-neutral-100 text-left">
                       <div>
-                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">Select Your Vehicle</h3>
-                        <p className="text-[10px] text-slate-500 font-medium">Matching your group size of {adults + children} pax</p>
+                        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wider">Select Your Vehicle</h3>
+                        <p className="text-[10px] text-neutral-500 font-normal">Matching group size of {adults + children} pax</p>
                       </div>
 
                       <div className="space-y-2">
@@ -2249,24 +2250,24 @@ const toggleAddOn = (addon: AddOn) => {
                                 key={t.id || idx}
                                 onClick={() => setSelectedTransport(t)}
                                 className={cn(
-                                  "p-3 rounded-xl border-2 transition-all bg-white cursor-pointer flex items-center justify-between",
-                                  isSelected ? "border-primary bg-orange-50/20" : "border-slate-200 hover:border-slate-300"
+                                  "p-3 rounded-xl border transition-all bg-white cursor-pointer flex items-center justify-between",
+                                  isSelected ? "border-2 border-neutral-900 bg-neutral-50/50" : "border-neutral-200 hover:border-neutral-300"
                                 )}
                               >
                                 <div className="flex items-center gap-3">
                                   <div className={cn(
                                     "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                                    isSelected ? "border-primary bg-primary" : "border-slate-300"
+                                    isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
                                   )}>
                                     {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                                   </div>
                                   <div>
-                                    <span className="font-extrabold text-xs text-slate-900 block">{t.name}</span>
-                                    <span className="text-[10px] text-slate-400 font-bold">Up to {t.maxCapacity || 6} Pax</span>
+                                    <span className="font-bold text-xs text-neutral-900 block">{t.name}</span>
+                                    <span className="text-[10px] text-neutral-400 font-medium">Up to {t.maxCapacity || 6} Pax</span>
                                   </div>
                                 </div>
 
-                                <span className="font-black text-xs text-slate-900">
+                                <span className="font-bold text-xs text-neutral-900">
                                   <FormattedPrice amount={t.price} />/car
                                 </span>
                               </div>
@@ -2279,13 +2280,13 @@ const toggleAddOn = (addon: AddOn) => {
               )}
 
               {/* Add-ons List */}
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-left">
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-left">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-slate-900 font-extrabold text-base">
-                    <Plus className="h-5 w-5 text-primary" />
+                  <div className="flex items-center gap-2 text-neutral-900 font-bold text-base">
+                    <Plus className="h-5 w-5 text-neutral-700" />
                     <h2>Add-on Extras</h2>
                   </div>
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Optional</span>
+                  <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">Optional</span>
                 </div>
 
                 <div className="space-y-3">
@@ -2294,10 +2295,10 @@ const toggleAddOn = (addon: AddOn) => {
                     const qty = existing ? existing.quantity : 0;
 
                     return (
-                      <div key={addon.id} className="p-3.5 rounded-xl border border-slate-200 flex items-center justify-between bg-white">
+                      <div key={addon.id} className="p-3.5 rounded-xl border border-neutral-200 flex items-center justify-between bg-white">
                         <div>
-                          <span className="font-extrabold text-xs text-slate-900 block">{addon.name}</span>
-                          <span className="text-[10px] text-slate-500 font-bold">
+                          <span className="font-bold text-xs text-neutral-900 block">{addon.name}</span>
+                          <span className="text-[10px] text-neutral-500 font-medium">
                             <FormattedPrice amount={addon.price} /> {addon.unit ? `/ ${addon.unit}` : ''}
                           </span>
                         </div>
@@ -2307,7 +2308,7 @@ const toggleAddOn = (addon: AddOn) => {
                             <button
                               type="button"
                               onClick={() => toggleAddOn(addon)}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-primary hover:text-white text-slate-800 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                              className="px-3 py-1.5 bg-neutral-100 hover:bg-neutral-900 hover:text-white text-neutral-800 font-bold text-xs rounded-lg transition-colors cursor-pointer"
                             >
                               + Add
                             </button>
@@ -2316,15 +2317,15 @@ const toggleAddOn = (addon: AddOn) => {
                               <button
                                 type="button"
                                 onClick={() => updateAddOnQuantity(addon.id, -1)}
-                                className="h-7 w-7 rounded-full border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-slate-100"
+                                className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
                               >
                                 -
                               </button>
-                              <span className="font-black text-xs w-5 text-center">{qty}</span>
+                              <span className="font-bold text-xs w-5 text-center">{qty}</span>
                               <button
                                 type="button"
                                 onClick={() => updateAddOnQuantity(addon.id, 1)}
-                                className="h-7 w-7 rounded-full border border-slate-200 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-slate-100"
+                                className="h-7 w-7 rounded-full border border-neutral-300 flex items-center justify-center font-bold text-xs cursor-pointer hover:bg-neutral-100"
                               >
                                 +
                               </button>
@@ -2335,31 +2336,31 @@ const toggleAddOn = (addon: AddOn) => {
                     );
                   })}
 
-                  {/* Option: No Add-Ons (At the last, default selection when empty) */}
+                  {/* Option: No Add-Ons */}
                   <div
                     onClick={() => setSelectedAddOns([])}
                     className={cn(
-                      "p-3.5 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all bg-white",
+                      "p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all bg-white",
                       selectedAddOns.length === 0
-                        ? "border-primary bg-orange-50/20 shadow-xs"
-                        : "border-slate-200 hover:border-slate-300"
+                        ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                        : "border-neutral-200 hover:border-neutral-300"
                     )}
                   >
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                        selectedAddOns.length === 0 ? "border-primary bg-primary" : "border-slate-300"
+                        selectedAddOns.length === 0 ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
                       )}>
                         {selectedAddOns.length === 0 && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                       </div>
                       <div>
-                        <span className="font-extrabold text-xs text-slate-900 block">No Add-Ons</span>
-                        <span className="text-[10px] text-slate-400 font-medium">Continue with basic tour package items only</span>
+                        <span className="font-bold text-xs text-neutral-900 block">No Add-Ons</span>
+                        <span className="text-[10px] text-neutral-400 font-normal">Continue with tour package items only</span>
                       </div>
                     </div>
 
                     {selectedAddOns.length === 0 && (
-                      <span className="text-[9px] font-black uppercase text-primary bg-orange-100 px-2 py-0.5 rounded">
+                      <span className="text-[9px] font-bold uppercase text-neutral-700 bg-neutral-100 px-2 py-0.5 rounded">
                         Selected
                       </span>
                     )}
@@ -2372,41 +2373,41 @@ const toggleAddOn = (addon: AddOn) => {
           {/* STEP 4: Booking Summary Modal */}
           {mobileStep === 'summary' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-xs">
-                <h2 className="font-black text-base text-slate-900">Booking Summary</h2>
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
+                <h2 className="font-bold text-base text-neutral-900">Booking Summary</h2>
 
-                <div className="flex gap-3 pb-3 border-b border-slate-100">
+                <div className="flex gap-3 pb-3 border-b border-neutral-100">
                   <img src={tour.featuredImage} alt={tour.title} className="h-16 w-16 object-cover rounded-xl shrink-0" />
                   <div>
-                    <h3 className="font-extrabold text-slate-900 line-clamp-1">{tour.title}</h3>
-                    <p className="text-slate-500 font-bold mt-0.5">Package: {selectedPackage?.name}</p>
-                    <p className="text-slate-500 font-medium">Date: {date} {selectedTime ? `(${selectedTime})` : ''}</p>
+                    <h3 className="font-bold text-neutral-900 line-clamp-1">{tour.title}</h3>
+                    <p className="text-neutral-500 font-medium mt-0.5">Package: {selectedPackage?.name}</p>
+                    <p className="text-neutral-500 font-normal">Date: {date} {selectedTime ? `(${selectedTime})` : ''}</p>
                   </div>
                 </div>
 
-                <div className="space-y-2 font-medium text-slate-600">
+                <div className="space-y-2 font-normal text-neutral-600">
                   <div className="flex justify-between">
-                    <span>Pax Count:</span>
-                    <span className="font-bold text-slate-900">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
+                    <span>Travelers:</span>
+                    <span className="font-semibold text-neutral-900">{adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Package Total:</span>
-                    <span className="font-bold text-slate-900"><FormattedPrice amount={summary.packageTotal} /></span>
+                    <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.packageTotal} /></span>
                   </div>
                   {summary.transportTotal > 0 && (
                     <div className="flex justify-between">
                       <span>Transport Service:</span>
-                      <span className="font-bold text-slate-900"><FormattedPrice amount={summary.transportTotal} /></span>
+                      <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.transportTotal} /></span>
                     </div>
                   )}
                   {summary.addonsTotal > 0 && (
                     <div className="flex justify-between">
                       <span>Add-ons Total:</span>
-                      <span className="font-bold text-slate-900"><FormattedPrice amount={summary.addonsTotal} /></span>
+                      <span className="font-semibold text-neutral-900"><FormattedPrice amount={summary.addonsTotal} /></span>
                     </div>
                   )}
                   {summary.discount > 0 && (
-                    <div className="flex justify-between text-emerald-600 font-bold">
+                    <div className="flex justify-between text-emerald-600 font-semibold">
                       <span>Discount:</span>
                       <span>-<FormattedPrice amount={summary.discount} /></span>
                     </div>
@@ -2414,20 +2415,20 @@ const toggleAddOn = (addon: AddOn) => {
                 </div>
 
                 {/* Coupon Code Input */}
-                <div className="pt-3 border-t border-slate-100 space-y-2">
+                <div className="pt-3 border-t border-neutral-100 space-y-2">
                   <div className="flex gap-2">
                     <input
                       type="text"
                       placeholder="Coupon Code"
                       value={couponInput}
                       onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                      className="flex-1 px-3 py-2 border border-slate-200 rounded-xl font-bold uppercase text-xs focus:outline-none focus:border-primary"
+                      className="flex-1 px-3 py-2 border border-neutral-200 rounded-xl font-bold uppercase text-xs focus:outline-none focus:border-neutral-900"
                     />
                     <button
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={isValidatingCoupon}
-                      className="px-4 py-2 bg-slate-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-slate-800 disabled:opacity-50"
+                      className="px-4 py-2 bg-neutral-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-black disabled:opacity-50"
                     >
                       {isValidatingCoupon ? 'Checking...' : 'Apply'}
                     </button>
@@ -2441,9 +2442,9 @@ const toggleAddOn = (addon: AddOn) => {
                   )}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-baseline">
-                  <span className="font-black text-slate-900 text-sm">Grand Total:</span>
-                  <span className="font-black text-xl text-primary font-display"><FormattedPrice amount={summary.grandTotal} /></span>
+                <div className="pt-3 border-t border-neutral-100 flex justify-between items-baseline">
+                  <span className="font-bold text-neutral-900 text-sm">Grand Total:</span>
+                  <span className="font-bold text-xl text-neutral-900"><FormattedPrice amount={summary.grandTotal} /></span>
                 </div>
               </div>
             </div>
@@ -2452,63 +2453,63 @@ const toggleAddOn = (addon: AddOn) => {
           {/* STEP 5: Customer Details */}
           {mobileStep === 'customer' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-xs">
-                <h2 className="font-black text-base text-slate-900">Customer Contact Details</h2>
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
+                <h2 className="font-bold text-base text-neutral-900">Customer Contact Details</h2>
 
                 <div className="space-y-3">
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Full Name *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Full Name *</label>
                     <input
                       type="text"
                       value={customerData.fullName}
                       onChange={(e) => setCustomerData({ ...customerData, fullName: e.target.value })}
                       placeholder="John Doe"
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-medium focus:border-primary focus:outline-none"
+                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Email Address *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Email Address *</label>
                     <input
                       type="email"
                       value={customerData.email}
                       onChange={(e) => setCustomerData({ ...customerData, email: e.target.value })}
                       placeholder="john@example.com"
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-medium focus:border-primary focus:outline-none"
+                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Phone Number *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Phone Number *</label>
                     <input
                       type="tel"
                       value={customerData.phone}
                       onChange={(e) => setCustomerData({ ...customerData, phone: e.target.value })}
                       placeholder="+123456789"
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-medium focus:border-primary focus:outline-none"
+                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   <div>
-                    <label className="font-bold text-slate-700 block mb-1">Nationality *</label>
+                    <label className="font-semibold text-neutral-700 block mb-1">Nationality *</label>
                     <input
                       type="text"
                       value={customerData.nationality}
                       onChange={(e) => setCustomerData({ ...customerData, nationality: e.target.value })}
                       placeholder="United States"
-                      className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-medium focus:border-primary focus:outline-none"
+                      className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                     />
                   </div>
 
                   {selectedTransportType !== 'meet' && (
                     <div>
-                      <label className="font-bold text-slate-700 block mb-1">Pickup Hotel / Address</label>
+                      <label className="font-semibold text-neutral-700 block mb-1">Pickup Hotel / Address</label>
                       <input
                         type="text"
                         value={customerData.pickupAddress}
                         onChange={(e) => setCustomerData({ ...customerData, pickupAddress: e.target.value })}
                         placeholder="Hotel name or street address"
-                        className="w-full px-3 py-2.5 border border-slate-200 rounded-xl font-medium focus:border-primary focus:outline-none"
+                        className="w-full px-3 py-2.5 border border-neutral-200 rounded-xl font-medium focus:border-neutral-900 focus:outline-none"
                       />
                     </div>
                   )}
@@ -2520,8 +2521,8 @@ const toggleAddOn = (addon: AddOn) => {
           {/* STEP 6: Payment Selection */}
           {mobileStep === 'payment' && (
             <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-xs">
-                <h2 className="font-black text-base text-slate-900">Select Payment Method</h2>
+              <div className="bg-white p-5 rounded-2xl border border-neutral-200 shadow-xs space-y-4 text-xs">
+                <h2 className="font-bold text-base text-neutral-900">Select Payment Method</h2>
 
                 <div className="space-y-2">
                   {[
@@ -2534,36 +2535,36 @@ const toggleAddOn = (addon: AddOn) => {
                       key={pm.id}
                       onClick={() => setPaymentMethod(pm.id as any)}
                       className={cn(
-                        "p-3.5 rounded-xl border-2 flex items-center justify-between cursor-pointer transition-all",
-                        paymentMethod === pm.id ? "border-primary bg-orange-50/20" : "border-slate-200 hover:border-slate-300"
+                        "p-3.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all",
+                        paymentMethod === pm.id ? "border-2 border-neutral-900 bg-neutral-50/50" : "border-neutral-200 hover:border-neutral-300"
                       )}
                     >
                       <div className="flex items-center gap-3">
                         <div className={cn(
                           "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0",
-                          paymentMethod === pm.id ? "border-primary bg-primary" : "border-slate-300"
+                          paymentMethod === pm.id ? "border-neutral-900 bg-neutral-900" : "border-neutral-300"
                         )}>
                           {paymentMethod === pm.id && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                         </div>
                         <div>
-                          <span className="font-extrabold text-xs text-slate-900 block">{pm.name}</span>
-                          <span className="text-[10px] text-slate-400 font-medium">{pm.desc}</span>
+                          <span className="font-bold text-xs text-neutral-900 block">{pm.name}</span>
+                          <span className="text-[10px] text-neutral-400 font-medium">{pm.desc}</span>
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex items-center gap-2">
+                <div className="pt-3 border-t border-neutral-100 flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="termsCheckMobile"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="h-4 w-4 rounded text-primary border-slate-300"
+                    className="h-4 w-4 rounded text-neutral-900 border-neutral-300 focus:ring-neutral-900"
                   />
-                  <label htmlFor="termsCheckMobile" className="text-[11px] text-slate-600 font-medium">
-                    I agree to the <a href="/terms" className="underline font-bold text-slate-900">Terms & Conditions</a> and Cancellation Policy.
+                  <label htmlFor="termsCheckMobile" className="text-[11px] text-neutral-600 font-medium">
+                    I agree to the <a href="/terms" className="underline font-bold text-neutral-900">Terms & Conditions</a> and Cancellation Policy.
                   </label>
                 </div>
               </div>
@@ -2572,20 +2573,20 @@ const toggleAddOn = (addon: AddOn) => {
         </div>
 
         {/* Sticky Mobile Navigation Bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white border-t border-slate-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.12)]">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-t border-neutral-200 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-10px_30px_rgba(0,0,0,0.06)]">
           <div className="max-w-lg mx-auto flex items-center justify-between gap-3">
             <button
               type="button"
               onClick={() => setShowMobileSummary(true)}
               className="text-left cursor-pointer group hover:opacity-90 transition-opacity"
             >
-              <div className="flex items-center gap-1 text-[10px] text-slate-400 font-black uppercase tracking-wider">
-                <span>Grand Total</span>
-                <span className="text-primary font-bold flex items-center gap-0.5 underline">
+              <div className="flex items-center gap-1 text-[10px] text-neutral-400 font-bold uppercase tracking-wider">
+                <span>Total</span>
+                <span className="text-neutral-900 font-bold flex items-center gap-0.5 underline">
                   Summary <ChevronUp className="h-3 w-3" />
                 </span>
               </div>
-              <span className="font-black text-lg text-slate-900 font-display block leading-tight">
+              <span className="font-bold text-lg text-neutral-900 block leading-tight">
                 <FormattedPrice amount={summary.grandTotal} />
               </span>
             </button>
@@ -2595,9 +2596,9 @@ const toggleAddOn = (addon: AddOn) => {
                 type="button"
                 onClick={() => setMobileStep('date')}
                 disabled={!selectedPackage}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                Select Date & Travelers
+                Choose Date & Guests
               </button>
             )}
 
@@ -2606,7 +2607,7 @@ const toggleAddOn = (addon: AddOn) => {
                 type="button"
                 onClick={() => setMobileStep('addons')}
                 disabled={!date}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 Continue to Options
               </button>
@@ -2616,9 +2617,9 @@ const toggleAddOn = (addon: AddOn) => {
               <button
                 type="button"
                 onClick={() => setMobileStep('summary')}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                Continue to Summary
+                Review Summary
               </button>
             )}
 
@@ -2626,9 +2627,9 @@ const toggleAddOn = (addon: AddOn) => {
               <button
                 type="button"
                 onClick={() => setMobileStep('customer')}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
-                Continue to Details
+                Enter Details
               </button>
             )}
 
@@ -2642,7 +2643,7 @@ const toggleAddOn = (addon: AddOn) => {
                   }
                   setMobileStep('payment');
                 }}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
               >
                 Continue to Payment
               </button>
@@ -2653,9 +2654,9 @@ const toggleAddOn = (addon: AddOn) => {
                 type="button"
                 onClick={() => handleFinalBooking()}
                 disabled={isBooking || !agreedToTerms}
-                className="px-6 py-3 bg-primary hover:bg-orange-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
               >
-                {isBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Complete Booking'}
+                {isBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm and Pay'}
               </button>
             )}
           </div>
@@ -2665,32 +2666,35 @@ const toggleAddOn = (addon: AddOn) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20">
+    <div className="min-h-screen bg-neutral-50/50 pb-20 text-left">
       {/* Header */}
-      <div className="bg-white border-b border-gray-100 sticky top-0 md:top-[116px] z-40">
-        <div className="container mx-auto px-4 lg:px-8 py-3 md:py-4 flex items-center justify-between">
-          <button
-            onClick={() => {
-              if (step === 'selection') navigate(-1);
-              else {
-                const steps: CheckoutStep[] = ["selection", "customer", "payment"];
-                const prevStep = steps[steps.indexOf(step) - 1];
-                updateStep(prevStep);
-              }
-            }}
-            className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-gray-900 transition-all group"
-          >
-            <div className="p-1.5 md:p-2 rounded-full group-hover:bg-gray-50 transition-colors">
+      <div className="bg-white border-b border-neutral-200 sticky top-0 md:top-[116px] z-40">
+        <div className="container mx-auto px-4 lg:px-8 py-3.5 md:py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (step === 'selection') navigate(-1);
+                else {
+                  const steps: CheckoutStep[] = ["selection", "customer", "payment"];
+                  const prevStep = steps[steps.indexOf(step) - 1];
+                  updateStep(prevStep);
+                }
+              }}
+              className="p-2 rounded-full border border-neutral-200 hover:bg-neutral-100 text-neutral-800 transition-colors cursor-pointer"
+              title="Go back"
+            >
               <ArrowLeft className="h-4 w-4" />
-            </div>
-            <span className="hidden sm:inline">Back</span>
-          </button>
+            </button>
+            <h1 className="text-lg md:text-xl font-bold text-neutral-900 tracking-tight">
+              Confirm and pay
+            </h1>
+          </div>
           
-          <div className="flex gap-2 md:gap-4 items-center">
+          <div className="flex gap-2 md:gap-3 items-center">
             {[
-              { id: "selection", label: "Options" },
-              { id: "customer", label: "Details" },
-              { id: "payment", label: "Billing" },
+              { id: "selection", label: "1. Options" },
+              { id: "customer", label: "2. Details" },
+              { id: "payment", label: "3. Payment" },
             ].map((s, i) => {
               const steps: CheckoutStep[] = ["selection", "customer", "payment"];
               const currentIndex = steps.indexOf(step);
@@ -2698,26 +2702,20 @@ const toggleAddOn = (addon: AddOn) => {
               const isCurrent = i === currentIndex;
               
               return (
-                <div key={s.id} className="flex items-center gap-1.5 md:gap-2">
-                  <div
-                    className={cn(
-                      "h-5 w-5 md:h-6 md:w-6 rounded-full flex items-center justify-center text-[9px] md:text-[10px] font-black transition-all",
-                      isCurrent ? "bg-primary text-white ring-4 ring-orange-50" : 
-                      isPast ? "bg-primary text-white" : 
-                      "bg-gray-100 text-gray-400",
-                    )}
-                  >
-                    {isPast ? <Check className="h-3 w-3" /> : i + 1}
-                  </div>
+                <div key={s.id} className="flex items-center gap-2">
                   <span
                     className={cn(
-                      "text-[10px] md:text-xs font-bold transition-all",
-                      isCurrent ? "text-primary" : isPast ? "text-primary" : "text-gray-400",
+                      "text-xs font-semibold transition-all px-2.5 py-1 rounded-full",
+                      isCurrent 
+                        ? "bg-neutral-900 text-white font-bold" 
+                        : isPast 
+                          ? "text-neutral-900 font-medium" 
+                          : "text-neutral-400",
                     )}
                   >
-                    <span className="hidden xs:inline">{s.label}</span>
+                    {s.label}
                   </span>
-                  {i < 2 && <div className={cn("h-[1px] w-4 md:w-6 bg-gray-100", isPast && "bg-orange-200")} />}
+                  {i < 2 && <span className="text-neutral-300 text-xs">/</span>}
                 </div>
               );
             })}
@@ -2725,25 +2723,25 @@ const toggleAddOn = (addon: AddOn) => {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 lg:px-8 py-12">
-        <div className="grid lg:grid-cols-3 gap-12 items-start">
+      <main className="container mx-auto px-4 lg:px-8 py-8 md:py-10">
+        <div className="grid lg:grid-cols-3 gap-10 items-start">
           {/* Left Column: Flow */}
-          <div className="lg:col-span-2 space-y-12 pb-32 md:pb-0 overflow-x-hidden">
+          <div className="lg:col-span-2 space-y-10 pb-32 md:pb-0 overflow-x-hidden">
             {/* Step 1: Selection (Packages & Add-ons) */}
             {step === "selection" && (
-              <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4">
+              <div className="space-y-10 animate-in fade-in slide-in-from-bottom-3">
                 {/* Package Selection */}
-                <section id="package-selection" className="space-y-6">
+                <section id="package-selection" className="space-y-4">
                   <div>
-                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-                      Select Your Package
+                    <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">
+                      Select your package
                     </h2>
-                    <p className="text-sm text-gray-500 font-medium">
+                    <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
                       Select the best option tailored for your adventure.
                     </p>
                   </div>
 
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {tour.packages.map((pkg, idx) => {
                       const isSelected = selectedPackage?.name === pkg.name;
                       const isExpanded = expandedPackage === pkg.name;
@@ -2753,13 +2751,13 @@ const toggleAddOn = (addon: AddOn) => {
                         <div
                           key={idx}
                           className={cn(
-                            "border-2 rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
+                            "border rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
                             isSelected
-                              ? "border-primary shadow-md shadow-primary/5 ring-1 ring-primary/20"
-                              : "border-slate-200 hover:border-slate-300",
+                              ? "border-2 border-neutral-900 shadow-sm"
+                              : "border-neutral-300 hover:border-neutral-400",
                           )}
                         >
-                          {/* Collapsed Header: ONLY Package Name & Price/Person */}
+                          {/* Collapsed Header */}
                           <div
                             onClick={() => {
                               if (isExpanded) {
@@ -2769,32 +2767,32 @@ const toggleAddOn = (addon: AddOn) => {
                                 setExpandedPackage(pkg.name);
                               }
                             }}
-                            className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-slate-50/50 transition-colors"
+                            className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-3.5">
                               <div
                                 className={cn(
                                   "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
                                   isSelected
-                                    ? "border-primary bg-primary"
-                                    : "border-slate-300 bg-white",
+                                    ? "border-neutral-900 bg-neutral-900"
+                                    : "border-neutral-300 bg-white",
                                 )}
                               >
                                 {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
                               </div>
-                              <h3 className="font-extrabold text-slate-900 text-sm md:text-base leading-snug">
+                              <h3 className="font-bold text-neutral-900 text-sm md:text-base leading-snug">
                                 {pkg.name}
                               </h3>
                             </div>
 
                             <div className="flex items-center gap-3">
                               <div className="text-right">
-                                <span className="font-black text-slate-900 text-sm md:text-base">
+                                <span className="font-bold text-neutral-900 text-sm md:text-base">
                                   <FormattedPrice amount={getPackagePricePerPerson(pkg)} />
                                 </span>
-                                <span className="text-[10px] text-slate-400 font-bold block">/ person</span>
+                                <span className="text-[11px] text-neutral-500 font-normal ml-1">/ person</span>
                               </div>
-                              <div className="p-1 rounded-full bg-slate-100 text-slate-500">
+                              <div className="p-1 rounded-full text-neutral-400">
                                 <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
                               </div>
                             </div>
@@ -2807,22 +2805,22 @@ const toggleAddOn = (addon: AddOn) => {
                                 initial={{ height: 0, opacity: 0 }}
                                 animate={{ height: "auto", opacity: 1 }}
                                 exit={{ height: 0, opacity: 0 }}
-                                className="overflow-hidden border-t border-slate-200 bg-slate-50/[0.35]"
+                                className="overflow-hidden border-t border-neutral-200 bg-neutral-50/50"
                               >
-                                <div className="p-5 md:p-6 space-y-6 text-left">
+                                <div className="p-5 md:p-6 space-y-5 text-left">
                                   {/* Minimum participants restriction warning */}
                                   {(() => {
                                     const minRequired = pkg.tiers && pkg.tiers.length > 0 ? Math.min(...pkg.tiers.map(t => t.minParticipants)) : 1;
                                     const totalPax = adults + children;
                                     if (totalPax < minRequired) {
                                       return (
-                                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-left">
+                                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-3.5 text-left">
                                           <div className="flex items-start gap-2.5">
-                                            <Info className="h-4.5 w-4.5 text-rose-500 shrink-0 mt-0.5" />
+                                            <Info className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
                                             <div>
-                                              <p className="text-xs font-black text-rose-700 uppercase tracking-wider">Booking Limit: Fewer than Minimum Travelers</p>
-                                              <p className="text-[11px] text-rose-600 font-bold mt-1 leading-relaxed">
-                                                This package has a requirement of at least <span className="text-rose-800 underline font-black">{minRequired} travelers</span> to book. Your current selection is <span className="text-rose-800 font-black">{totalPax} traveler(s)</span>. Please increase your traveler count under the Travelers section.
+                                              <p className="text-xs font-bold text-rose-700">Minimum travelers required</p>
+                                              <p className="text-xs text-rose-600 mt-0.5 leading-relaxed">
+                                                This package requires at least {minRequired} travelers. You currently have {totalPax} traveler(s).
                                               </p>
                                             </div>
                                           </div>
@@ -2834,8 +2832,8 @@ const toggleAddOn = (addon: AddOn) => {
 
                                   {/* Preferred Departure time slots */}
                                   {tour.timeSlots && tour.timeSlots.length > 0 && (
-                                    <div className="space-y-2 text-left mb-6">
-                                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Choose Preferred Departure Time:</p>
+                                    <div className="space-y-2 text-left mb-4">
+                                      <p className="text-[11px] font-bold uppercase text-neutral-500 tracking-wider">Departure Time:</p>
                                       <div className="flex flex-wrap gap-2">
                                         {tour.timeSlots.map(time => (
                                           <button
@@ -2843,10 +2841,10 @@ const toggleAddOn = (addon: AddOn) => {
                                             type="button"
                                             onClick={() => setSelectedTime(time)}
                                             className={cn(
-                                              "px-4 py-2 text-xs font-black rounded-full border-2 transition-all cursor-pointer focus:outline-none",
+                                              "px-3.5 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer focus:outline-none",
                                               selectedTime === time
-                                                ? "bg-primary border-primary text-white shadow-md shadow-primary/10"
-                                                : "bg-white border-slate-200 text-slate-700 hover:border-primary hover:text-primary"
+                                                ? "bg-neutral-900 border-neutral-900 text-white shadow-xs"
+                                                : "bg-white border-neutral-300 text-neutral-700 hover:border-neutral-900"
                                             )}
                                           >
                                             {time}
@@ -2856,32 +2854,30 @@ const toggleAddOn = (addon: AddOn) => {
                                     </div>
                                   )}
 
-                                  {/* Trust guarantee highlights matching Viator */}
-                                  <div className="bg-primary/[0.04] border border-primary/10 rounded-xl p-4 space-y-2 text-left mb-6">
-                                    <div className="flex items-start gap-2.5 text-xs font-semibold text-slate-700">
-                                      <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                  {/* Trust guarantee highlights matching Airbnb clean style */}
+                                  <div className="bg-emerald-50/60 border border-emerald-200/60 rounded-xl p-3.5 space-y-2 text-left mb-5">
+                                    <div className="flex items-start gap-2.5 text-xs font-medium text-emerald-900">
+                                      <Check className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                                       <span>
-                                        <strong className="font-extrabold border-b border-dashed border-slate-400">Free cancellation</strong> before {selectedTime || '7:00 AM'} on {date ? new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'tomorrow'} (local time)
+                                        <strong className="font-bold">Free cancellation</strong> before {selectedTime || '7:00 AM'} on {date ? new Date(new Date(date).getTime() - 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'tomorrow'} (local time)
                                       </span>
                                     </div>
-
                                   </div>
 
-                                  {/* Viator Pricing Info Section */}
+                                  {/* Dynamic Group Rates Section */}
                                   {pkg.tiers && pkg.tiers.length > 0 && (
                                     <div className="space-y-2 mt-4">
                                        <div className="flex items-center justify-between text-left">
                                           <div className="flex items-center gap-1.5">
-                                             <div className="h-3 w-0.5 bg-primary rounded-full" />
-                                             <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dynamic Group Rates</h4>
+                                             <h4 className="text-[11px] font-bold text-neutral-700 uppercase tracking-wider">Dynamic Group Rates</h4>
                                           </div>
-                                          <span className="text-[9px] font-extrabold text-primary bg-orange-50 px-2 py-0.5 rounded-md border border-primary/20 font-mono">
+                                          <span className="text-[10px] font-bold text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded font-mono">
                                              Active: {adults} pax
                                           </span>
                                        </div>
                                        
                                        <div className="w-full">
-                                          <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden divide-y divide-slate-100">
+                                          <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden divide-y divide-neutral-100">
                                              {pkg.tiers.map((tier, tIdx) => {
                                                 const count = adults;
                                                 const isActive = count >= tier.minParticipants && count <= tier.maxParticipants;
@@ -2889,38 +2885,38 @@ const toggleAddOn = (addon: AddOn) => {
                                                    <div 
                                                       key={tIdx} 
                                                       className={cn(
-                                                         "flex items-center justify-between px-3 py-2 text-xs transition-colors",
+                                                         "flex items-center justify-between px-3.5 py-2.5 text-xs transition-colors",
                                                          isActive 
-                                                           ? "bg-primary/[0.04] text-slate-900 font-medium" 
-                                                           : "text-slate-650 hover:bg-slate-100/20"
+                                                           ? "bg-neutral-100/70 text-neutral-900 font-semibold" 
+                                                           : "text-neutral-600 hover:bg-neutral-50"
                                                       )}
                                                    >
                                                       <div className="flex items-center gap-2">
-                                                         <span className={cn("text-[11px] font-bold", isActive ? "text-primary" : "text-slate-600")}>
+                                                         <span className={cn("text-xs", isActive ? "font-bold text-neutral-900" : "text-neutral-600")}>
                                                             {tier.maxParticipants >= 99 
-                                                               ? `${tier.minParticipants}+ people` 
-                                                               : tier.minParticipants === tier.maxParticipants 
-                                                                 ? `${tier.minParticipants} person`
-                                                                 : `${tier.minParticipants}-${tier.maxParticipants} people`
+                                                              ? `${tier.minParticipants}+ people` 
+                                                              : tier.minParticipants === tier.maxParticipants 
+                                                                ? `${tier.minParticipants} person`
+                                                                : `${tier.minParticipants}-${tier.maxParticipants} people`
                                                             }
                                                          </span>
                                                          {isActive && (
-                                                            <span className="text-[8px] font-black text-primary bg-orange-100 px-1.5 py-0.5 rounded uppercase tracking-wide">
+                                                            <span className="text-[8px] font-bold text-neutral-900 bg-neutral-200 px-1.5 py-0.5 rounded uppercase tracking-wide">
                                                                Active
                                                             </span>
                                                          )}
                                                       </div>
                                                       
-                                                      <div className="flex items-center gap-4 text-slate-500">
+                                                      <div className="flex items-center gap-4 text-neutral-600">
                                                          <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] text-slate-400 font-medium font-sans">Adult:</span>
-                                                            <span className={cn("font-bold font-mono text-[11px]", isActive ? "text-primary font-extrabold" : "text-slate-700")}>
+                                                            <span className="text-[10px] text-neutral-400 font-normal">Adult:</span>
+                                                            <span className={cn("font-bold text-xs", isActive ? "text-neutral-900" : "text-neutral-700")}>
                                                                <FormattedPrice amount={tier.adultPrice} />
                                                             </span>
                                                          </div>
                                                          <div className="flex items-center gap-1">
-                                                            <span className="text-[9px] text-slate-400 font-medium font-sans">Child:</span>
-                                                            <span className={cn("font-bold font-mono text-[11px]", isActive ? "text-primary font-extrabold" : "text-slate-600")}>
+                                                            <span className="text-[10px] text-neutral-400 font-normal">Child:</span>
+                                                            <span className={cn("font-bold text-xs", isActive ? "text-neutral-900" : "text-neutral-600")}>
                                                                <FormattedPrice amount={tier.childPrice} />
                                                             </span>
                                                          </div>
@@ -2934,20 +2930,18 @@ const toggleAddOn = (addon: AddOn) => {
                                   )}
 
                                   {/* Inclusions and Exclusions split layout */}
-                                  <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+                                  <div className="grid md:grid-cols-2 gap-6 pt-4 border-t border-neutral-200">
                                     {pkg.inclusions && pkg.inclusions.filter(Boolean).length > 0 && (
                                       <div className="space-y-3 text-left">
-                                        <h4 className="text-xs font-bold text-secondary flex items-center gap-1.5 font-extrabold uppercase tracking-wider">
-                                          <div className="h-5 w-5 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-                                            <Check className="h-3.5 w-3.5" />
-                                          </div>
+                                        <h4 className="text-xs font-bold text-neutral-900 uppercase tracking-wider flex items-center gap-1.5">
+                                          <Check className="h-4 w-4 text-emerald-600" />
                                           What's Included
                                         </h4>
                                         <ul className="space-y-1.5">
                                           {pkg.inclusions.filter(Boolean).map((inc, i) => (
-                                            <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
-                                              <div className="h-1.5 w-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
-                                              <span className="leading-relaxed font-semibold">{inc}</span>
+                                            <li key={i} className="text-xs text-neutral-700 flex items-start gap-2">
+                                              <span className="h-1.5 w-1.5 rounded-full bg-neutral-900 mt-1.5 shrink-0" />
+                                              <span className="leading-relaxed font-medium">{inc}</span>
                                             </li>
                                           ))}
                                         </ul>
@@ -2956,17 +2950,15 @@ const toggleAddOn = (addon: AddOn) => {
 
                                     {pkg.exclusions && pkg.exclusions.filter(Boolean).length > 0 && (
                                       <div className="space-y-3 text-left">
-                                        <h4 className="text-xs font-bold text-rose-600 flex items-center gap-1.5 font-extrabold uppercase tracking-wider">
-                                          <div className="h-5 w-5 rounded-full bg-rose-50 flex items-center justify-center text-rose-500">
-                                            <Plus className="rotate-45 h-3.5 w-3.5" />
-                                          </div>
+                                        <h4 className="text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1.5">
+                                          <X className="h-4 w-4 text-neutral-400" />
                                           What's Excluded
                                         </h4>
                                         <ul className="space-y-1.5">
                                           {pkg.exclusions.filter(Boolean).map((exc, i) => (
-                                            <li key={i} className="text-xs text-slate-450 flex items-start gap-2">
-                                              <div className="h-1.5 w-1.5 rounded-full bg-rose-200 mt-1.5 shrink-0" />
-                                              <span className="leading-relaxed line-through decoration-slate-300 font-semibold">{exc}</span>
+                                            <li key={i} className="text-xs text-neutral-400 flex items-start gap-2">
+                                              <span className="h-1.5 w-1.5 rounded-full bg-neutral-300 mt-1.5 shrink-0" />
+                                              <span className="leading-relaxed line-through decoration-neutral-300 font-normal">{exc}</span>
                                             </li>
                                           ))}
                                         </ul>
@@ -2974,15 +2966,15 @@ const toggleAddOn = (addon: AddOn) => {
                                     )}
                                   </div>
 
-                                  {/* Special Booking Rate label section */}
-                                  <div className="pt-5 border-t border-slate-100 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                  {/* Booking Total Rate summary */}
+                                  <div className="pt-4 border-t border-neutral-200 flex flex-col sm:flex-row gap-4 items-center justify-between">
                                     <div className="text-left w-full">
-                                      <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest block">Special Booking Rate</span>
+                                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block">Estimated Package Cost</span>
                                       <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-black text-slate-900 tracking-tight font-display">
+                                        <span className="text-2xl font-bold text-neutral-900 tracking-tight">
                                           <FormattedPrice amount={price} />
                                         </span>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">all inclusive group pricing</span>
+                                        <span className="text-[11px] text-neutral-500 font-normal">all inclusive group rate</span>
                                       </div>
                                     </div>
                                   </div>
@@ -2998,48 +2990,48 @@ const toggleAddOn = (addon: AddOn) => {
 
                 {/* Multi-day Accommodations Selection */}
                 {tour?.tourDurationType === 'multi_day' && tour.accommodations && tour.accommodations.length > 0 && (
-                  <section id="accommodation-selection" className="space-y-6">
+                  <section id="accommodation-selection" className="space-y-4">
                     <div>
-                      <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <Hotel className="h-6 w-6 text-primary" /> Select Hotel & Accommodation
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">
+                        <Hotel className="h-5 w-5 text-neutral-700" /> Select Hotel & Accommodation
                       </h2>
-                      <p className="text-sm text-gray-500 font-medium">
+                      <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
                         Choose your preferred hotel category and room arrangement for this multi-day journey.
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       {tour.accommodations.map((acc) => {
                         const isAccSelected = selectedAccommodation?.accommodationId === acc.id;
                         return (
                           <div
                             key={acc.id}
                             className={cn(
-                              "border-2 rounded-2xl p-5 bg-white space-y-4 transition-all relative flex flex-col justify-between",
-                              isAccSelected ? "border-primary ring-2 ring-primary/10 shadow-md" : "border-gray-200 hover:border-gray-300"
+                              "border rounded-2xl p-5 bg-white space-y-4 transition-all relative flex flex-col justify-between",
+                              isAccSelected ? "border-2 border-neutral-900 shadow-sm" : "border-neutral-200 hover:border-neutral-300"
                             )}
                           >
                             <div className="space-y-3">
                               {acc.image && (
-                                <div className="aspect-video w-full rounded-xl overflow-hidden bg-gray-100">
+                                <div className="aspect-video w-full rounded-xl overflow-hidden bg-neutral-100">
                                   <SmartImage src={acc.image} alt={acc.name} aspectRatio="auto" />
                                 </div>
                               )}
                               <div className="space-y-1">
-                                <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-orange-50 px-2.5 py-0.5 rounded-full border border-orange-100 inline-block">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-700 bg-neutral-100 px-2.5 py-0.5 rounded-full inline-block">
                                   {acc.category}
                                 </span>
-                                <h3 className="font-extrabold text-gray-900 text-lg leading-tight">{acc.name}</h3>
+                                <h3 className="font-bold text-neutral-900 text-base leading-tight">{acc.name}</h3>
                                 {acc.description && (
-                                  <p className="text-xs text-gray-500 font-medium leading-relaxed">{acc.description}</p>
+                                  <p className="text-xs text-neutral-500 font-normal leading-relaxed">{acc.description}</p>
                                 )}
                               </div>
                             </div>
 
                             {/* Room Options */}
                             {acc.roomTypes && acc.roomTypes.length > 0 && (
-                              <div className="pt-3 border-t border-gray-100 space-y-2 mt-2">
-                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Select Room Type</span>
+                              <div className="pt-3 border-t border-neutral-100 space-y-2 mt-2">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Select Room Type</span>
                                 <div className="space-y-2">
                                   {acc.roomTypes.map((rt) => {
                                     const isRoomSelected = isAccSelected && selectedAccommodation?.roomTypeId === rt.id;
@@ -3059,19 +3051,19 @@ const toggleAddOn = (addon: AddOn) => {
                                         }}
                                         className={cn(
                                           "w-full text-left p-3 rounded-xl border flex items-center justify-between transition-all cursor-pointer",
-                                          isRoomSelected ? "bg-primary text-white border-primary font-bold shadow-xs" : "bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-800"
+                                          isRoomSelected ? "bg-neutral-900 text-white border-neutral-900 font-bold shadow-xs" : "bg-white hover:bg-neutral-50 border-neutral-200 text-neutral-800"
                                         )}
                                       >
                                         <div>
                                           <p className="text-xs font-bold leading-tight">{rt.name}</p>
                                           {rt.description && (
-                                            <p className={cn("text-[10px] mt-0.5 font-medium", isRoomSelected ? "text-orange-100" : "text-gray-400")}>
+                                            <p className={cn("text-[10px] mt-0.5 font-normal", isRoomSelected ? "text-neutral-300" : "text-neutral-400")}>
                                               {rt.description}
                                             </p>
                                           )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                          <span className={cn("text-xs font-black", isRoomSelected ? "text-white" : "text-primary")}>
+                                          <span className={cn("text-xs font-bold", isRoomSelected ? "text-white" : "text-neutral-900")}>
                                             +<FormattedPrice amount={rt.price} />
                                           </span>
                                           {isRoomSelected && <Check className="h-4 w-4 text-white shrink-0" />}
@@ -3091,12 +3083,12 @@ const toggleAddOn = (addon: AddOn) => {
 
                 {/* Multi-day Guide Language Selection */}
                 {tour?.tourDurationType === 'multi_day' && tour.multiDayGuides && tour.multiDayGuides.length > 0 && (
-                  <section id="guide-selection" className="space-y-6">
+                  <section id="guide-selection" className="space-y-4">
                     <div>
-                      <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <UserCheck className="h-6 w-6 text-primary" /> Select Tour Guide Language
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">
+                        <UserCheck className="h-5 w-5 text-neutral-700" /> Select Tour Guide Language
                       </h2>
-                      <p className="text-sm text-gray-500 font-medium">
+                      <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
                         Choose the language spoken by your dedicated tour guide throughout the trip.
                       </p>
                     </div>
@@ -3116,26 +3108,26 @@ const toggleAddOn = (addon: AddOn) => {
                               });
                             }}
                             className={cn(
-                              "p-4 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between gap-3 relative",
-                              isSelected ? "border-primary bg-orange-50/20 ring-2 ring-primary/10 shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
+                              "p-4 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-3 relative",
+                              isSelected ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs" : "border-neutral-200 bg-white hover:border-neutral-300"
                             )}
                           >
                             <div className="flex items-start justify-between">
                               <div>
-                                <span className="text-xs font-black text-gray-900 block">{guide.language} Guide</span>
+                                <span className="text-xs font-bold text-neutral-900 block">{guide.language} Guide</span>
                                 {guide.description && (
-                                  <p className="text-[11px] text-gray-500 font-medium mt-1 leading-snug">{guide.description}</p>
+                                  <p className="text-[11px] text-neutral-500 font-normal mt-1 leading-snug">{guide.description}</p>
                                 )}
                               </div>
                               {isSelected && (
-                                <div className="h-5 w-5 rounded-full bg-primary text-white flex items-center justify-center shrink-0">
-                                  <Check className="h-3 w-3" />
+                                <div className="h-4 w-4 rounded-full bg-neutral-900 text-white flex items-center justify-center shrink-0">
+                                  <Check className="h-2.5 w-2.5 stroke-[3]" />
                                 </div>
                               )}
                             </div>
-                            <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-xs font-black">
-                              <span className="text-gray-400 uppercase text-[9px] tracking-wider">Language Fee</span>
-                              <span className="text-primary">
+                            <div className="pt-2 border-t border-neutral-100 flex items-center justify-between text-xs font-bold">
+                              <span className="text-neutral-400 uppercase text-[9px] tracking-wider">Language Fee</span>
+                              <span className="text-neutral-900">
                                 {guide.price === 0 ? "Included (Free)" : <span>+<FormattedPrice amount={guide.price} /></span>}
                               </span>
                             </div>
@@ -3148,17 +3140,17 @@ const toggleAddOn = (addon: AddOn) => {
 
                  {/* Transport / Pick Up Option Selection */}
                 {availableTransports.length > 0 && (
-                  <section id="transport-selection" className="space-y-6">
+                  <section id="transport-selection" className="space-y-4">
                     <div>
-                      <h2 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <Car className="h-6 w-6 text-primary" /> Pick a Transport Option
+                      <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">
+                        <Car className="h-5 w-5 text-neutral-700" /> Transportation Options
                       </h2>
-                      <p className="text-sm text-gray-500 font-medium">
-                        Select your preferred transfer or meeting arrangement. Vehicles are automatically checked to accommodate your group of <span className="text-primary font-black">{adults + children}</span> traveler(s).
+                      <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
+                        Select your preferred transfer or meeting arrangement for <span className="text-neutral-900 font-bold">{adults + children}</span> traveler(s).
                       </p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                       {/* 1. Own Transport Option */}
                       {availableTransports.some(t => t.type === 'meet') && (() => {
                         const isSelected = selectedTransportType === 'meet';
@@ -3169,10 +3161,10 @@ const toggleAddOn = (addon: AddOn) => {
                         return (
                           <div
                             className={cn(
-                              "border-2 rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
+                              "border rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
                               isSelected
-                                ? "border-primary shadow-md shadow-primary/5 ring-1 ring-primary/20"
-                                : "border-slate-200 hover:border-slate-300"
+                                ? "border-2 border-neutral-900 shadow-sm"
+                                : "border-neutral-200 hover:border-neutral-300"
                             )}
                           >
                             {/* Header */}
@@ -3187,13 +3179,13 @@ const toggleAddOn = (addon: AddOn) => {
                                 }));
                                 setExpandedTransport(isExpanded ? null : 'meet');
                               }}
-                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-slate-50/50 transition-colors"
+                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3.5">
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                    isSelected ? "border-primary bg-primary" : "border-slate-300 bg-white"
+                                    isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300 bg-white"
                                   )}
                                 >
                                   {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
@@ -3201,15 +3193,15 @@ const toggleAddOn = (addon: AddOn) => {
                                 <div className="flex items-center gap-2.5">
                                   <div className={cn(
                                     "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                    isSelected ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                                    isSelected ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-700"
                                   )}>
                                     <MapPin className="h-4 w-4" />
                                   </div>
                                   <div>
-                                    <h3 className="font-extrabold text-slate-900 text-sm md:text-base leading-snug">
+                                    <h3 className="font-bold text-neutral-900 text-sm md:text-base leading-snug">
                                       Own Transport
                                     </h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
                                       Self-Arrival / Basecamp
                                     </p>
                                   </div>
@@ -3217,10 +3209,10 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
 
                               <div className="flex items-center gap-3">
-                                <span className="font-black text-primary text-xs md:text-sm bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+                                <span className="font-bold text-emerald-700 text-xs md:text-sm bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
                                   Free
                                 </span>
-                                <div className="p-1 rounded-full bg-slate-100 text-slate-500">
+                                <div className="p-1 rounded-full text-neutral-400">
                                   <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
                                 </div>
                               </div>
@@ -3233,26 +3225,26 @@ const toggleAddOn = (addon: AddOn) => {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-slate-200 bg-slate-50/50"
+                                  className="overflow-hidden border-t border-neutral-200 bg-neutral-50/50"
                                 >
                                   <div className="p-5 space-y-4 text-left">
-                                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                    <p className="text-xs text-neutral-600 font-normal leading-relaxed">
                                       Come directly to our operation basecamp or meeting point on your own. No pickup service is included.
                                     </p>
-                                    <div className="bg-white border border-primary/20 rounded-xl p-4 space-y-2">
-                                      <span className="text-[10px] font-black text-primary uppercase tracking-wider block">Meeting Point Location:</span>
-                                      <p className="text-sm font-black text-slate-900">{mp.venue}</p>
+                                    <div className="bg-white border border-neutral-200 rounded-xl p-4 space-y-2">
+                                      <span className="text-[10px] font-bold text-neutral-700 uppercase tracking-wider block">Meeting Point Location:</span>
+                                      <p className="text-sm font-bold text-neutral-900">{mp.venue}</p>
                                       {mp.address && mp.address !== mp.venue && (
-                                        <p className="text-xs text-slate-600 font-bold">{mp.address}</p>
+                                        <p className="text-xs text-neutral-600 font-medium">{mp.address}</p>
                                       )}
                                       {mp.url && (
                                         <a
                                           href={mp.url}
                                           target="_blank"
                                           rel="noopener noreferrer"
-                                          className="text-xs font-extrabold text-primary hover:underline block pt-1"
+                                          className="text-xs font-bold text-neutral-900 underline hover:text-neutral-600 block pt-1"
                                         >
-                                          📍 Open Google Maps Location
+                                          Open Google Maps Location →
                                         </a>
                                       )}
                                     </div>
@@ -3274,10 +3266,10 @@ const toggleAddOn = (addon: AddOn) => {
                         return (
                           <div
                             className={cn(
-                              "border-2 rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
+                              "border rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
                               isSelected
-                                ? "border-primary shadow-md shadow-primary/5 ring-1 ring-primary/20"
-                                : "border-slate-200 hover:border-slate-300"
+                                ? "border-2 border-neutral-900 shadow-sm"
+                                : "border-neutral-200 hover:border-neutral-300"
                             )}
                           >
                             {/* Header */}
@@ -3295,13 +3287,13 @@ const toggleAddOn = (addon: AddOn) => {
                                 });
                                 setExpandedTransport(isExpanded ? null : 'shared');
                               }}
-                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-slate-50/50 transition-colors"
+                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3.5">
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                    isSelected ? "border-primary bg-primary" : "border-slate-300 bg-white"
+                                    isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300 bg-white"
                                   )}
                                 >
                                   {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
@@ -3309,15 +3301,15 @@ const toggleAddOn = (addon: AddOn) => {
                                 <div className="flex items-center gap-2.5">
                                   <div className={cn(
                                     "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                    isSelected ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                                    isSelected ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-700"
                                   )}>
                                     <Bus className="h-4 w-4" />
                                   </div>
                                   <div>
-                                    <h3 className="font-extrabold text-slate-900 text-sm md:text-base leading-snug">
+                                    <h3 className="font-bold text-neutral-900 text-sm md:text-base leading-snug">
                                       Shared Shuttle Transfer
                                     </h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
                                       Shared Pickup & Drop-off
                                     </p>
                                   </div>
@@ -3325,10 +3317,10 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
 
                               <div className="flex items-center gap-3">
-                                <span className="font-black text-primary text-xs md:text-sm bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+                                <span className="font-bold text-neutral-900 text-xs md:text-sm">
                                   {rateText}
                                 </span>
-                                <div className="p-1 rounded-full bg-slate-100 text-slate-500">
+                                <div className="p-1 rounded-full text-neutral-400">
                                   <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
                                 </div>
                               </div>
@@ -3341,15 +3333,15 @@ const toggleAddOn = (addon: AddOn) => {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-slate-200 bg-slate-50/50"
+                                  className="overflow-hidden border-t border-neutral-200 bg-neutral-50/50"
                                 >
                                   <div className="p-5 space-y-4 text-left">
-                                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                    <p className="text-xs text-neutral-600 font-normal leading-relaxed">
                                       Pickup & drop-off shared with other travelers going to the same tour. Pickup schedule will be confirmed based on your hotel area.
                                     </p>
                                     {(selectedPackage?.pickupAreas || tour?.pickupAreas) && (
-                                      <div className="bg-blue-50/60 border border-blue-200/60 rounded-xl p-3.5 text-xs text-slate-700 font-semibold">
-                                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider block mb-1">Served Areas:</span>
+                                      <div className="bg-neutral-100 border border-neutral-200 rounded-xl p-3.5 text-xs text-neutral-700 font-medium">
+                                        <span className="text-[10px] font-bold text-neutral-900 uppercase tracking-wider block mb-1">Served Areas:</span>
                                         {selectedPackage?.pickupAreas || tour?.pickupAreas}
                                       </div>
                                     )}
@@ -3376,10 +3368,10 @@ const toggleAddOn = (addon: AddOn) => {
                         return (
                           <div
                             className={cn(
-                              "border-2 rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
+                              "border rounded-2xl transition-all overflow-hidden bg-white shadow-xs",
                               isSelected
-                                ? "border-primary shadow-md shadow-primary/5 ring-1 ring-primary/20"
-                                : "border-slate-200 hover:border-slate-300"
+                                ? "border-2 border-neutral-900 shadow-sm"
+                                : "border-neutral-200 hover:border-neutral-300"
                             )}
                           >
                             {/* Header */}
@@ -3398,13 +3390,13 @@ const toggleAddOn = (addon: AddOn) => {
                                 });
                                 setExpandedTransport(isExpanded ? null : 'private');
                               }}
-                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-slate-50/50 transition-colors"
+                              className="flex items-center justify-between p-4 md:p-5 cursor-pointer bg-white hover:bg-neutral-50/50 transition-colors"
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-3.5">
                                 <div
                                   className={cn(
                                     "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                                    isSelected ? "border-primary bg-primary" : "border-slate-300 bg-white"
+                                    isSelected ? "border-neutral-900 bg-neutral-900" : "border-neutral-300 bg-white"
                                   )}
                                 >
                                   {isSelected && <div className="h-2 w-2 rounded-full bg-white" />}
@@ -3412,15 +3404,15 @@ const toggleAddOn = (addon: AddOn) => {
                                 <div className="flex items-center gap-2.5">
                                   <div className={cn(
                                     "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
-                                    isSelected ? "bg-primary text-white" : "bg-orange-50 text-primary"
+                                    isSelected ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-700"
                                   )}>
                                     <Car className="h-4 w-4" />
                                   </div>
                                   <div>
-                                    <h3 className="font-extrabold text-slate-900 text-sm md:text-base leading-snug">
+                                    <h3 className="font-bold text-neutral-900 text-sm md:text-base leading-snug">
                                       Private Transfer
                                     </h3>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                    <p className="text-[10px] font-semibold text-neutral-400 uppercase tracking-wider">
                                       Dedicated Vehicle & Driver
                                     </p>
                                   </div>
@@ -3428,10 +3420,10 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
 
                               <div className="flex items-center gap-3">
-                                <span className="font-black text-primary text-xs md:text-sm bg-orange-50 px-3 py-1 rounded-full border border-orange-100">
+                                <span className="font-bold text-neutral-900 text-xs md:text-sm">
                                   {rateText}
                                 </span>
-                                <div className="p-1 rounded-full bg-slate-100 text-slate-500">
+                                <div className="p-1 rounded-full text-neutral-400">
                                   <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-180")} />
                                 </div>
                               </div>
@@ -3444,16 +3436,16 @@ const toggleAddOn = (addon: AddOn) => {
                                   initial={{ height: 0, opacity: 0 }}
                                   animate={{ height: "auto", opacity: 1 }}
                                   exit={{ height: 0, opacity: 0 }}
-                                  className="overflow-hidden border-t border-slate-200 bg-slate-50/50"
+                                  className="overflow-hidden border-t border-neutral-200 bg-neutral-50/50"
                                 >
                                   <div className="p-5 space-y-4 text-left">
-                                    <p className="text-xs text-slate-600 font-medium leading-relaxed">
+                                    <p className="text-xs text-neutral-600 font-normal leading-relaxed">
                                       Air-conditioned vehicle with professional driver exclusively for your group. Select your preferred vehicle below:
                                     </p>
 
                                     {(selectedPackage?.pickupAreas || tour?.pickupAreas) && (
-                                      <div className="bg-blue-50/60 border border-blue-200/60 rounded-xl p-3 text-xs text-slate-700 font-semibold mb-3">
-                                        <span className="text-[10px] font-black text-blue-800 uppercase tracking-wider block mb-0.5">Served Areas:</span>
+                                      <div className="bg-neutral-100 border border-neutral-200 rounded-xl p-3 text-xs text-neutral-700 font-medium mb-3">
+                                        <span className="text-[10px] font-bold text-neutral-900 uppercase tracking-wider block mb-0.5">Served Areas:</span>
                                         {selectedPackage?.pickupAreas || tour?.pickupAreas}
                                       </div>
                                     )}
@@ -3475,22 +3467,22 @@ const toggleAddOn = (addon: AddOn) => {
                                               setSelectedTransport(t);
                                             }}
                                             className={cn(
-                                              "border-2 rounded-xl p-3.5 transition-all bg-white cursor-pointer flex flex-col justify-between gap-2 text-left",
+                                              "border rounded-xl p-3.5 transition-all bg-white cursor-pointer flex flex-col justify-between gap-2 text-left",
                                               isCarSelected
-                                                ? "border-primary bg-orange-50/20 ring-1 ring-primary/20 shadow-xs"
-                                                : "border-slate-200 hover:border-slate-300"
+                                                ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                                                : "border-neutral-200 hover:border-neutral-300"
                                             )}
                                           >
                                             <div className="flex items-center justify-between">
                                               <div className="flex items-center gap-2">
-                                                <Car className={cn("h-4 w-4", isCarSelected ? "text-primary" : "text-slate-400")} />
-                                                <span className="font-extrabold text-slate-900 text-xs">{t.name}</span>
+                                                <Car className={cn("h-4 w-4", isCarSelected ? "text-neutral-900" : "text-neutral-400")} />
+                                                <span className="font-bold text-neutral-900 text-xs">{t.name}</span>
                                               </div>
-                                              {isCarSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                                              {isCarSelected && <Check className="h-4 w-4 text-neutral-900 shrink-0" />}
                                             </div>
-                                            <div className="flex items-center justify-between text-[11px] font-bold border-t border-slate-100 pt-2">
-                                              <span className="text-slate-400">Cap: {t.maxCapacity} pax</span>
-                                              <span className="text-primary font-black"><FormattedPrice amount={t.price} /> / car</span>
+                                            <div className="flex items-center justify-between text-[11px] font-medium border-t border-neutral-100 pt-2">
+                                              <span className="text-neutral-400">Cap: {t.maxCapacity} pax</span>
+                                              <span className="text-neutral-900 font-bold"><FormattedPrice amount={t.price} /> / car</span>
                                             </div>
                                           </button>
                                         );
@@ -3507,13 +3499,13 @@ const toggleAddOn = (addon: AddOn) => {
 
                     {/* Hotel Address Input Form for Shared and Private Transfer */}
                     {(selectedTransportType === 'shared' || selectedTransportType === 'private') && (
-                      <div className="bg-orange-50/20 border border-primary/20 rounded-2xl p-6 mt-6 space-y-3 animate-in fade-in duration-200">
-                        <label className="text-xs font-black text-gray-700 uppercase tracking-widest flex items-center gap-2">
-                          <MapPin className="h-4 w-4 text-primary" />
+                      <div className="bg-white border border-neutral-200 rounded-2xl p-6 mt-4 space-y-3 animate-in fade-in duration-200 text-left">
+                        <label className="text-xs font-bold text-neutral-900 uppercase tracking-wider flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-neutral-700" />
                           Hotel Name & Address (For Pickup) <span className="text-rose-500 font-bold">*</span>
                         </label>
-                        <p className="text-xs text-gray-500 font-medium">
-                          Please enter the complete name of your hotel, resort, or villa, and its address in Bali for our driver to pick you up.
+                        <p className="text-xs text-neutral-500 font-normal">
+                          Please enter the complete name of your hotel, resort, or villa, and its address for our driver to pick you up.
                         </p>
                         <textarea
                           required
@@ -3526,10 +3518,10 @@ const toggleAddOn = (addon: AddOn) => {
                             })
                           }
                           placeholder="e.g. Ayana Resort Bali, Jl. Karang Mas Sejahtera, Jimbaran"
-                          className="w-full rounded-xl border-2 border-gray-100 p-4 focus:border-primary focus:outline-none bg-white font-bold transition-all text-sm shadow-sm"
+                          className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                         />
                         {!customerData.pickupAddress.trim() && (
-                          <p className="text-[11px] text-rose-500 font-bold animate-pulse">
+                          <p className="text-[11px] text-rose-500 font-bold">
                             ⚠️ Hotel address is required to arrange your pickup.
                           </p>
                         )}
@@ -3539,39 +3531,39 @@ const toggleAddOn = (addon: AddOn) => {
                 )}
 
                 {/* Add-on Selection */}
-                <section className="space-y-6">
+                <section className="space-y-4">
                   <div>
-                    <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+                    <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">
                       Enhance Your Trip
                     </h2>
-                    <p className="text-sm text-gray-500 font-medium">
-                      Add those extra touches to make your journey perfect.
+                    <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
+                      Add optional extras to customize your experience.
                     </p>
                   </div>
 
-                  <div className="grid sm:grid-cols-2 gap-6">
+                  <div className="grid sm:grid-cols-2 gap-4">
                     {/* Explicit "None" Option for Add-ons */}
                     <div
                       onClick={() => setSelectedAddOns([])}
                       className={cn(
-                        "border-2 rounded-[15px] p-5 transition-all bg-white relative cursor-pointer group",
+                        "border rounded-2xl p-4 transition-all bg-white relative cursor-pointer",
                         selectedAddOns.length === 0
-                          ? "border-primary bg-orange-50/10"
-                          : "border-gray-50 hover:border-primary/20",
+                          ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                          : "border-neutral-200 hover:border-neutral-300",
                       )}
                     >
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-3">
                         <div className={cn(
-                          "h-6 w-6 rounded border-2 transition-all flex items-center justify-center",
+                          "h-5 w-5 rounded-full border-2 transition-all flex items-center justify-center shrink-0",
                           selectedAddOns.length === 0
-                            ? "bg-primary border-primary text-white"
-                            : "border-gray-200",
+                            ? "bg-neutral-900 border-neutral-900 text-white"
+                            : "border-neutral-300",
                         )}>
-                          {selectedAddOns.length === 0 && <Check className="h-4 w-4" />}
+                          {selectedAddOns.length === 0 && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                         </div>
                         <div>
-                          <h4 className="font-extrabold text-gray-900">No Add-ons</h4>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">I don't need any extras</p>
+                          <h4 className="font-bold text-neutral-900 text-sm">No Add-ons</h4>
+                          <p className="text-[11px] text-neutral-400 font-normal">Continue with tour package only</p>
                         </div>
                       </div>
                     </div>
@@ -3586,51 +3578,51 @@ const toggleAddOn = (addon: AddOn) => {
                         <div
                           key={idx}
                           className={cn(
-                            "border-2 rounded-[15px] p-5 transition-all bg-white relative group",
+                            "border rounded-2xl p-4 transition-all bg-white relative",
                             isSelected
-                              ? "border-primary bg-orange-50/10"
-                              : "border-gray-50 hover:border-primary/20",
+                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                              : "border-neutral-200 hover:border-neutral-300",
                           )}
                         >
                           <div className="flex items-start justify-between">
-                            <div className="flex gap-4">
+                            <div className="flex gap-3">
                               <button
                                 onClick={() => toggleAddOn(addon)}
                                 className={cn(
-                                  "h-6 w-6 rounded border-2 transition-all flex items-center justify-center mt-1",
+                                  "h-5 w-5 rounded-md border-2 transition-all flex items-center justify-center mt-0.5 shrink-0",
                                   isSelected
-                                    ? "bg-primary border-primary text-white"
-                                    : "border-gray-200",
+                                    ? "bg-neutral-900 border-neutral-900 text-white"
+                                    : "border-neutral-300",
                                 )}
                               >
-                                {isSelected && <Check className="h-4 w-4" />}
+                                {isSelected && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                               </button>
                               <div>
-                                <h4 className="font-extrabold text-gray-900">
+                                <h4 className="font-bold text-neutral-900 text-sm">
                                   {addon.name}
                                 </h4>
-                                <p className="text-xs font-bold text-primary mt-1 tracking-tight">
+                                <p className="text-xs font-bold text-neutral-700 mt-0.5">
                                   <FormattedPrice amount={addon.price} /> / {addon.unit}
                                 </p>
                                 
                                 {isSelected && (
-                                  <div className="mt-4 flex items-center gap-4 p-2 bg-white rounded-lg border border-gray-100 shadow-sm w-fit">
-                                    <span className="text-xs font-semibold text-gray-500 ml-1">Quantity:</span>
-                                    <div className="flex items-center gap-3">
+                                  <div className="mt-3 flex items-center gap-3 p-1.5 bg-white rounded-lg border border-neutral-200 w-fit">
+                                    <span className="text-[11px] font-medium text-neutral-500 ml-1">Qty:</span>
+                                    <div className="flex items-center gap-2">
                                       <button 
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); updateAddOnQuantity(addon.id, -1); }}
-                                        className="h-6 w-6 rounded-md bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100"
+                                        className="h-6 w-6 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-700 hover:bg-neutral-200"
                                       >
                                         <Minus className="h-3 w-3" />
                                       </button>
-                                      <span className="text-sm font-black text-gray-900 w-4 text-center">
+                                      <span className="text-xs font-bold text-neutral-900 w-4 text-center">
                                         {selectedAddOns.find(a => a.id === addon.id)?.quantity}
                                       </span>
                                       <button 
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); updateAddOnQuantity(addon.id, 1); }}
-                                        className="h-6 w-6 rounded-md bg-gray-50 flex items-center justify-center text-gray-500 hover:bg-gray-100"
+                                        className="h-6 w-6 rounded-md bg-neutral-100 flex items-center justify-center text-neutral-700 hover:bg-neutral-200"
                                       >
                                         <Plus className="h-3 w-3" />
                                       </button>
@@ -3643,9 +3635,9 @@ const toggleAddOn = (addon: AddOn) => {
                               onClick={() =>
                                 setExpandedAddOn(isExpanded ? null : addon.id)
                               }
-                              className="text-gray-400 hover:text-primary transition-colors p-1"
+                              className="text-neutral-400 hover:text-neutral-700 transition-colors p-1"
                             >
-                              <Info className="h-5 w-5" />
+                              <Info className="h-4 w-4" />
                             </button>
                           </div>
 
@@ -3656,12 +3648,12 @@ const toggleAddOn = (addon: AddOn) => {
                                 animate={{
                                   height: "auto",
                                   opacity: 1,
-                                  marginTop: 12,
+                                  marginTop: 10,
                                 }}
                                 exit={{ height: 0, opacity: 0, marginTop: 0 }}
                                 className="overflow-hidden"
                               >
-                                <p className="text-xs text-gray-500 font-medium leading-relaxed bg-gray-50 p-3 rounded-lg border border-gray-100">
+                                <p className="text-xs text-neutral-600 font-normal leading-relaxed bg-neutral-50 p-3 rounded-lg border border-neutral-200">
                                   {addon.description}
                                 </p>
                               </motion.div>
@@ -3673,9 +3665,9 @@ const toggleAddOn = (addon: AddOn) => {
                   </div>
                 </section>
 
-                <div className="pt-8 hidden md:flex flex-col items-end gap-4">
+                <div className="pt-6 hidden md:flex flex-col items-end gap-3">
                   {(spotsLeft !== null && (adults + children) > spotsLeft) && (
-                    <div className="flex items-center gap-2 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+                    <div className="flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-200">
                       <Info className="h-4 w-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">
                         Capacity Exceeded: Only {spotsLeft} spots remaining
@@ -3683,7 +3675,7 @@ const toggleAddOn = (addon: AddOn) => {
                     </div>
                   )}
                   {isUnderMinParticipants && (
-                    <div className="flex items-center gap-2 text-red-500 bg-red-50 px-4 py-2 rounded-lg border border-red-100">
+                    <div className="flex items-center gap-2 text-rose-600 bg-rose-50 px-4 py-2 rounded-xl border border-rose-200">
                       <Info className="h-4 w-4" />
                       <span className="text-xs font-bold uppercase tracking-wider">
                         Fewer than minimum participants required for selected package
@@ -3693,10 +3685,10 @@ const toggleAddOn = (addon: AddOn) => {
                   <button
                     onClick={() => updateStep("customer")}
                     disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isUnderMinParticipants}
-                    className="bg-primary text-white px-12 py-5 rounded-full font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="bg-neutral-900 hover:bg-black text-white px-10 py-4 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSoldOut ? 'Sold Out' : (spotsLeft !== null && (adults + children) > spotsLeft) ? 'Not Enough Spots' : 
-                     isUnderMinParticipants ? 'Under Min Travelers' : 'Continue To Details'} <ChevronRight className="h-4 w-4" />
+                     isUnderMinParticipants ? 'Under Min Travelers' : 'Continue to Guest Details'} <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -3704,20 +3696,20 @@ const toggleAddOn = (addon: AddOn) => {
 
             {/* Step 2: Customer Info */}
             {step === "customer" && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 text-left">
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900 tracking-tight">
-                    Who's Traveling?
+                  <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">
+                    Traveler details
                   </h2>
-                  <p className="text-sm text-gray-500 font-medium">
-                    Please provide your details for the booking confirmation.
+                  <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
+                    Please provide your contact information for booking confirmation and tickets.
                   </p>
                 </div>
 
-                <div className="bg-white p-8 rounded-[20px] border border-gray-100 shadow-sm space-y-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-500 px-1">
-                      Full Name
+                <div className="bg-white p-6 md:p-8 rounded-2xl border border-neutral-200 shadow-xs space-y-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-neutral-700">
+                      Full Name *
                     </label>
                     <input
                       required
@@ -3729,14 +3721,14 @@ const toggleAddOn = (addon: AddOn) => {
                           fullName: e.target.value,
                         })
                       }
-                      placeholder="e.g. John Alexander"
-                      className="w-full rounded-[12px] border-2 border-gray-50 p-4 focus:border-primary focus:outline-none bg-gray-50/30 font-bold transition-all text-sm"
+                      placeholder="e.g. John Doe"
+                      className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                     />
                   </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 px-1">
-                        Email Address
+                  <div className="grid md:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-700">
+                        Email Address *
                       </label>
                       <input
                         required
@@ -3749,12 +3741,12 @@ const toggleAddOn = (addon: AddOn) => {
                           })
                         }
                         placeholder="john@example.com"
-                        className="w-full rounded-[12px] border-2 border-gray-50 p-4 focus:border-primary focus:outline-none bg-gray-50/30 font-bold transition-all text-sm"
+                        className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                       />
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 px-1 uppercase tracking-widest flex items-center gap-2">
-                        Nationality
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-neutral-700">
+                        Nationality *
                       </label>
                       <select
                         required
@@ -3765,7 +3757,7 @@ const toggleAddOn = (addon: AddOn) => {
                             nationality: e.target.value,
                           })
                         }
-                        className="w-full rounded-[12px] border-2 border-gray-50 p-4 focus:border-primary focus:outline-none bg-gray-50/30 font-bold transition-all text-sm appearance-none"
+                        className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                       >
                         <option value="">Select Country</option>
                         {COUNTRIES_WITH_CODES.map((c) => (
@@ -3775,9 +3767,9 @@ const toggleAddOn = (addon: AddOn) => {
                         ))}
                       </select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black text-gray-400 px-1 uppercase tracking-widest flex items-center gap-2">
-                        Phone Number
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-xs font-semibold text-neutral-700">
+                        Phone Number (WhatsApp) *
                       </label>
                       <input
                         required
@@ -3789,22 +3781,22 @@ const toggleAddOn = (addon: AddOn) => {
                             phone: e.target.value,
                           })
                         }
-                        placeholder="e.g. 081238363366"
-                        className="w-full rounded-[12px] border-2 border-gray-50 p-4 focus:border-primary focus:outline-none bg-gray-50/30 font-bold transition-all text-sm"
+                        placeholder="e.g. +1 555 123 4567"
+                        className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                       />
                       {customerData.phone && customerData.nationality && (
-                        <p className="text-[11px] text-primary font-bold px-1 animate-in fade-in">
-                          Will be saved as: <span className="font-mono text-xs">{getInternationalPhoneNumber(customerData.phone, customerData.nationality)}</span> (for WhatsApp delivery)
+                        <p className="text-[11px] text-neutral-500 font-normal pt-0.5">
+                          Formatted for mobile vouchers: <span className="font-mono font-semibold text-neutral-900">{getInternationalPhoneNumber(customerData.phone, customerData.nationality)}</span>
                         </p>
                       )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-gray-400 px-1 uppercase tracking-widest">
-                      Special Requirements
+                  <div className="space-y-1.5 pt-1">
+                    <label className="text-xs font-semibold text-neutral-700">
+                      Special Requests / Notes (Optional)
                     </label>
                     <textarea
-                      rows={4}
+                      rows={3}
                       value={customerData.specialRequirements}
                       onChange={(e) =>
                         setCustomerData({
@@ -3812,18 +3804,18 @@ const toggleAddOn = (addon: AddOn) => {
                           specialRequirements: e.target.value,
                         })
                       }
-                      placeholder="Allergies, wheelchair access, dietary preferences..."
-                      className="w-full rounded-[12px] border-2 border-gray-50 p-4 focus:border-primary focus:outline-none bg-gray-50/30 font-bold transition-all text-sm"
+                      placeholder="Dietary requirements, accessibility needs, or notes for the guide..."
+                      className="w-full rounded-xl border border-neutral-200 p-3.5 focus:border-neutral-900 focus:outline-none bg-white font-medium transition-all text-sm"
                     />
                   </div>
                 </div>
 
-                <div className="hidden md:flex justify-between items-center">
+                <div className="hidden md:flex justify-between items-center pt-2">
                   <button
                     onClick={() => updateStep("selection")}
-                    className="text-gray-400 font-bold text-sm tracking-tight hover:text-gray-600"
+                    className="text-neutral-600 font-semibold text-sm hover:text-neutral-900 transition-colors cursor-pointer"
                   >
-                    Back
+                    ← Back to Options
                   </button>
                   <button
                     onClick={() => {
@@ -3831,9 +3823,9 @@ const toggleAddOn = (addon: AddOn) => {
                         updateStep("payment");
                       }
                     }}
-                    className="bg-primary text-white px-12 py-5 rounded-full font-black tracking-[0.2em] text-xs shadow-xl shadow-primary/20 hover:opacity-90 transition-all flex items-center gap-3"
+                    className="bg-neutral-900 hover:bg-black text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
                   >
-                    Continue To Payment <ChevronRight className="h-4 w-4" />
+                    Continue to Payment <ChevronRight className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -3841,23 +3833,23 @@ const toggleAddOn = (addon: AddOn) => {
 
             {/* Step 3: Payment */}
             {step === "payment" && (
-              <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4">
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-3 text-left">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                      Select Payment Method
+                    <h2 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">
+                      Choose how to pay
                     </h2>
-                    <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                      Choose your preferred way to pay securely.
+                    <p className="text-xs md:text-sm text-neutral-500 mt-0.5">
+                      All transactions are secure and encrypted.
                     </p>
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold border border-emerald-200/60 self-start sm:self-auto">
-                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 text-xs font-semibold border border-emerald-200/80 self-start sm:self-auto">
+                    <ShieldCheck className="h-4 w-4 text-emerald-600" />
                     <span>256-Bit SSL Encrypted</span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
                     {
                       id: "stripe",
@@ -3952,29 +3944,29 @@ const toggleAddOn = (addon: AddOn) => {
                           className={cn(
                             "p-3.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 select-none",
                             isSelected
-                              ? "border-primary bg-primary/[0.04] shadow-sm ring-1 ring-primary/30"
-                              : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50/60",
+                              ? "border-2 border-neutral-900 bg-neutral-50/50 shadow-xs"
+                              : "border-neutral-200 bg-white hover:border-neutral-300",
                           )}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <div
                               className={cn(
-                                "h-9 w-9 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                                "h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
                                 isSelected
-                                  ? "bg-primary text-white"
-                                  : "bg-gray-100 text-gray-500",
+                                  ? "bg-neutral-900 text-white"
+                                  : "bg-neutral-100 text-neutral-600",
                               )}
                             >
-                              <method.icon className="h-4.5 w-4.5" />
+                              <method.icon className="h-4 w-4" />
                             </div>
                             <div className="min-w-0">
-                              <p className="font-bold text-xs sm:text-sm text-gray-900 truncate leading-snug">
+                              <p className="font-bold text-xs sm:text-sm text-neutral-900 truncate leading-snug">
                                 {method.label}
                               </p>
                               {method.tag && (
                                 <span className={cn(
-                                  "text-[10px] font-semibold",
-                                  isSelected ? "text-primary" : "text-gray-400"
+                                  "text-[10px] font-medium",
+                                  isSelected ? "text-neutral-900 font-semibold" : "text-neutral-400"
                                 )}>
                                   {method.tag}
                                 </span>
@@ -3983,15 +3975,13 @@ const toggleAddOn = (addon: AddOn) => {
                           </div>
                           <div
                             className={cn(
-                              "h-4.5 w-4.5 rounded-full border flex items-center justify-center shrink-0 transition-all",
+                              "h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
                               isSelected
-                                ? "bg-primary border-primary text-white"
-                                : "border-gray-300 bg-white",
+                                ? "border-neutral-900 bg-neutral-900"
+                                : "border-neutral-300 bg-white",
                             )}
                           >
-                            {isSelected && (
-                              <Check className="h-2.5 w-2.5 stroke-[3]" />
-                            )}
+                            {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
                           </div>
                         </div>
                       );
@@ -4002,24 +3992,24 @@ const toggleAddOn = (addon: AddOn) => {
                   <motion.div
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-emerald-50/40 rounded-xl p-5 sm:p-6 border border-emerald-200/80 space-y-4"
+                    className="bg-emerald-50/50 rounded-xl p-5 border border-emerald-200 space-y-3"
                   >
-                    <div className="flex items-center gap-3 text-gray-900">
-                      <div className="h-9 w-9 rounded-lg bg-emerald-100/80 flex items-center justify-center shadow-xs">
-                        <DollarSign className="h-5 w-5 text-emerald-700" />
+                    <div className="flex items-center gap-3 text-emerald-950">
+                      <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                        <DollarSign className="h-4 w-4 text-emerald-800" />
                       </div>
                       <div>
                         <h4 className="font-bold text-sm text-emerald-950">
                           Cash on Arrival
                         </h4>
-                        <p className="text-[11px] text-emerald-700 font-medium">
+                        <p className="text-xs text-emerald-700 font-normal">
                           Pay directly to our guide or driver on the tour date
                         </p>
                       </div>
                     </div>
 
-                    <div className="text-xs text-emerald-900 font-medium leading-relaxed bg-white/80 p-3.5 rounded-lg border border-emerald-100">
-                      Please prepare <span className="font-bold text-gray-900">{formatPrice(summary.grandTotal)}</span> in cash (IDR or USD equivalent) on the day of your tour. Your reservation will be submitted and confirmed upon guide verification.
+                    <div className="text-xs text-emerald-900 font-normal leading-relaxed bg-white p-3 rounded-lg border border-emerald-100">
+                      Please prepare <span className="font-bold text-neutral-900">{formatPrice(summary.grandTotal)}</span> in cash (IDR or USD equivalent) on the day of your tour. Your reservation will be registered and confirmed immediately.
                     </div>
                   </motion.div>
                 )}
@@ -4028,92 +4018,39 @@ const toggleAddOn = (addon: AddOn) => {
                   <motion.div
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-sky-50/40 rounded-xl p-5 sm:p-6 border border-sky-200/80 space-y-4"
+                    className="bg-neutral-50 rounded-xl p-5 border border-neutral-200 space-y-4"
                   >
-                    <div className="flex items-center gap-3 text-gray-900">
-                      <div className="h-9 w-9 rounded-lg bg-sky-100 flex items-center justify-center shadow-xs">
-                        <Globe className="h-5 w-5 text-sky-700" />
+                    <div className="flex items-center gap-3 text-neutral-900">
+                      <div className="h-8 w-8 rounded-lg bg-neutral-200 flex items-center justify-center">
+                        <Globe className="h-4 w-4 text-neutral-800" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-sky-950">
+                        <h4 className="font-bold text-sm text-neutral-900">
                           Wise (TransferWise) Bank Transfer
                         </h4>
-                        <p className="text-[11px] text-sky-700 font-medium">
+                        <p className="text-xs text-neutral-500 font-normal">
                           Real mid-market exchange rate & low transfer fees
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4 pt-1">
-                      <div className="space-y-0.5 bg-white p-3 rounded-lg border border-sky-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                      <div className="space-y-0.5 bg-white p-3 rounded-xl border border-neutral-200">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                           Payment Destination
                         </span>
-                        <p className="font-bold text-gray-900 text-xs sm:text-sm">
+                        <p className="font-bold text-neutral-900 text-xs sm:text-sm">
                           {paymentSettings?.bankName || "Wise Account"} ({paymentSettings?.accountHolder || "Bali Adventours"})
                         </p>
                       </div>
-                      <div className="space-y-0.5 bg-white p-3 rounded-lg border border-sky-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <div className="space-y-0.5 bg-white p-3 rounded-xl border border-neutral-200">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                           Amount To Transfer
                         </span>
-                        <p className="font-black text-base text-sky-700">
+                        <p className="font-bold text-base text-neutral-900">
                           <FormattedPrice amount={summary.amountToPay} />
                         </p>
                       </div>
-                      {paymentSettings?.accountNumber && (
-                        <div className="space-y-0.5 bg-white p-3 rounded-lg border border-sky-100">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            Wise / IBAN Account
-                          </span>
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-xs sm:text-sm text-gray-900">
-                              {paymentSettings.accountNumber}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(paymentSettings.accountNumber);
-                                alert("Account number copied to clipboard!");
-                              }}
-                              className="px-2 py-0.5 rounded bg-sky-100 hover:bg-sky-200 text-sky-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <Copy className="h-2.5 w-2.5" /> Copy
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      {paymentSettings?.swiftCode && (
-                        <div className="space-y-0.5 bg-white p-3 rounded-lg border border-sky-100">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            SWIFT / BIC Code
-                          </span>
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-xs sm:text-sm text-sky-800 uppercase">
-                              {paymentSettings.swiftCode}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(paymentSettings.swiftCode || '');
-                                alert("SWIFT code copied to clipboard!");
-                              }}
-                              className="px-2 py-0.5 rounded bg-sky-100 hover:bg-sky-200 text-sky-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <Copy className="h-2.5 w-2.5" /> Copy
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="bg-white/90 p-3.5 rounded-lg text-xs text-sky-950 font-medium leading-relaxed border border-sky-100 space-y-1">
-                      <p className="font-bold flex items-center gap-1 text-sky-900 text-[11px]">
-                        <Info className="h-3.5 w-3.5" /> Transfer Instructions
-                      </p>
-                      <p className="text-gray-600 text-[11px]">
-                        Transfer to the Wise account above and enter your Booking ID in the transfer note. Your booking status will be updated upon receipt.
-                      </p>
                     </div>
                   </motion.div>
                 )}
@@ -4122,37 +4059,37 @@ const toggleAddOn = (addon: AddOn) => {
                   <motion.div
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-gray-50/80 rounded-xl p-5 sm:p-6 border border-gray-200 space-y-4"
+                    className="bg-neutral-50 rounded-xl p-5 border border-neutral-200 space-y-4"
                   >
-                    <div className="flex items-center gap-3 text-gray-900">
-                      <div className="h-9 w-9 rounded-lg bg-white border border-gray-200 flex items-center justify-center shadow-xs">
-                        <Banknote className="h-5 w-5 text-gray-700" />
+                    <div className="flex items-center gap-3 text-neutral-900">
+                      <div className="h-8 w-8 rounded-lg bg-white border border-neutral-200 flex items-center justify-center">
+                        <Banknote className="h-4 w-4 text-neutral-700" />
                       </div>
                       <div>
-                        <h4 className="font-bold text-sm text-gray-900">
+                        <h4 className="font-bold text-sm text-neutral-900">
                           Direct Bank Transfer
                         </h4>
-                        <p className="text-[11px] text-gray-500 font-medium">
+                        <p className="text-xs text-neutral-500 font-normal">
                           Deposit directly to our merchant bank account
                         </p>
                       </div>
                     </div>
 
-                    <div className="grid sm:grid-cols-2 gap-4 pt-1">
-                      <div className="space-y-0.5 bg-white p-3 rounded-lg border border-gray-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                      <div className="space-y-0.5 bg-white p-3 rounded-xl border border-neutral-200">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                           Bank Name
                         </span>
-                        <p className="font-bold text-gray-900 text-xs sm:text-sm">
+                        <p className="font-bold text-neutral-900 text-xs sm:text-sm">
                           {paymentSettings.bankName || "N/A"}
                         </p>
                       </div>
-                      <div className="space-y-0.5 bg-white p-3 rounded-lg border border-gray-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      <div className="space-y-0.5 bg-white p-3 rounded-xl border border-neutral-200">
+                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
                           Account Number
                         </span>
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-bold text-xs sm:text-sm text-primary">
+                          <span className="font-mono font-bold text-xs sm:text-sm text-neutral-900">
                             {paymentSettings.accountNumber || "N/A"}
                           </span>
                           {paymentSettings.accountNumber && (
@@ -4162,75 +4099,39 @@ const toggleAddOn = (addon: AddOn) => {
                                 navigator.clipboard.writeText(paymentSettings.accountNumber);
                                 alert("Account number copied to clipboard!");
                               }}
-                              className="px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                              className="px-2 py-0.5 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
                             >
                               <Copy className="h-2.5 w-2.5" /> Copy
                             </button>
                           )}
                         </div>
                       </div>
-                      {paymentSettings?.swiftCode && (
-                        <div className="space-y-0.5 bg-white p-3 rounded-lg border border-gray-100">
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                            SWIFT / BIC Code
-                          </span>
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-xs sm:text-sm text-secondary uppercase">
-                              {paymentSettings.swiftCode}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                navigator.clipboard.writeText(paymentSettings.swiftCode || '');
-                                alert("SWIFT code copied to clipboard!");
-                              }}
-                              className="px-2 py-0.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-800 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                            >
-                              <Copy className="h-2.5 w-2.5" /> Copy
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                      <div className="space-y-0.5 bg-white p-3 rounded-lg border border-gray-100">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                          Account Holder
-                        </span>
-                        <p className="font-bold text-gray-900 text-xs sm:text-sm">
-                          {paymentSettings.accountHolder || "N/A"}
-                        </p>
-                      </div>
                     </div>
-
-                    {paymentSettings.bankInstructions && (
-                      <div className="bg-white p-3 rounded-lg text-xs text-gray-600 font-medium leading-relaxed border border-gray-100">
-                        {paymentSettings.bankInstructions}
-                      </div>
-                    )}
                   </motion.div>
                 )}
 
-                <div className="space-y-6">
-                  <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 shadow-sm cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => setAgreedToTerms(!agreedToTerms)}>
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3 p-4 bg-white rounded-xl border border-neutral-200 shadow-xs cursor-pointer hover:bg-neutral-50/50 transition-colors" onClick={() => setAgreedToTerms(!agreedToTerms)}>
                     <button
                       type="button"
                       className={cn(
-                        "h-6 w-6 rounded-md border-2 flex items-center justify-center transition-all",
-                        agreedToTerms ? "bg-primary border-primary text-white" : "border-gray-200"
+                        "h-5 w-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0",
+                        agreedToTerms ? "bg-neutral-900 border-neutral-900 text-white" : "border-neutral-300"
                       )}
                     >
-                      {agreedToTerms && <Check className="h-4 w-4" />}
+                      {agreedToTerms && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                     </button>
-                    <p className="text-xs text-gray-600 font-medium">
-                      By booking this tour you agree to our <Link to="/pages/terms-and-conditions" className="text-primary font-bold hover:underline" target="_blank">Terms and Conditions</Link>
+                    <p className="text-xs text-neutral-600 font-normal">
+                      By continuing, I agree to the <Link to="/pages/terms-and-conditions" className="text-neutral-900 font-semibold underline hover:text-neutral-700" target="_blank">Terms & Conditions</Link> and Cancellation Policy.
                     </p>
                   </div>
 
-                  <div className="hidden md:flex justify-between items-center mb-4">
+                  <div className="hidden md:flex justify-between items-center pt-2">
                     <button
                       onClick={() => updateStep("customer")}
-                      className="text-gray-400 font-black text-xs tracking-widest hover:text-gray-600"
+                      className="text-neutral-600 font-semibold text-sm hover:text-neutral-900 transition-colors cursor-pointer"
                     >
-                      Back
+                      ← Back to Details
                     </button>
                   </div>
 
@@ -4247,7 +4148,7 @@ const toggleAddOn = (addon: AddOn) => {
                       <button
                         onClick={() => handleFinalBooking()}
                         disabled={isBooking || !agreedToTerms}
-                        className="w-full sm:w-auto bg-primary text-white px-16 py-6 rounded-full font-black tracking-[0.2em] text-sm shadow-2xl shadow-primary/20 hover:opacity-90 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full sm:w-auto bg-neutral-900 hover:bg-black text-white px-12 py-4 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {isBooking ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
@@ -4259,8 +4160,8 @@ const toggleAddOn = (addon: AddOn) => {
                             {paymentMethod === "razorpay" && "Pay with Razorpay (UPI/Card)"}
                             {paymentMethod === "adyen" && "Pay with Adyen"}
                             {paymentMethod === "wise" && "Complete Wise Booking"}
-                            {(paymentMethod === "bank_transfer" || paymentMethod === "pay_on_arrival" || summary.grandTotal <= 0) && "Complete Booking"}
-                            <Check className="h-5 w-5" />
+                            {(paymentMethod === "bank_transfer" || paymentMethod === "pay_on_arrival" || summary.grandTotal <= 0) && "Confirm and Pay"}
+                            <Check className="h-4 w-4 stroke-[3]" />
                           </>
                         )}
                       </button>
@@ -4268,7 +4169,7 @@ const toggleAddOn = (addon: AddOn) => {
                   ) : (
                     <div className={cn("w-full relative z-0 min-h-[150px] flex flex-col transition-opacity", !agreedToTerms && "opacity-50 pointer-events-none")}>
                       {!agreedToTerms && (
-                        <p className="text-xs font-bold text-amber-600 tracking-tight mb-4 animate-bounce">
+                        <p className="text-xs font-semibold text-amber-700 tracking-tight mb-3">
                           Please agree to Terms & Conditions above
                         </p>
                       )}
@@ -4297,469 +4198,324 @@ const toggleAddOn = (addon: AddOn) => {
             )}
           </div>
 
-          {/* Right Column: Checkout Summary Sidebar */}
-          <div className="hidden md:block md:col-span-1">
-            <div className="sticky top-28 space-y-8">
+          {/* Right Column: Airbnb Style Checkout Summary Sidebar */}
+          <div className="hidden md:block md:col-span-1 text-left">
+            <div className="sticky top-28 space-y-6">
               {/* Main Summary Card */}
-              <div className="bg-white rounded-[20px] border border-gray-100 shadow-xl overflow-hidden">
-                <div className="aspect-video w-full relative">
+              <div className="bg-white rounded-3xl border border-neutral-200 p-6 shadow-xl shadow-neutral-900/[0.04] space-y-5">
+                {/* Header: Tour thumbnail + Title */}
+                <div className="flex gap-4 items-start pb-5 border-b border-neutral-100">
                   <img
-                    src={tour.gallery[0] || ""}
-                    className="h-full w-full object-cover"
+                    src={tour.gallery?.[0] || tour.featuredImage || ""}
+                    alt={tour.title}
+                    className="h-20 w-20 object-cover rounded-xl shrink-0 border border-neutral-100"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-transparent to-transparent" />
-                  <div className="absolute bottom-6 left-6 right-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="px-2 py-0.5 bg-orange-500 text-white text-[8px] font-black uppercase tracking-widest rounded-full">
-                        Experience
-                      </span>
-                      <div className="flex text-amber-400">
-                        <Star className="h-2 w-2 fill-current" />
-                      </div>
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+                      <span>Experience</span>
+                      {tour.rating && (
+                        <>
+                          <span>•</span>
+                          <span className="flex items-center gap-0.5 text-neutral-900 font-bold">
+                            <Star className="h-3 w-3 fill-neutral-900 text-neutral-900" />
+                            {tour.rating}
+                          </span>
+                        </>
+                      )}
                     </div>
-                    <h3 className="text-white font-black tracking-tight leading-tight">
+                    <h3 className="text-neutral-900 font-bold text-sm leading-snug line-clamp-2">
                       {tour.title}
                     </h3>
                   </div>
                 </div>
 
-              <div className="p-8 space-y-6">
-                  {/* Availability Warning for Desktop Sidebar */}
-                  {spotsLeft !== null && (
-                    <div className={cn(
-                      "p-3 rounded-xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2",
-                      isSoldOut ? "bg-red-50 border-red-100 text-red-600" :
-                      (adults + children) > spotsLeft ? "bg-red-50 border-red-100 text-red-600 animate-pulse" :
-                      isLowCapacity ? "bg-orange-50 border-orange-100 text-orange-600" :
-                      "bg-orange-50 border-primary/20 text-primary"
-                    )}>
-                      {isSoldOut ? (
-                        <><Info className="h-3.5 w-3.5" /> Sold Out for this date</>
-                      ) : (adults + children) > spotsLeft ? (
-                        <><Info className="h-3.5 w-3.5" /> Insufficient spots: Only {spotsLeft} available</>
-                      ) : (
-                        <><Check className="h-3.5 w-3.5" /> {spotsLeft} spots available</>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Details Strip */}
-                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Calendar className="h-4 w-4 text-primary shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Date</p>
-                            <p className="font-extrabold text-slate-900 text-xs truncate">
-                              {date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="h-6 w-[1px] bg-slate-200 shrink-0" />
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Users className="h-4 w-4 text-primary shrink-0" />
-                          <div className="min-w-0">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Travelers</p>
-                            <p className="font-extrabold text-slate-900 text-xs truncate">
-                              {adults + children} Total ({adults}A{children > 0 ? `, ${children}C` : ''})
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setShowSidebarEdit(!showSidebarEdit)}
-                        className="text-xs font-black text-primary hover:text-orange-600 bg-orange-50 hover:bg-orange-100 px-2.5 py-1.5 rounded-xl border border-orange-200 transition-colors cursor-pointer shrink-0 flex items-center gap-1 shadow-xs"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                        <span>{showSidebarEdit ? "Done" : "Change"}</span>
-                      </button>
-                    </div>
-
-                    {/* Collapsible Sidebar Date & Participant Editor */}
-                    <AnimatePresence>
-                      {showSidebarEdit && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden pt-3 border-t border-slate-200 space-y-3"
-                        >
-                          {/* Mini Date Selector */}
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                              Select Travel Date
-                            </label>
-                            <div className="bg-white p-2.5 rounded-xl border border-slate-200 shadow-xs">
-                              <div className="flex items-center justify-between mb-2">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newM = new Date(currentMonth);
-                                    newM.setMonth(newM.getMonth() - 1);
-                                    setCurrentMonth(newM);
-                                  }}
-                                  className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                                >
-                                  <ChevronLeft className="h-3.5 w-3.5" />
-                                </button>
-                                <span className="font-black text-[11px] text-slate-800 uppercase tracking-wider">
-                                  {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const newM = new Date(currentMonth);
-                                    newM.setMonth(newM.getMonth() + 1);
-                                    setCurrentMonth(newM);
-                                  }}
-                                  className="p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 cursor-pointer"
-                                >
-                                  <ChevronRight className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-                              <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-slate-400 uppercase py-0.5">
-                                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d}>{d}</div>)}
-                              </div>
-                              <div className="grid grid-cols-7 gap-1">
-                                {(() => {
-                                  const year = currentMonth.getFullYear();
-                                  const month = currentMonth.getMonth();
-                                  const firstDay = new Date(year, month, 1).getDay();
-                                  const daysInMonth = new Date(year, month + 1, 0).getDate();
-                                  const today = new Date(); today.setHours(0,0,0,0);
-                                  const cells = [];
-                                  for (let i = 0; i < firstDay; i++) cells.push(<div key={`sb-empty-${i}`} />);
-                                  for (let d = 1; d <= daysInMonth; d++) {
-                                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                                    const isPast = new Date(year, month, d) < today;
-                                    const isSelected = date === dateStr;
-                                    cells.push(
-                                      <button
-                                        key={`sb-${d}`}
-                                        type="button"
-                                        disabled={isPast}
-                                        onClick={() => setDate(dateStr)}
-                                        className={cn(
-                                          "h-6 w-full rounded flex items-center justify-center text-[10px] font-extrabold transition-all cursor-pointer",
-                                          isSelected ? "bg-primary text-white shadow-xs" : isPast ? "text-slate-300 opacity-40 line-through cursor-not-allowed" : "text-slate-800 bg-slate-50 hover:bg-orange-50 hover:text-primary"
-                                        )}
-                                      >
-                                        {d}
-                                      </button>
-                                    );
-                                  }
-                                  return cells;
-                                })()}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Travelers Adjuster */}
-                          <div className="space-y-1.5 pt-2 border-t border-slate-200 text-left">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                              Adjust Travelers
-                            </label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {/* Adults */}
-                              <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                                <div>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase">Adults</p>
-                                  <p className="text-xs font-black text-slate-900">{adults}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    disabled={adults <= 1 || (adults + children) <= minRequired}
-                                    onClick={() => setAdults(Math.max(1, adults - 1))}
-                                    className="h-6 w-6 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center text-xs disabled:opacity-40 cursor-pointer"
-                                  >
-                                    -
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
-                                        alert(`Only ${spotsLeft} spots available.`);
-                                        return;
-                                      }
-                                      setAdults(adults + 1);
-                                    }}
-                                    className="h-6 w-6 rounded-md bg-slate-900 text-white font-bold flex items-center justify-center text-xs cursor-pointer"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Children */}
-                              <div className="bg-white p-2 rounded-xl border border-slate-200 flex items-center justify-between">
-                                <div>
-                                  <p className="text-[9px] font-black text-slate-400 uppercase">Children</p>
-                                  <p className="text-xs font-black text-slate-900">{children}</p>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    disabled={children <= 0 || (adults + children) <= minRequired}
-                                    onClick={() => setChildren(Math.max(0, children - 1))}
-                                    className="h-6 w-6 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center text-xs disabled:opacity-40 cursor-pointer"
-                                  >
-                                    -
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
-                                        alert(`Only ${spotsLeft} spots available.`);
-                                        return;
-                                      }
-                                      setChildren(children + 1);
-                                    }}
-                                    className="h-6 w-6 rounded-md bg-slate-900 text-white font-bold flex items-center justify-center text-xs cursor-pointer"
-                                  >
-                                    +
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Pricing Breakdown */}
-                  <div className="space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between items-center group">
-                        <div className="flex flex-col">
-                          <span className="text-xs font-bold text-gray-400 tracking-tight">
-                            Package Price
-                          </span>
-                          <span className="font-bold text-gray-900 text-sm">
-                            {selectedPackage?.name || tour?.packages?.[0]?.name || tour?.title || "Standard Package"}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      {/* Detailed Guests Breakdown */}
-                      <div className="space-y-1.5 pl-2 border-l-2 border-primary/20">
-                        {adults > 0 && (
-                          <div className="flex justify-between items-center text-xs text-gray-500 font-medium">
-                            <div className="flex flex-col">
-                              <span>Adults (x{adults})</span>
-                              <span className="text-[10px] text-primary font-black"><FormattedPrice amount={applicableTier?.adultPrice || 0} /> / person</span>
-                            </div>
-                            <span className="font-bold"><FormattedPrice amount={(applicableTier?.adultPrice || 0) * adults} /></span>
-                          </div>
-                        )}
-                        {children > 0 && (
-                          <div className="flex justify-between items-center text-xs text-gray-500 font-medium pt-1">
-                            <div className="flex flex-col">
-                              <span>Children (x{children})</span>
-                              <span className="text-[10px] text-primary font-black"><FormattedPrice amount={applicableTier?.childPrice || 0} /> / child</span>
-                            </div>
-                            <span className="font-bold"><FormattedPrice amount={(applicableTier?.childPrice || 0) * children} /></span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {selectedAccommodation && (
-                      <div className="space-y-2 pt-4 border-t border-gray-50">
-                        <p className="text-xs font-bold text-primary tracking-tight flex items-center gap-1">
-                          <Hotel className="h-3.5 w-3.5" /> Selected Hotel
-                        </p>
-                        <div className="flex justify-between items-start animate-in fade-in slide-in-from-right-2">
-                          <div className="text-left">
-                            <p className="text-xs text-gray-700 font-bold">{selectedAccommodation.accommodationName}</p>
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider block mt-0.5">
-                              {selectedAccommodation.category} • {selectedAccommodation.roomTypeName}
-                            </p>
-                          </div>
-                          <span className="text-xs font-black text-gray-700">
-                            <FormattedPrice amount={summary.accommodationTotal} />
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedGuideOption && (
-                      <div className="space-y-2 pt-4 border-t border-gray-50">
-                        <p className="text-xs font-bold text-primary tracking-tight flex items-center gap-1">
-                          <UserCheck className="h-3.5 w-3.5" /> Tour Guide
-                        </p>
-                        <div className="flex justify-between items-start animate-in fade-in slide-in-from-right-2">
-                          <div className="text-left">
-                            <p className="text-xs text-gray-700 font-bold">{selectedGuideOption.language} Guide</p>
-                          </div>
-                          <span className="text-xs font-black text-gray-700">
-                            {summary.guideTotal === 0 ? "Included" : <FormattedPrice amount={summary.guideTotal} />}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedTransport && (
-                      <div className="space-y-3 pt-4 border-t border-gray-50">
-                        <p className="text-xs font-bold text-primary tracking-tight flex items-center gap-1">
-                          <Car className="h-3.5 w-3.5" /> Selected Transport
-                        </p>
-                        <div className="flex justify-between items-start animate-in fade-in slide-in-from-right-2">
-                          <div className="text-left">
-                            <p className="text-xs text-gray-700 font-bold">{selectedTransport.name}</p>
-                            <p className="text-[10px] text-gray-400 font-black uppercase tracking-wider block mt-0.5">
-                              {selectedTransport.type === 'meet' ? 'Meet on location' : `${selectedTransport.carType || selectedTransport.type}`}
-                            </p>
-                          </div>
-                          <span className="text-xs font-black text-gray-700">
-                            {selectedTransport.type === 'meet' ? 'Free' : <FormattedPrice amount={summary.transportTotal} />}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {selectedAddOns.length > 0 && (
-                      <div className="space-y-3 pt-4 border-t border-gray-50">
-                        <p className="text-xs font-bold text-primary tracking-tight">
-                          Added Extras
-                        </p>
-                        {selectedAddOns.map((a) => (
-                          <div
-                            key={a.id}
-                            className="flex justify-between items-center animate-in fade-in slide-in-from-right-2"
-                          >
-                            <span className="text-xs text-gray-500 font-medium">
-                              {a.name}{" "}
-                              <span className="text-[10px] font-black opacity-60 ml-1">
-                                {a.quantity}x <FormattedPrice amount={a.price} />
-                              </span>
-                            </span>
-                            <span className="text-xs font-bold text-gray-600">
-                              <FormattedPrice amount={a.price * a.quantity} />
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Total Bar */}
-                  <div className="pt-8 border-t-2 border-dashed border-gray-100">
-                    {summary.discount > 0 && (
-                      <div className="flex justify-between items-center mb-4 text-primary">
-                        <span className="text-xs font-bold tracking-tight">
-                          Coupon Discount
-                        </span>
-                        <span className="font-bold">
-                          -<FormattedPrice amount={summary.discount} />
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex justify-between items-baseline mb-2">
-                       <span className="text-sm font-bold text-gray-900 tracking-tight">
-                         {existingBooking ? "New Total Estimate" : "Total Estimate"}
-                       </span>
-                       <span className="text-xs font-medium text-gray-400">
-                         All taxes included
-                       </span>
-                    </div>
-                    <div className="flex justify-between items-center mb-6">
-                       <span className="text-3xl font-black text-primary font-display tracking-tighter leading-none">
-                         <FormattedPrice amount={summary.grandTotal} />
-                       </span>
-                       <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary shadow-inner">
-                         <Rocket className="h-4 w-4" />
-                       </div>
-                    </div>
-
-                    {existingBooking && (
-                      <div className="space-y-4 mb-8 bg-gray-50 p-6 rounded-2xl border border-gray-100">
-                        <div className="flex justify-between items-center text-xs font-bold text-gray-500">
-                          <span>Original Price Paid</span>
-                          <span><FormattedPrice amount={summary.amountPaid} /></span>
-                        </div>
-                        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
-                          <span className="text-sm font-black text-gray-900">Total to Pay Now</span>
-                          <span className="text-2xl font-black text-secondary"><FormattedPrice amount={summary.amountToPay} /></span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Desktop Coupon Field - Moved here to be more prominent */}
-                    <div className="mt-8 pt-8 border-t border-gray-100">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Tag className="h-3 w-3 text-primary" />
-                        <h4 className="text-[10px] font-black text-gray-900 uppercase tracking-widest">
-                          Have a coupon?
-                        </h4>
-                      </div>
-
-                      {appliedCoupon ? (
-                        <div className="flex items-center justify-between bg-orange-50 p-3 rounded-xl border border-primary/20">
-                          <div className="flex items-center gap-2">
-                            <Check className="h-3 w-3 text-primary" />
-                            <span className="text-[10px] font-bold text-primary">{appliedCoupon.code} Applied</span>
-                          </div>
-                          <button
-                            onClick={() => setAppliedCoupon(null)}
-                            className="text-[10px] font-black text-primary hover:text-primary"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            placeholder="CODE"
-                            value={couponInput}
-                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                            className="flex-1 rounded-xl border border-gray-100 bg-gray-50/50 p-3 focus:border-primary focus:outline-none font-bold text-xs uppercase"
-                          />
-                          <button
-                            onClick={handleApplyCoupon}
-                            disabled={isValidatingCoupon || !couponInput}
-                            className="bg-gray-900 text-white px-4 py-3 rounded-xl font-bold text-[10px] hover:bg-black transition-all disabled:opacity-50"
-                          >
-                            {isValidatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
-                          </button>
-                        </div>
-                      )}
-                      {couponError && (
-                        <p className="text-[9px] text-red-500 font-bold mt-2 pl-1 italic">
-                          {couponError}
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                {/* Free Cancellation Banner */}
+                <div className="flex items-center gap-2 bg-emerald-50 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl border border-emerald-200/60">
+                  <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>Free cancellation before travel date</span>
                 </div>
-              </div>
 
-              {/* Removed redundant Coupon Input card below */}
-
-
-              {/* Assistance Card */}
-              <div className="bg-gray-900 rounded-[20px] p-8 text-white relative overflow-hidden group">
-                <div className="absolute -right-8 -bottom-8 h-40 w-40 bg-white/5 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-700" />
-                <div className="relative z-10 space-y-4">
-                  <div className="h-10 w-10 rounded-lg bg-white/10 flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-orange-400" />
+                {/* Date & Guests Selector Box */}
+                <div className="border border-neutral-200 rounded-2xl p-3.5 space-y-3 bg-neutral-50/50">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block">Dates & Time</span>
+                      <p className="text-xs font-bold text-neutral-900 truncate">
+                        {date ? new Date(date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Select Date'}
+                        {selectedTime && ` • ${selectedTime}`}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowSidebarEdit(!showSidebarEdit)}
+                      className="text-xs font-bold text-neutral-900 underline hover:text-neutral-600 cursor-pointer shrink-0"
+                    >
+                      {showSidebarEdit ? "Done" : "Edit"}
+                    </button>
                   </div>
-                  <h4 className="font-black tracking-tight text-sm">
-                    Need Consultation?
-                  </h4>
-                  <p className="text-xs text-white/60 font-medium leading-relaxed">
-                    Our local experts are available 24/7 to help you refine your
-                    itinerary.
-                  </p>
-                  <button className="flex items-center gap-2 text-xs font-bold tracking-tight text-orange-400 hover:text-white transition-colors">
-                    Chat With Us Now <ChevronRight className="h-3 w-3" />
-                  </button>
+
+                  <div className="pt-2 border-t border-neutral-200/80 flex items-center justify-between">
+                    <div className="space-y-0.5 min-w-0">
+                      <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-wider block">Guests</span>
+                      <p className="text-xs font-bold text-neutral-900 truncate">
+                        {adults + children} guest{adults + children > 1 ? 's' : ''} ({adults} Adult{adults > 1 ? 's' : ''}{children > 0 ? `, ${children} Child${children > 1 ? 'ren' : ''}` : ''})
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Collapsible Sidebar Date & Participant Editor */}
+                  <AnimatePresence>
+                    {showSidebarEdit && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden pt-3 border-t border-neutral-200 space-y-3"
+                      >
+                        {/* Mini Calendar */}
+                        <div className="space-y-1 text-left">
+                          <div className="bg-white p-2.5 rounded-xl border border-neutral-200 shadow-xs">
+                            <div className="flex items-center justify-between mb-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newM = new Date(currentMonth);
+                                  newM.setMonth(newM.getMonth() - 1);
+                                  setCurrentMonth(newM);
+                                }}
+                                className="p-1 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 cursor-pointer"
+                              >
+                                <ChevronLeft className="h-3.5 w-3.5" />
+                              </button>
+                              <span className="font-bold text-[11px] text-neutral-900 uppercase tracking-wider">
+                                {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newM = new Date(currentMonth);
+                                  newM.setMonth(newM.getMonth() + 1);
+                                  setCurrentMonth(newM);
+                                }}
+                                className="p-1 rounded bg-neutral-100 hover:bg-neutral-200 text-neutral-700 cursor-pointer"
+                              >
+                                <ChevronRight className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <div className="grid grid-cols-7 gap-1 text-center font-bold text-[9px] text-neutral-400 uppercase py-0.5">
+                              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(d => <div key={d}>{d}</div>)}
+                            </div>
+                            <div className="grid grid-cols-7 gap-1">
+                              {(() => {
+                                const year = currentMonth.getFullYear();
+                                const month = currentMonth.getMonth();
+                                const firstDay = new Date(year, month, 1).getDay();
+                                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                                const today = new Date(); today.setHours(0,0,0,0);
+                                const cells = [];
+                                for (let i = 0; i < firstDay; i++) cells.push(<div key={`sb-empty-${i}`} />);
+                                for (let d = 1; d <= daysInMonth; d++) {
+                                  const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                  const isPast = new Date(year, month, d) < today;
+                                  const isSelected = date === dateStr;
+                                  cells.push(
+                                    <button
+                                      key={`sb-${d}`}
+                                      type="button"
+                                      disabled={isPast}
+                                      onClick={() => setDate(dateStr)}
+                                      className={cn(
+                                        "h-6 w-full rounded flex items-center justify-center text-[10px] font-bold transition-all cursor-pointer",
+                                        isSelected ? "bg-neutral-900 text-white shadow-xs" : isPast ? "text-neutral-300 opacity-40 line-through cursor-not-allowed" : "text-neutral-800 bg-neutral-50 hover:bg-neutral-100"
+                                      )}
+                                    >
+                                      {d}
+                                    </button>
+                                  );
+                                }
+                                return cells;
+                              })()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Travelers Adjuster */}
+                        <div className="space-y-1.5 pt-2 border-t border-neutral-200 text-left">
+                          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+                            Adjust Guests
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            {/* Adults */}
+                            <div className="bg-white p-2 rounded-xl border border-neutral-200 flex items-center justify-between">
+                              <div>
+                                <p className="text-[9px] font-bold text-neutral-400 uppercase">Adults</p>
+                                <p className="text-xs font-bold text-neutral-900">{adults}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={adults <= 1 || (adults + children) <= minRequired}
+                                  onClick={() => setAdults(Math.max(1, adults - 1))}
+                                  className="h-6 w-6 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold flex items-center justify-center text-xs disabled:opacity-30 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
+                                      alert(`Only ${spotsLeft} spots available.`);
+                                      return;
+                                    }
+                                    setAdults(adults + 1);
+                                  }}
+                                  className="h-6 w-6 rounded-md bg-neutral-900 text-white font-bold flex items-center justify-center text-xs cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Children */}
+                            <div className="bg-white p-2 rounded-xl border border-neutral-200 flex items-center justify-between">
+                              <div>
+                                <p className="text-[9px] font-bold text-neutral-400 uppercase">Children</p>
+                                <p className="text-xs font-bold text-neutral-900">{children}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  disabled={children <= 0 || (adults + children) <= minRequired}
+                                  onClick={() => setChildren(Math.max(0, children - 1))}
+                                  className="h-6 w-6 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-800 font-bold flex items-center justify-center text-xs disabled:opacity-30 cursor-pointer"
+                                >
+                                  -
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (spotsLeft !== null && (adults + children + 1) > spotsLeft) {
+                                      alert(`Only ${spotsLeft} spots available.`);
+                                      return;
+                                    }
+                                    setChildren(children + 1);
+                                  }}
+                                  className="h-6 w-6 rounded-md bg-neutral-900 text-white font-bold flex items-center justify-center text-xs cursor-pointer"
+                                >
+                                  +
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* Price Breakdown: Airbnb Underlined Clean Rows */}
+                <div className="space-y-3 pt-3 border-t border-neutral-100 text-sm">
+                  <h4 className="font-bold text-neutral-900 text-sm">Price details</h4>
+
+                  <div className="space-y-2 text-neutral-600 text-xs">
+                    {adults > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="underline decoration-neutral-300">
+                          <FormattedPrice amount={applicableTier?.adultPrice || 0} /> × {adults} adult{adults > 1 ? 's' : ''}
+                        </span>
+                        <span className="font-semibold text-neutral-900">
+                          <FormattedPrice amount={(applicableTier?.adultPrice || 0) * adults} />
+                        </span>
+                      </div>
+                    )}
+
+                    {children > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="underline decoration-neutral-300">
+                          <FormattedPrice amount={applicableTier?.childPrice || 0} /> × {children} child{children > 1 ? 'ren' : ''}
+                        </span>
+                        <span className="font-semibold text-neutral-900">
+                          <FormattedPrice amount={(applicableTier?.childPrice || 0) * children} />
+                        </span>
+                      </div>
+                    )}
+
+                    {summary.transportTotal > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="underline decoration-neutral-300">Transport ({selectedTransport?.name})</span>
+                        <span className="font-semibold text-neutral-900">
+                          <FormattedPrice amount={summary.transportTotal} />
+                        </span>
+                      </div>
+                    )}
+
+                    {summary.addonsTotal > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="underline decoration-neutral-300">Add-on extras</span>
+                        <span className="font-semibold text-neutral-900">
+                          <FormattedPrice amount={summary.addonsTotal} />
+                        </span>
+                      </div>
+                    )}
+
+                    {summary.discount > 0 && (
+                      <div className="flex justify-between items-center text-emerald-600 font-semibold">
+                        <span>Coupon discount</span>
+                        <span>-<FormattedPrice amount={summary.discount} /></span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Coupon Code Row */}
+                  <div className="pt-3 border-t border-neutral-100">
+                    {appliedCoupon ? (
+                      <div className="flex items-center justify-between bg-emerald-50 p-2.5 rounded-xl border border-emerald-200">
+                        <div className="flex items-center gap-1.5 text-xs text-emerald-800 font-bold">
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          <span>{appliedCoupon.code} Applied</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setAppliedCoupon(null)}
+                          className="text-[11px] font-bold text-rose-600 underline cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Coupon code"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          className="flex-1 rounded-xl border border-neutral-200 bg-white p-2.5 focus:border-neutral-900 focus:outline-none font-bold text-xs uppercase"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={isValidatingCoupon || !couponInput}
+                          className="bg-neutral-900 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs hover:bg-black transition-all disabled:opacity-40 cursor-pointer"
+                        >
+                          {isValidatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
+                        </button>
+                      </div>
+                    )}
+                    {couponError && (
+                      <p className="text-[11px] text-rose-500 font-bold mt-1.5 pl-1">
+                        {couponError}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Total Line */}
+                  <div className="pt-4 border-t border-neutral-200 flex justify-between items-baseline">
+                    <span className="font-bold text-base text-neutral-900">Total (USD)</span>
+                    <span className="font-black text-2xl text-neutral-900">
+                      <FormattedPrice amount={summary.grandTotal} />
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
