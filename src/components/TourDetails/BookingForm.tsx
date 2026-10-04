@@ -47,6 +47,7 @@ export default function BookingForm({ tour }: BookingFormProps) {
   const [adults, setAdults] = useState(Math.max(1, minRequired));
   const [children, setChildren] = useState(0);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGuestPicker, setShowGuestPicker] = useState(false);
   const [showPriceSummary, setShowPriceSummary] = useState(false);
   const [step, setStep] = useState<BookingStep>('package');
   const [isBooking, setIsBooking] = useState(false);
@@ -188,397 +189,354 @@ export default function BookingForm({ tour }: BookingFormProps) {
 
   return (
     <>
-      {/* Main Sidebar Form */}
-      <div id="package" className="rounded-2xl border border-gray-200/90 bg-white p-5 md:p-6 shadow-xl shadow-gray-200/40 scroll-mt-[100px]">
-        {/* Live Pricing Header */}
-        <div className="mb-4 flex items-center justify-between border-b border-gray-100 pb-3.5">
-          <div className="flex flex-col gap-0.5 text-left">
-            <span className="text-[11px] font-black uppercase tracking-wider text-primary">Live Pricing From</span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl lg:text-4xl font-black text-gray-950 tracking-tight font-display">
-                <FormattedPrice amount={tour.discountPrice || tour.regularPrice} />
-              </span>
-              {tour.discountPrice && (
-                <span className="text-xs text-gray-400 line-through font-bold">
-                  <FormattedPrice amount={tour.regularPrice} />
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="text-right">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-              <ShieldCheck className="w-3 h-3 text-emerald-600" />
-              <span>Best Price Guarantee</span>
+      {/* Airbnb-style Sleek Booking Card */}
+      <div id="package" className="rounded-3xl border border-neutral-200 bg-white p-6 shadow-xl shadow-neutral-900/[0.04] scroll-mt-[100px] text-left">
+        {/* Header: Clean Price & Micro-Trust */}
+        <div className="flex items-baseline justify-between mb-5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl lg:text-3xl font-bold text-neutral-900 tracking-tight font-display">
+              <FormattedPrice amount={selectedPackage ? (calculatePackagePrice(selectedPackage) / Math.max(1, adults + children)) : (tour.discountPrice || tour.regularPrice)} />
             </span>
+            <span className="text-sm font-normal text-neutral-500">/ person</span>
+            {tour.discountPrice && (
+              <span className="text-xs text-neutral-400 line-through ml-1 font-medium">
+                <FormattedPrice amount={tour.regularPrice} />
+              </span>
+            )}
           </div>
-        </div>
 
-        {/* Booking Cut-off Operational Notice */}
-        <div className="mb-4 flex items-center gap-2.5 p-2.5 rounded-xl bg-orange-50/80 border border-orange-200/80 text-orange-950">
-          <Clock className="h-4 w-4 text-primary shrink-0" />
-          <div className="text-left leading-tight">
-            <p className="text-[11px] font-extrabold text-gray-900 tracking-tight">
-              {formatCutOffNotice(cutOffHours)}
-            </p>
-            <p className="text-[9.5px] font-medium text-gray-500 mt-0.5">
-              {cutOffHours > 0 
-                ? `Booking closes ${cutOffHours}h prior to schedule guide & vehicle.` 
-                : `Instant confirmation with flexible last-minute booking.`}
-            </p>
+          <div className="flex items-center gap-1 text-xs font-semibold text-neutral-700">
+            <ShieldCheck className="w-4 h-4 text-neutral-500" />
+            <span>Best price</span>
           </div>
         </div>
 
         {cutOffError && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 animate-in fade-in">
-            <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
-            <div className="text-left text-xs font-bold leading-relaxed flex-1">
+          <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-2.5 text-rose-700 text-xs font-medium animate-in fade-in">
+            <AlertTriangle className="h-4 w-4 text-rose-500 shrink-0 mt-0.5" />
+            <div className="flex-1 leading-relaxed">
               {cutOffError}
             </div>
           </div>
         )}
 
-        <form id="tour-booking-form" onSubmit={handleAvailabilityCheck} className="space-y-4 text-left">
-          {/* Package Selector (if multiple packages available) */}
-          {tour.packages && tour.packages.length > 1 && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-black text-gray-700 flex items-center justify-between">
-                <span>1. Select Package</span>
-                <span className="text-[10px] font-bold text-gray-400">{tour.packages.length} options</span>
-              </label>
-              <div className="grid grid-cols-1 gap-1.5">
-                {tour.packages.map((pkg) => {
-                  const isSelected = selectedPackage?.name === pkg.name;
-                  const pkgTierPrice = pkg.tiers && pkg.tiers.length > 0 ? pkg.tiers[0].adultPrice : 0;
-                  return (
-                    <button
-                      key={pkg.name}
-                      type="button"
-                      onClick={() => setSelectedPackage(pkg)}
-                      className={cn(
-                        "w-full text-left p-2.5 rounded-xl border-2 transition-all flex items-center justify-between cursor-pointer group",
-                        isSelected 
-                          ? "border-primary bg-orange-50/30 shadow-xs ring-1 ring-primary/20" 
-                          : "border-gray-200 bg-white hover:border-gray-300"
-                      )}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
-                          isSelected ? "border-primary bg-primary" : "border-gray-300 bg-white"
-                        )}>
-                          {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                        </div>
-                        <span className={cn("text-xs font-black", isSelected ? "text-gray-900" : "text-gray-700")}>
-                          {pkg.name}
-                        </span>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <span className="text-xs font-black text-primary">
-                          <FormattedPrice amount={pkgTierPrice || tour.discountPrice || tour.regularPrice} />
-                        </span>
-                        <span className="text-[9px] text-gray-400 font-bold block leading-none">/person</span>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Date Picker Dropdown */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 block">
-              {tour.packages && tour.packages.length > 1 ? '2' : '1'}. Departure Date
-            </label>
-            <div className="relative">
-              <button 
-                type="button"
-                onClick={() => setShowDatePicker(!showDatePicker)}
-                className={cn(
-                  "w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer group",
-                  date ? "border-primary/40 bg-orange-50/20" : "border-gray-200 bg-gray-50/50 hover:border-gray-300"
-                )}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Calendar className={cn("h-4 w-4 transition-colors shrink-0", date ? "text-primary" : "text-gray-400")} />
-                  <span className={cn("text-xs md:text-sm font-bold", date ? "text-gray-900" : "text-gray-400")}>
-                    {date ? new Date(date).toLocaleDateString('en-US', { dateStyle: 'medium' }) : 'Choose departure date'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  {date && (
-                    <span className={cn(
-                      "text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full flex items-center gap-1",
-                      isSoldOut ? "bg-red-50 text-red-600 border border-red-200" : 
-                      isLowCapacity ? "bg-amber-50 text-amber-700 border border-amber-200" : 
-                      "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    )}>
-                      {isSoldOut ? <X className="h-2 w-2" /> : <Check className="h-2 w-2" />}
-                      {isSoldOut ? 'Sold Out' : isLowCapacity ? `${spotsLeft} left` : 'Available'}
-                    </span>
-                  )}
-                  <ChevronDown className={cn("h-4 w-4 transition-transform text-gray-500", showDatePicker && "rotate-180")} />
-                </div>
-              </button>
-
-              <AnimatePresence>
-                {showDatePicker && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 5, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    className="absolute top-full left-0 right-0 z-[70] bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 mt-1"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <button type="button" onClick={() => {
-                        const d = new Date(currentMonth);
-                        d.setMonth(d.getMonth() - 1);
-                        setCurrentMonth(d);
-                      }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 cursor-pointer">
-                        <ChevronLeft className="h-4 w-4" />
-                      </button>
-                      <span className="font-black text-gray-900 tracking-tight text-xs">
-                          {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
-                      </span>
-                      <button type="button" onClick={() => {
-                        const d = new Date(currentMonth);
-                        d.setMonth(d.getMonth() + 1);
-                        setCurrentMonth(d);
-                      }} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500 cursor-pointer">
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </div>
-                    
-                    <div className="grid grid-cols-7 gap-1 mb-1.5">
-                      {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
-                        <div key={d} className="text-center text-[10px] font-black text-gray-400 tracking-tight uppercase">{d}</div>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1">
-                      {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
-                        <div key={`empty-${i}`} className="aspect-square" />
-                      ))}
-                      {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
-                        const d = i + 1;
-                        const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
-                        const isPast = dateObj < new Date(new Date().setHours(0,0,0,0));
-                        const dateString = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
-                        const isSelected = date === dateString;
-                        const isCutOff = isDateFullyCutOff(dateString, tour.timeSlots, cutOffHours);
-                        const isDisabled = isPast || isCutOff;
-
-                        return (
-                          <button
-                            key={d}
-                            type="button"
-                            disabled={isDisabled}
-                            title={isPast ? "Past date" : isCutOff ? `Booking closed (Cut-off: ${cutOffHours}h before start)` : undefined}
-                            onClick={() => {
-                              setDate(dateString);
-                              setCutOffError(null);
-                              setShowDatePicker(false);
-                            }}
-                            className={cn(
-                              "aspect-square rounded-lg text-xs font-bold transition-all flex flex-col items-center justify-center relative cursor-pointer",
-                              isSelected ? "bg-primary text-white shadow-md font-black" : 
-                              isDisabled ? "text-gray-300 cursor-not-allowed bg-gray-50/60 line-through decoration-gray-300" : "text-gray-800 hover:bg-orange-50 hover:text-primary"
-                            )}
-                          >
-                            <span>{d}</span>
-                            {isCutOff && !isPast && (
-                              <span className="text-[7px] font-black text-red-500 -mt-1 leading-none no-underline block">Closed</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-
-          {/* Time Picker */}
-          {tour.timeSlots && tour.timeSlots.length > 0 && (
-            <div className="space-y-1.5 animate-in fade-in slide-in-from-top-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-black text-gray-700 block">
-                  {tour.packages && tour.packages.length > 1 ? '3' : '2'}. Departure Time
+        <form id="tour-booking-form" onSubmit={handleAvailabilityCheck} className="space-y-4">
+          {/* Unified Airbnb Segmented Input Box */}
+          <div className="border border-neutral-300 rounded-2xl divide-y divide-neutral-200 bg-white shadow-xs focus-within:ring-2 focus-within:ring-neutral-900 transition-all">
+            {/* Package Selector (if multiple packages available) */}
+            {tour.packages && tour.packages.length > 1 && (
+              <div className="p-3 relative">
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
+                  Package
                 </label>
-                {cutOffHours > 0 && (
-                  <span className="text-[10px] text-gray-400 font-bold flex items-center gap-1">
-                    <Clock className="h-3 w-3 text-orange-500" /> Closes {cutOffHours}h prior
-                  </span>
-                )}
+                <div className="relative">
+                  <select
+                    value={selectedPackage?.name || ''}
+                    onChange={(e) => {
+                      const found = tour.packages.find(p => p.name === e.target.value);
+                      if (found) setSelectedPackage(found);
+                    }}
+                    className="w-full text-xs font-semibold text-neutral-900 bg-transparent pr-6 focus:outline-none cursor-pointer appearance-none truncate"
+                  >
+                    {tour.packages.map((pkg) => {
+                      const tierPrice = pkg.tiers && pkg.tiers.length > 0 ? pkg.tiers[0].adultPrice : 0;
+                      return (
+                        <option key={pkg.name} value={pkg.name}>
+                          {pkg.name} {tierPrice ? `($${tierPrice}/pax)` : ''}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {tour.timeSlots.map(time => {
-                  const slotCutOff = date ? isSlotCutOff(date, time, cutOffHours) : false;
-                  const isSelected = selectedTime === time;
-                  return (
-                    <button
-                      key={time}
-                      type="button"
-                      disabled={slotCutOff}
-                      onClick={() => {
-                        setSelectedTime(time);
+            )}
+
+            {/* Date and Time Row */}
+            <div className="grid grid-cols-2 divide-x divide-neutral-200 relative">
+              {/* Date Cell */}
+              <div 
+                onClick={() => {
+                  setShowDatePicker(!showDatePicker);
+                  setShowGuestPicker(false);
+                }}
+                className="p-3 cursor-pointer hover:bg-neutral-50/80 transition-colors"
+              >
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
+                  Date
+                </label>
+                <div className="text-xs font-semibold text-neutral-900 truncate">
+                  {date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Add date'}
+                </div>
+              </div>
+
+              {/* Time Cell */}
+              <div className="p-3 relative hover:bg-neutral-50/80 transition-colors">
+                <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
+                  Time
+                </label>
+                {tour.timeSlots && tour.timeSlots.length > 0 ? (
+                  <div className="relative">
+                    <select
+                      value={selectedTime}
+                      onChange={(e) => {
+                        setSelectedTime(e.target.value);
                         setCutOffError(null);
                       }}
-                      title={slotCutOff ? `Cut-off threshold reached (${cutOffHours}h prior)` : undefined}
-                      className={cn(
-                        "py-2 px-1 rounded-xl text-xs font-bold border-2 transition-all cursor-pointer focus:outline-none flex flex-col items-center justify-center gap-0.5",
-                        slotCutOff 
-                          ? "bg-gray-100/70 border-gray-200 text-gray-400 cursor-not-allowed line-through"
-                          : isSelected
-                            ? "bg-primary border-primary text-white shadow-sm font-black"
-                            : "bg-gray-50/80 border-gray-200 text-gray-700 hover:border-primary/50 hover:bg-white"
-                      )}
+                      className="w-full text-xs font-semibold text-neutral-900 bg-transparent pr-5 focus:outline-none cursor-pointer appearance-none truncate"
                     >
-                      <span>{time}</span>
-                      {slotCutOff && (
-                        <span className="text-[8px] font-bold text-red-500 no-underline leading-none">Cut-off</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Participant Picker (Desktop Side-by-Side) */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-gray-700 block">
-              {tour.packages && tour.packages.length > 1 ? (tour.timeSlots && tour.timeSlots.length > 0 ? '4' : '3') : (tour.timeSlots && tour.timeSlots.length > 0 ? '3' : '2')}. Travelers
-            </label>
-            
-            <div className="grid grid-cols-2 gap-2">
-              {/* Adults Counter */}
-              <div className="flex flex-col justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-black text-gray-900 text-xs">Adults</span>
-                  <span className="text-[10px] text-gray-400 font-bold">12+ yrs</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <button 
-                    type="button" 
-                    onClick={() => setAdults(Math.max(1, adults - 1))} 
-                    className={cn(
-                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                      (adults <= 1 || (adults + children) <= minRequired) 
-                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
-                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
-                    )} 
-                    disabled={adults <= 1 || (adults + children) <= minRequired}
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="font-black text-base text-gray-950 font-mono">{adults}</span>
-                  <button 
-                    type="button" 
-                    disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
-                    onClick={() => setAdults(adults + 1)} 
-                    className={cn(
-                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                      (spotsLeft !== null && (adults + children + 1) > spotsLeft) 
-                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
-                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
-                    )}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Children Counter */}
-              <div className="flex flex-col justify-between p-3 bg-gray-50/70 rounded-xl border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-black text-gray-900 text-xs">Children</span>
-                  <span className="text-[10px] text-gray-400 font-bold">3-11 yrs</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <button 
-                    type="button" 
-                    onClick={() => setChildren(Math.max(0, children - 1))} 
-                    className={cn(
-                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                      (children <= 0 || (adults + children) <= minRequired) 
-                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
-                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
-                    )} 
-                    disabled={children <= 0 || (adults + children) <= minRequired}
-                  >
-                    <Minus className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="font-black text-base text-gray-950 font-mono">{children}</span>
-                  <button 
-                    type="button" 
-                    disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
-                    onClick={() => setChildren(children + 1)} 
-                    className={cn(
-                      "h-7 w-7 rounded-lg border flex items-center justify-center transition-all cursor-pointer",
-                      (spotsLeft !== null && (adults + children + 1) > spotsLeft) 
-                        ? "border-gray-200 text-gray-300 bg-gray-100 opacity-50 cursor-not-allowed" 
-                        : "border-gray-300 bg-white text-gray-700 hover:border-primary hover:text-primary hover:bg-orange-50"
-                    )}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                      {tour.timeSlots.map(t => {
+                        const slotCutOff = date ? isSlotCutOff(date, t, cutOffHours) : false;
+                        return (
+                          <option key={t} value={t} disabled={slotCutOff}>
+                            {t} {slotCutOff ? '(Closed)' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <ChevronDown className="w-3.5 h-3.5 text-neutral-400 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                ) : (
+                  <div className="text-xs font-semibold text-neutral-900 truncate">
+                    Daily Flexible
+                  </div>
+                )}
               </div>
             </div>
 
-            {(spotsLeft !== null && (adults + children) > spotsLeft) && (
-              <p className="text-[10px] text-red-500 font-bold text-center animate-pulse mt-1">
-                Capacity Exceeded: Only {spotsLeft} spots remaining
-              </p>
+            {/* Guests Cell */}
+            <div className="p-3 relative">
+              <div 
+                onClick={() => {
+                  setShowGuestPicker(!showGuestPicker);
+                  setShowDatePicker(false);
+                }}
+                className="cursor-pointer flex items-center justify-between"
+              >
+                <div>
+                  <label className="block text-[10px] font-extrabold uppercase tracking-wider text-neutral-500 mb-0.5">
+                    Guests
+                  </label>
+                  <div className="text-xs font-semibold text-neutral-900">
+                    {adults + children} {adults + children === 1 ? 'guest' : 'guests'} ({adults} {adults === 1 ? 'adult' : 'adults'}{children > 0 ? `, ${children} ${children === 1 ? 'child' : 'children'}` : ''})
+                  </div>
+                </div>
+                <ChevronDown className={cn("w-4 h-4 text-neutral-400 transition-transform duration-200", showGuestPicker && "rotate-180")} />
+              </div>
+            </div>
+          </div>
+
+          {/* Date Picker Popover */}
+          <AnimatePresence>
+            {showDatePicker && (
+              <motion.div 
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                className="bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 relative z-50 mt-1"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <button type="button" onClick={() => {
+                    const d = new Date(currentMonth);
+                    d.setMonth(d.getMonth() - 1);
+                    setCurrentMonth(d);
+                  }} className="p-1.5 hover:bg-neutral-100 rounded-full transition-colors text-neutral-600 cursor-pointer">
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="font-bold text-neutral-900 text-xs">
+                    {currentMonth.toLocaleString('en-US', { month: 'long', year: 'numeric' })}
+                  </span>
+                  <button type="button" onClick={() => {
+                    const d = new Date(currentMonth);
+                    d.setMonth(d.getMonth() + 1);
+                    setCurrentMonth(d);
+                  }} className="p-1.5 hover:bg-neutral-100 rounded-full transition-colors text-neutral-600 cursor-pointer">
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                <div className="grid grid-cols-7 gap-1 mb-1 text-center text-[10px] font-semibold text-neutral-400 uppercase">
+                  {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                    <div key={d}>{d}</div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1">
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                    <div key={`empty-${i}`} className="aspect-square" />
+                  ))}
+                  {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                    const d = i + 1;
+                    const dateObj = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
+                    const isPast = dateObj < new Date(new Date().setHours(0,0,0,0));
+                    const dateString = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+                    const isSelected = date === dateString;
+                    const isCutOff = isDateFullyCutOff(dateString, tour.timeSlots, cutOffHours);
+                    const isDisabled = isPast || isCutOff;
+
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        disabled={isDisabled}
+                        title={isPast ? "Past date" : isCutOff ? `Cut-off reached` : undefined}
+                        onClick={() => {
+                          setDate(dateString);
+                          setCutOffError(null);
+                          setShowDatePicker(false);
+                        }}
+                        className={cn(
+                          "aspect-square rounded-full text-xs font-semibold transition-all flex flex-col items-center justify-center cursor-pointer",
+                          isSelected 
+                            ? "bg-neutral-900 text-white font-bold" 
+                            : isDisabled 
+                              ? "text-neutral-300 cursor-not-allowed line-through decoration-neutral-300" 
+                              : "text-neutral-800 hover:bg-neutral-100"
+                        )}
+                      >
+                        <span>{d}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </motion.div>
             )}
+          </AnimatePresence>
+
+          {/* Guest Picker Popover */}
+          <AnimatePresence>
+            {showGuestPicker && (
+              <motion.div 
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                className="bg-white rounded-2xl shadow-2xl border border-neutral-200 p-4 space-y-4 relative z-50 mt-1"
+              >
+                {/* Adults row */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="block text-xs font-bold text-neutral-900">Adults</span>
+                    <span className="text-[11px] text-neutral-500 font-normal">Age 12+</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setAdults(Math.max(1, adults - 1))}
+                      disabled={adults <= 1 || (adults + children) <= minRequired}
+                      className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-30 disabled:hover:border-neutral-300 cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-4 text-center font-bold text-xs text-neutral-900">{adults}</span>
+                    <button
+                      type="button"
+                      disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
+                      onClick={() => setAdults(adults + 1)}
+                      className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-30 disabled:hover:border-neutral-300 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Children row */}
+                <div className="flex items-center justify-between border-t border-neutral-100 pt-3">
+                  <div>
+                    <span className="block text-xs font-bold text-neutral-900">Children</span>
+                    <span className="text-[11px] text-neutral-500 font-normal">Age 3–11</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setChildren(Math.max(0, children - 1))}
+                      disabled={children <= 0 || (adults + children) <= minRequired}
+                      className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-30 disabled:hover:border-neutral-300 cursor-pointer"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="w-4 text-center font-bold text-xs text-neutral-900">{children}</span>
+                    <button
+                      type="button"
+                      disabled={spotsLeft !== null && (adults + children + 1) > spotsLeft}
+                      onClick={() => setChildren(children + 1)}
+                      className="w-8 h-8 rounded-full border border-neutral-300 flex items-center justify-center text-neutral-600 hover:border-neutral-900 hover:text-neutral-900 disabled:opacity-30 disabled:hover:border-neutral-300 cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-t border-neutral-100 pt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setShowGuestPicker(false)}
+                    className="text-xs font-bold text-neutral-900 underline hover:text-neutral-700 cursor-pointer"
+                  >
+                    Close
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Subtle Cut-off / Cancellation notice */}
+          <div className="flex items-center justify-center gap-1.5 text-[11px] text-neutral-500 pt-1">
+            <Clock className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+            <span>{formatCutOffNotice(cutOffHours)}</span>
           </div>
 
-          {/* Price Summary Breakdown Card */}
-          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-            <div className="text-left">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">Total Price ({adults + children} pax)</span>
-              <div className="flex items-baseline gap-1 mt-0.5">
-                <span className="text-lg font-black text-gray-950 font-display">
-                  <FormattedPrice amount={summary.grandTotal} />
-                </span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowPriceSummary(true)}
-              className="text-xs font-black text-primary hover:text-orange-700 underline flex items-center gap-0.5 cursor-pointer bg-orange-50/80 px-2.5 py-1.5 rounded-lg border border-orange-200/80"
-            >
-              <span>Summary</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Action CTA Button */}
+          {/* Airbnb-style Solid Reserve Button */}
           <button
             type="button"
             onClick={handleAvailabilityCheck}
             disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isNavigating}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 font-black text-white hover:bg-orange-700 hover:shadow-lg active:scale-[0.99] transition-all shadow-md tracking-wider text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer relative z-10 select-none"
+            className="w-full py-3.5 px-6 rounded-xl bg-[#FF385C] hover:bg-[#E00B41] text-white font-semibold text-base shadow-sm transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {isNavigating ? (
               <>
-                <span>Processing Booking...</span>
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Processing...</span>
+                <Loader2 className="h-4 w-4 animate-spin" />
               </>
             ) : isSoldOut ? (
-              'Sold Out for this Date'
+              'Sold out'
             ) : (spotsLeft !== null && (adults + children) > spotsLeft) ? (
-              'Not Enough Spots Available'
+              'Not enough spots'
             ) : (
-              <>
-                <span>Book Now / Check Availability</span>
-                <Rocket className="h-4 w-4" />
-              </>
+              <span>Check availability</span>
             )}
           </button>
+
+          <p className="text-xs text-neutral-500 text-center font-normal">
+            You won&apos;t be charged yet
+          </p>
+
+          {/* Airbnb-style Itemized Price Breakdown */}
+          <div className="pt-4 border-t border-neutral-200 space-y-3 text-xs text-neutral-600">
+            <div className="flex justify-between items-center">
+              <span className="underline decoration-neutral-300 cursor-pointer" onClick={() => setShowPriceSummary(true)}>
+                <FormattedPrice amount={calculatePackagePrice(selectedPackage || tour.packages[0]) / Math.max(1, adults + children)} /> × {adults + children} {adults + children === 1 ? 'guest' : 'guests'}
+              </span>
+              <span className="font-semibold text-neutral-900">
+                <FormattedPrice amount={summary.packageTotal} />
+              </span>
+            </div>
+
+            {summary.addonsTotal > 0 && (
+              <div className="flex justify-between items-center">
+                <span className="underline decoration-neutral-300">Add-ons</span>
+                <span className="font-semibold text-neutral-900">
+                  <FormattedPrice amount={summary.addonsTotal} />
+                </span>
+              </div>
+            )}
+
+            <div className="border-t border-neutral-200 pt-3 flex justify-between items-center font-bold text-sm text-neutral-900">
+              <span>Total before taxes</span>
+              <span className="text-base font-extrabold font-display">
+                <FormattedPrice amount={summary.grandTotal} />
+              </span>
+            </div>
+          </div>
         </form>
       </div>
 
