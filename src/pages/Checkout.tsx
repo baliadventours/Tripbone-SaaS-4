@@ -1483,7 +1483,7 @@ const toggleAddOn = (addon: AddOn) => {
         {/* Step Progress Bar */}
         <div className="w-full bg-neutral-100 h-1">
           <div
-            className="bg-neutral-900 h-1 transition-all duration-300"
+            className="bg-primary h-1 transition-all duration-300"
             style={{
               width:
                 step === 'selection' ? '33.3%' :
@@ -2204,7 +2204,7 @@ const toggleAddOn = (addon: AddOn) => {
                       type="button"
                       onClick={handleApplyCoupon}
                       disabled={isValidatingCoupon || !couponInput}
-                      className="px-4 py-2 bg-neutral-900 text-white font-bold rounded-xl text-xs cursor-pointer hover:bg-black disabled:opacity-40"
+                      className="px-4 py-2 bg-primary text-white font-bold rounded-xl text-xs cursor-pointer hover:opacity-90 disabled:opacity-40"
                     >
                       {isValidatingCoupon ? 'Checking...' : 'Apply'}
                     </button>
@@ -2230,7 +2230,7 @@ const toggleAddOn = (addon: AddOn) => {
                     id="termsCheckMobile"
                     checked={agreedToTerms}
                     onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    className="h-4 w-4 rounded text-neutral-900 border-neutral-300 focus:ring-neutral-900 mt-0.5"
+                    className="h-4 w-4 rounded text-primary border-neutral-300 focus:ring-primary mt-0.5"
                   />
                   <label htmlFor="termsCheckMobile" className="text-[11px] text-neutral-600 font-normal leading-snug">
                     I agree to the <a href="/terms" className="underline font-bold text-neutral-900">Terms & Conditions</a> and understand the free cancellation policy.
@@ -2265,7 +2265,7 @@ const toggleAddOn = (addon: AddOn) => {
                 type="button"
                 onClick={() => updateStep('customer')}
                 disabled={!selectedPackage}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
+                className="px-6 py-3 bg-primary hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shadow-primary/20 transition-all cursor-pointer"
               >
                 Continue to Details
               </button>
@@ -2275,7 +2275,7 @@ const toggleAddOn = (addon: AddOn) => {
               <button
                 type="button"
                 onClick={() => updateStep('payment')}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all cursor-pointer"
+                className="px-6 py-3 bg-primary hover:opacity-90 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shadow-primary/20 transition-all cursor-pointer"
               >
                 Continue to Payment
               </button>
@@ -2286,7 +2286,7 @@ const toggleAddOn = (addon: AddOn) => {
                 type="button"
                 onClick={() => handleFinalBooking()}
                 disabled={isBooking || !agreedToTerms}
-                className="px-6 py-3 bg-neutral-900 hover:bg-black disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 bg-primary hover:opacity-90 disabled:opacity-50 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-md shadow-primary/20 transition-all flex items-center gap-2 cursor-pointer"
               >
                 {isBooking ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm and Pay'}
               </button>
@@ -2339,7 +2339,7 @@ const toggleAddOn = (addon: AddOn) => {
                     className={cn(
                       "text-xs font-semibold transition-all px-2.5 py-1 rounded-full",
                       isCurrent 
-                        ? "bg-neutral-900 text-white font-bold" 
+                        ? "bg-primary text-white font-bold shadow-xs shadow-primary/20" 
                         : isPast 
                           ? "text-neutral-900 font-medium" 
                           : "text-neutral-400",
@@ -3317,7 +3317,7 @@ const toggleAddOn = (addon: AddOn) => {
                   <button
                     onClick={() => updateStep("customer")}
                     disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isUnderMinParticipants}
-                    className="bg-neutral-900 hover:bg-black text-white px-10 py-4 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                    className="bg-primary hover:opacity-90 text-white px-10 py-4 rounded-xl font-bold text-sm shadow-md shadow-primary/20 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                   >
                     {isSoldOut ? 'Sold Out' : (spotsLeft !== null && (adults + children) > spotsLeft) ? 'Not Enough Spots' : 
                      isUnderMinParticipants ? 'Under Min Travelers' : 'Continue to Guest Details'} <ChevronRight className="h-4 w-4" />
@@ -3455,7 +3455,7 @@ const toggleAddOn = (addon: AddOn) => {
                         updateStep("payment");
                       }
                     }}
-                    className="bg-neutral-900 hover:bg-black text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+                    className="bg-primary hover:opacity-90 text-white px-8 py-3.5 rounded-xl font-bold text-sm shadow-md shadow-primary/20 transition-all flex items-center gap-2 cursor-pointer"
                   >
                     Continue to Payment <ChevronRight className="h-4 w-4" />
                   </button>
@@ -3780,7 +3780,7 @@ const toggleAddOn = (addon: AddOn) => {
                       <button
                         onClick={() => handleFinalBooking()}
                         disabled={isBooking || !agreedToTerms}
-                        className="w-full sm:w-auto bg-neutral-900 hover:bg-black text-white px-12 py-4 rounded-xl font-bold text-sm shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                        className="w-full sm:w-auto bg-primary hover:opacity-90 text-white px-12 py-4 rounded-xl font-bold text-sm shadow-md shadow-primary/20 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
                       >
                         {isBooking ? (
                           <Loader2 className="h-5 w-5 animate-spin" />
@@ -4128,7 +4128,7 @@ const toggleAddOn = (addon: AddOn) => {
                           type="button"
                           onClick={handleApplyCoupon}
                           disabled={isValidatingCoupon || !couponInput}
-                          className="bg-neutral-900 text-white px-3.5 py-2.5 rounded-xl font-bold text-xs hover:bg-black transition-all disabled:opacity-40 cursor-pointer"
+                          className="bg-primary text-white px-3.5 py-2.5 rounded-xl font-bold text-xs hover:opacity-90 transition-all disabled:opacity-40 cursor-pointer shadow-xs shadow-primary/20"
                         >
                           {isValidatingCoupon ? <Loader2 className="h-3 w-3 animate-spin" /> : "Apply"}
                         </button>

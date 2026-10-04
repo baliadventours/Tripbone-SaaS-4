@@ -485,12 +485,12 @@ export default function BookingForm({ tour }: BookingFormProps) {
             <span>{formatCutOffNotice(cutOffHours)}</span>
           </div>
 
-          {/* Airbnb-style Solid Reserve Button */}
+          {/* Dynamic Admin Brand Styled Reserve Button */}
           <button
             type="button"
             onClick={handleAvailabilityCheck}
             disabled={isSoldOut || (spotsLeft !== null && (adults + children) > spotsLeft) || isNavigating}
-            className="w-full py-3.5 px-6 rounded-xl bg-[#FF385C] hover:bg-[#E00B41] text-white font-semibold text-base shadow-sm transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3.5 px-6 rounded-xl bg-primary hover:opacity-95 text-white font-bold text-base shadow-md shadow-primary/20 transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
           >
             {isNavigating ? (
               <>

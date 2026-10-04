@@ -167,7 +167,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     const builderRef = doc(db, 'website_builder', tenantId || 'general');
     const unsubscribeBuilder = onSnapshot(builderRef, (snapshot) => {
       if (snapshot.exists()) {
-        setBuilderSettings(snapshot.data() as WebsiteBuilderSettings);
+        const bData = snapshot.data() as WebsiteBuilderSettings;
+        setBuilderSettings(bData);
+        if (settings) {
+          applySettings(settings, bData);
+        }
       } else {
         setBuilderSettings(null);
       }
@@ -208,9 +212,18 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     };
   }, [tenantId, tenantLoading]);
 
-  function applySettings(data: SiteSettings) {
+  function applySettings(data: SiteSettings, builder?: WebsiteBuilderSettings | null) {
+    const activeBuilder = builder !== undefined ? builder : builderSettings;
+    const primary = (activeBuilder as any)?.brandingSettings?.primaryColor || data.primaryColor || '#FF7A00';
+    const secondary = (activeBuilder as any)?.brandingSettings?.secondaryColor || data.secondaryColor || '#1F3B1F';
+
     // Apply colors to CSS variables
-    document.documentElement.style.setProperty('--primary-color', data.primaryColor);
+    document.documentElement.style.setProperty('--primary-color', primary);
+    document.documentElement.style.setProperty('--color-primary', primary);
+    document.documentElement.style.setProperty('--primary', primary);
+    document.documentElement.style.setProperty('--secondary-color', secondary);
+    document.documentElement.style.setProperty('--color-secondary', secondary);
+    document.documentElement.style.setProperty('--secondary', secondary);
 
     // Apply branding preset class to root
     const root = document.documentElement;

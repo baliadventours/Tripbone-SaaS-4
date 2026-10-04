@@ -130,6 +130,72 @@ export async function createServer() {
     }
   });
 
+  // Booking Tracker API: Allows guest customers to look up booking status securely by Reference ID + Email
+  app.post("/api/track-booking", async (req: any, res: any) => {
+    try {
+      const { bookingId, email } = req.body || {};
+      if (!bookingId || !email) {
+        return res.status(400).json({ error: "Booking Reference and Email Address are required" });
+      }
+
+      const adminDb = getAdminDb();
+      const normalizedEmail = String(email).trim().toLowerCase();
+      let cleanId = String(bookingId).trim();
+      if (cleanId.startsWith("#")) {
+        cleanId = cleanId.substring(1).trim();
+      }
+      const targetCleanId = cleanId.toLowerCase();
+
+      let foundBooking: any = null;
+
+      // 1. Direct get by exact docId
+      try {
+        const directDoc = await adminDb.collection("bookings").doc(cleanId).get();
+        if (directDoc.exists) {
+          const data = directDoc.data();
+          const bEmail = (data?.customerData?.email || data?.customerDetails?.email || data?.email || data?.userEmail || "").toLowerCase();
+          if (bEmail === normalizedEmail) {
+            foundBooking = { id: directDoc.id, ...data };
+          }
+        }
+      } catch (directErr) {
+        console.warn("[Server Track Booking] Direct lookup notice:", directErr);
+      }
+
+      // 2. If not found, scan matching bookings
+      if (!foundBooking) {
+        const snapshot = await adminDb.collection("bookings").get();
+        for (const d of snapshot.docs) {
+          const data = d.data();
+          const bEmail = (data?.customerData?.email || data?.customerDetails?.email || data?.email || data?.userEmail || "").toLowerCase();
+          if (bEmail === normalizedEmail) {
+            const currentDocId = d.id.toLowerCase();
+            if (
+              currentDocId === targetCleanId ||
+              currentDocId.endsWith(targetCleanId) ||
+              String(data.id || "").toLowerCase() === targetCleanId ||
+              String(data.bookingReference || "").toLowerCase() === targetCleanId ||
+              currentDocId.slice(-8) === targetCleanId.slice(-8) ||
+              targetCleanId.endsWith(currentDocId.slice(-8))
+            ) {
+              foundBooking = { id: d.id, ...data };
+              break;
+            }
+          }
+        }
+      }
+
+      if (!foundBooking) {
+        return res.status(404).json({ error: "No booking found matching this reference and email address." });
+      }
+
+      return res.json({ success: true, booking: foundBooking });
+    } catch (err: any) {
+      console.error("[Server Track Booking] Error:", err);
+      return res.status(500).json({ error: "Failed to fetch booking details. Please try again." });
+    }
+  });
+
   // Redirect /index.html and /app.html to / for SEO duplicate content prevention
   app.use((req, res, next) => {
     if (req.path === '/index.html' || req.path === '/app.html') {

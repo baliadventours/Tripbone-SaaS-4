@@ -78,8 +78,8 @@ export default function JoyTimeMobilePreset({
 
   // JoyTime customization settings from tenant
   const joytimeCustomization = settings?.joytimeCustomization;
-  const primaryColor = joytimeCustomization?.primaryColor || '#0284c7';
-  const secondaryColor = joytimeCustomization?.secondaryColor || '#0369a1';
+  const primaryColor = joytimeCustomization?.primaryColor || settings?.primaryColor || '#FF7A00';
+  const secondaryColor = joytimeCustomization?.secondaryColor || settings?.secondaryColor || '#1F3B1F';
   const accentColor = joytimeCustomization?.accentColor || '#f59e0b';
   const headerBgColor = joytimeCustomization?.headerBgColor || '#ffffff';
 

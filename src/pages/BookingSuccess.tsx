@@ -176,7 +176,7 @@ export default function BookingSuccess() {
               <div className="grid gap-2.5">
                 <Link 
                   to="/customer/bookings" 
-                  className="w-full h-12 bg-neutral-900 text-white rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider hover:bg-black transition-all cursor-pointer"
+                  className="w-full h-12 bg-primary text-white rounded-xl flex items-center justify-center gap-2 font-bold text-xs uppercase tracking-wider hover:opacity-90 transition-all cursor-pointer shadow-md shadow-primary/20"
                 >
                   Go to Dashboard <Icons.ArrowRight className="h-4 w-4" />
                 </Link>
@@ -215,7 +215,7 @@ export default function BookingSuccess() {
           <div className="flex gap-3">
             <button 
               onClick={() => window.print()}
-              className="flex items-center gap-2 rounded-xl bg-neutral-900 px-6 py-3 text-xs font-bold text-white transition-all hover:bg-black cursor-pointer shadow-xs"
+              className="flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-xs font-bold text-white transition-all hover:opacity-90 cursor-pointer shadow-md shadow-primary/20"
             >
               Print Voucher
             </button>

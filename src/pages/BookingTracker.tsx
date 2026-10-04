@@ -30,59 +30,48 @@ export default function BookingTracker() {
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const rawEmail = email.trim();
-      const normalizedId = bookingId.trim().toLowerCase();
-
-      // We try fetching multiple casings to cover possible guest checkout variations
-      const queries = [
-        getDocs(query(collection(db, 'bookings'), where('customerData.email', '==', normalizedEmail)))
-      ];
-
-      if (rawEmail !== normalizedEmail) {
-        queries.push(getDocs(query(collection(db, 'bookings'), where('customerData.email', '==', rawEmail))));
+      let cleanId = bookingId.trim();
+      if (cleanId.startsWith('#')) {
+        cleanId = cleanId.substring(1).trim();
       }
 
-      if (normalizedEmail.includes('@')) {
-        const parts = normalizedEmail.split('@');
-        const capitalized = parts[0].charAt(0).toUpperCase() + parts[0].slice(1) + '@' + parts[1];
-        if (capitalized !== normalizedEmail && capitalized !== rawEmail) {
-          queries.push(getDocs(query(collection(db, 'bookings'), where('customerData.email', '==', capitalized))));
+      // 1. First attempt: call secure server tracking endpoint (handles both full IDs & 8-char short references)
+      try {
+        const res = await fetch('/api/track-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ bookingId: cleanId, email: normalizedEmail })
+        });
+        const json = await res.json();
+        if (res.ok && json.success && json.booking) {
+          setBooking(json.booking);
+          return;
         }
+      } catch (apiErr) {
+        console.warn('[Booking Tracker API Notice]', apiErr);
       }
 
-      const snapshots = await Promise.all(queries);
-      
-      let foundBooking: Booking | null = null;
-      const allDocs = snapshots.flatMap(snap => snap.docs);
-
-      allDocs.forEach((docSnap) => {
-        const id = docSnap.id.toLowerCase();
-        // Support full ID or the last 8 characters
-        if (id === normalizedId || id.endsWith(normalizedId)) {
-          foundBooking = { id: docSnap.id, ...docSnap.data() } as Booking;
-        }
-      });
-
-      if (foundBooking) {
-        setBooking(foundBooking);
-      } else {
-        // If not found by direct email query, maybe the email in DB isn't lowercase?
-        // Let's try a direct doc get as fallback (case-sensitive)
-        const docRef = doc(db, 'bookings', bookingId.trim());
+      // 2. Fallback: direct doc get (for confirmed/direct docs)
+      try {
+        const docRef = doc(db, 'bookings', cleanId);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
           const data = docSnap.data() as Booking;
-          if (data.customerData?.email || "".toLowerCase() === normalizedEmail) {
+          const bEmail = (data.customerData?.email || (data as any).customerDetails?.email || (data as any).email || "").toLowerCase();
+          if (bEmail === normalizedEmail) {
             setBooking({ id: docSnap.id, ...data });
             return;
           }
         }
-        setError('Booking not found or email does not match.');
+      } catch (docErr) {
+        console.warn('[Booking Tracker Direct Get Notice]', docErr);
       }
-    } catch (err) {
+
+      setError('No booking found matching this reference and email address.');
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred while fetching the booking.');
+      setError('An error occurred while fetching the booking. Please check your details and try again.');
     } finally {
       setLoading(false);
     }
@@ -144,7 +133,7 @@ export default function BookingTracker() {
             <button 
               type="submit"
               disabled={loading}
-              className="w-full h-16 bg-gray-900 text-white rounded-2xl flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:bg-black transition-all shadow-xl shadow-gray-200 disabled:opacity-50"
+              className="w-full h-14 bg-primary text-white rounded-2xl flex items-center justify-center gap-3 font-bold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-lg shadow-primary/20 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -226,7 +215,7 @@ export default function BookingTracker() {
                       {booking.status === 'confirmed' ? (
                         <Link 
                           to={`/booking-success/${booking.id}`}
-                          className="w-full h-16 bg-orange-500 text-white rounded-2xl flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:bg-primary transition-all shadow-xl shadow-orange-100"
+                          className="w-full h-16 bg-primary text-white rounded-2xl flex items-center justify-center gap-3 font-black text-sm uppercase tracking-widest hover:opacity-95 transition-all shadow-xl shadow-primary/20 cursor-pointer"
                         >
                           View Voucher <Icons.Ticket className="h-5 w-5" />
                         </Link>
