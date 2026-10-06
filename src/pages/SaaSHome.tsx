@@ -714,20 +714,25 @@ export default function SaaSHome() {
         console.warn("[SaaS Signup] Failed to write profile to Firestore:", profileErr);
       }
 
-      // Send Tripbone Branded Welcome & Verification Emails via Mailjet API
+      // Send Tripbone Branded Welcome & Verification Emails via Resend / Server Mail Service
       try {
         const baseHost = window.location.origin;
         fetch(`${baseHost}/api/mail/welcome`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: loginEmail, name: regName.trim() || 'Traveler' })
-        }).catch(e => console.warn('[Mailjet] Welcome fail', e));
+        }).catch(e => console.warn('[Resend] Welcome fail', e));
 
         fetch(`${baseHost}/api/mail/verify`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email: loginEmail })
-        }).catch(e => console.warn('[Mailjet] Verify fail', e));
+        }).catch(e => console.warn('[Resend] Verify fail', e));
+
+        // Client-side Firebase native email verification trigger as dual fallback
+        if (usrCredential?.user) {
+          sendEmailVerification(usrCredential.user).catch(e => console.warn('[Firebase Auth] Verification email fallback notice:', e));
+        }
       } catch (verErr) {
         console.warn("[SaaS Signup] Failed to trigger verification email:", verErr);
       }
@@ -2334,12 +2339,22 @@ export default function SaaSHome() {
                           const userEmail = auth.currentUser?.email || loginEmail;
                           if (userEmail) {
                             const baseHost = window.location.origin;
-                            await fetch(`${baseHost}/api/mail/verify`, {
+                            const res = await fetch(`${baseHost}/api/mail/verify`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ email: userEmail })
                             });
-                            setSuccess("📧 Confirmation email dispatched from Tripbone! Please check your inbox.");
+                            
+                            if (auth.currentUser) {
+                              await sendEmailVerification(auth.currentUser).catch(e => console.warn('[Firebase Auth] Verification fallback error:', e));
+                            }
+
+                            if (res.ok) {
+                              setSuccess("📧 Confirmation email dispatched from Tripbone! Please check your inbox (and Spam folder).");
+                            } else {
+                              const errData = await res.json().catch(() => ({}));
+                              setSuccess(`📧 Verification email requested for ${userEmail}. Please check your inbox.`);
+                            }
                             setError(null);
                           }
                         } catch (resendErr: any) {

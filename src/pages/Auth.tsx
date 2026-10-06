@@ -455,20 +455,22 @@ export default function Auth() {
             });
           }
 
-          // --- Send Tripbone Branded Welcome & Verification Emails ---
+          // --- Send Tripbone Branded Welcome & Verification Emails via Resend ---
           try {
             const baseHost = window.location.origin;
             fetch(`${baseHost}/api/mail/welcome`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: user.email, name: fullName || 'Traveler' })
-            }).catch(e => console.warn('[Mailjet] Welcome fail', e));
+            }).catch(e => console.warn('[Resend] Welcome fail', e));
             
             fetch(`${baseHost}/api/mail/verify`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ email: user.email })
-            }).catch(e => console.warn('[Mailjet] Verify fail', e));
+            }).catch(e => console.warn('[Resend] Verify fail', e));
+
+            sendEmailVerification(user).catch(e => console.warn('[Firebase Auth] sendEmailVerification notice:', e));
           } catch (mailError) {
             console.warn('[Auth] Failed to send welcome/verification emails:', mailError);
           }

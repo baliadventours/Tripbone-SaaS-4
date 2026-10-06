@@ -108,14 +108,32 @@ export async function resolveEmailConfig(tenantId?: string | null): Promise<Emai
     console.error("[Email Resolver] Firestore fetch FAILED:", dbError.message);
   }
 
+  // Resolve active provider
+  let resolvedProvider = (globalSettings?.emailProvider || process.env.DEFAULT_EMAIL_PROVIDER || '').trim();
+  if (!resolvedProvider || resolvedProvider === 'none') {
+    if (process.env.RESEND_API_KEY) {
+      resolvedProvider = 'resend';
+    } else if (process.env.MJ_APIKEY_PUBLIC || process.env.MAILJET_API_KEY) {
+      resolvedProvider = 'mailjet';
+    } else if (process.env.SENDGRID_API_KEY) {
+      resolvedProvider = 'sendgrid';
+    } else {
+      resolvedProvider = 'resend'; // Default to Resend
+    }
+  }
+
   let resolvedApiKey = (globalSettings?.emailApiKey || '').trim();
   if (!resolvedApiKey) {
-    const mPublic = process.env.MJ_APIKEY_PUBLIC || process.env.MAILJET_API_KEY;
-    const mPrivate = process.env.MJ_APIKEY_PRIVATE || process.env.MAILJET_API_SECRET;
-    if (mPublic && mPrivate) {
-      resolvedApiKey = `${mPublic.trim()}:${mPrivate.trim()}`;
+    if (resolvedProvider === 'resend') {
+      resolvedApiKey = (process.env.RESEND_API_KEY || '').trim();
+    } else if (resolvedProvider === 'mailjet') {
+      const mPublic = process.env.MJ_APIKEY_PUBLIC || process.env.MAILJET_API_KEY;
+      const mPrivate = process.env.MJ_APIKEY_PRIVATE || process.env.MAILJET_API_SECRET;
+      if (mPublic && mPrivate) {
+        resolvedApiKey = `${mPublic.trim()}:${mPrivate.trim()}`;
+      }
     } else {
-      resolvedApiKey = (mPublic || process.env.ENGINEMAILER_API_KEY || process.env.RESEND_API_KEY || process.env.BREVO_API_KEY || process.env.SENDGRID_API_KEY || '').trim();
+      resolvedApiKey = (process.env.RESEND_API_KEY || process.env.ENGINEMAILER_API_KEY || process.env.BREVO_API_KEY || process.env.SENDGRID_API_KEY || '').trim();
     }
   }
 
@@ -133,11 +151,21 @@ export async function resolveEmailConfig(tenantId?: string | null): Promise<Emai
     resolvedSenderEmail = (globalSettings?.senderEmail || process.env.SENDER_EMAIL || globalSettings?.supportEmail || 'onboarding@resend.dev').trim();
   }
   if (!resolvedSenderName) {
-    resolvedSenderName = (globalSettings?.senderName || process.env.SENDER_NAME || globalSettings?.siteName || 'Travel Agency').trim();
+    resolvedSenderName = (globalSettings?.senderName || process.env.SENDER_NAME || globalSettings?.siteName || 'Tripbone').trim();
+  }
+
+  // For Resend: if sender is generic gmail or unverified, fallback to SENDER_EMAIL or onboarding@resend.dev so delivery succeeds
+  if (resolvedProvider === 'resend') {
+    if (!resolvedSenderEmail || resolvedSenderEmail.includes('@gmail.com') || resolvedSenderEmail.includes('@yahoo.com') || resolvedSenderEmail.includes('@hotmail.com')) {
+      resolvedSenderEmail = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+    }
+    if (!resolvedSenderName) {
+      resolvedSenderName = 'Tripbone';
+    }
   }
 
   const envValues = {
-    emailProvider: (globalSettings?.emailProvider || process.env.DEFAULT_EMAIL_PROVIDER || 'none').trim(),
+    emailProvider: resolvedProvider,
     emailApiKey: resolvedApiKey,
     senderEmail: resolvedSenderEmail,
     senderName: resolvedSenderName,
