@@ -84,6 +84,7 @@ const SaasCookies = lazyWithRetry(() => import('./pages/SaasCookies'));
 const AppSumoRedeem = lazyWithRetry(() => import('./pages/AppSumoRedeem'));
 const GuideView = lazyWithRetry(() => import('./pages/GuideView'));
 const DocsPage = lazyWithRetry(() => import('./pages/DocsPage'));
+const StoryboardPage = lazyWithRetry(() => import('./pages/StoryboardPage'));
 
 // Lazy load non-critical components
 import { useTenantSEO } from './hooks/useTenantSEO';
@@ -248,6 +249,8 @@ function AppContent() {
               <Route path="/appsumo" element={<AppSumoRedeem />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/docs/:slug" element={<DocsPage />} />
+              <Route path="/storyboard" element={<StoryboardPage />} />
+              <Route path="/docs/storyboard" element={<StoryboardPage />} />
               <Route path="/fundamental-setup" element={<Navigate to="/docs/fundamental-setup" replace />} />
               <Route path="/onboarding" element={<Navigate to="/docs/fundamental-setup" replace />} />
               
@@ -487,6 +490,8 @@ function AppContent() {
               <Route path="/admin/guide" element={<GuideView />} />
               <Route path="/docs" element={<DocsPage />} />
               <Route path="/docs/:slug" element={<DocsPage />} />
+              <Route path="/storyboard" element={<StoryboardPage />} />
+              <Route path="/docs/storyboard" element={<StoryboardPage />} />
               <Route path="/fundamental-setup" element={<Navigate to="/docs/fundamental-setup" replace />} />
               <Route path="/onboarding" element={<Navigate to="/docs/fundamental-setup" replace />} />
               <Route path="/terms" element={<Terms />} />

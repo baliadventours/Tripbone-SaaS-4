@@ -107,6 +107,18 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const isAiStudioPlatformHost = (h: string) => {
+    const host = h.toLowerCase();
+    return (
+      host.includes('run.app') ||
+      host.includes('ai.studio') ||
+      host.includes('aistudio.google.com') ||
+      host.includes('vercel.app') ||
+      host.includes('web.app') ||
+      host.includes('firebaseapp.com')
+    );
+  };
+
   const stopImpersonation = () => {
     sessionStorage.removeItem('tripbone_is_impersonating');
     sessionStorage.removeItem('tripbone_impersonated_tenant_id');
@@ -115,7 +127,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     const hostname = window.location.hostname;
     const protocol = hostname === 'localhost' || hostname === '127.0.0.1' ? 'http://' : 'https://';
-    const isAiStudio = hostname.includes('run.app');
+    const isAiStudio = isAiStudioPlatformHost(hostname);
 
     if (isAiStudio) {
       window.location.href = '/superadmin';
@@ -163,7 +175,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (targetTenant.customDomain) {
       targetUrl = `${protocol}${targetTenant.customDomain}/admin?impersonate=${targetTenant.id}`;
     } else {
-      const isAiStudio = hostname.includes('run.app');
+      const isAiStudio = isAiStudioPlatformHost(hostname);
 
       if (isAiStudio) {
         targetUrl = `/admin?tenant=${targetTenant.slug}&impersonate=${targetTenant.id}`;
@@ -267,7 +279,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
 
     // 3. Check localStorage for preview/sticky tenant (ONLY if NOT explicit superadmin impersonation)
     const cachedTenant = localStorage.getItem('tripbone_preview_tenant');
-    const isAiStudio = hostname.includes('run.app');
+    const isAiStudio = isAiStudioPlatformHost(hostname);
 
     if (cachedTenant && !isExplicitImpersonate && isAiStudio) {
       return { 
@@ -280,7 +292,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 4. Resolve subdomain or custom domain
-    const mainDomains = ['tripbone.com', 'localhost', '127.0.0.1'];
+    const mainDomains = ['tripbone.com', 'localhost', '127.0.0.1', 'ai.studio', 'run.app', 'vercel.app', 'web.app', 'firebaseapp.com'];
     const RESERVED_SUBDOMAINS = ['www', 'app', 'docs', 'api', 'admin', 'system', 'superadmin', 'status', 'guide', 'panduan'];
     const isMainDomain = mainDomains.some(domain => hostname === domain || hostname.endsWith('.' + domain));
 

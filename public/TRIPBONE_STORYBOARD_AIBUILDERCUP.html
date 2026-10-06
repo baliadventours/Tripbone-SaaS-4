@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tripbone - Google Cloud AI Builder Cup 2026 Demo Storyboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: #0f172a;
+      background-color: #f8fafc;
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .no-print-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #ffffff;
+      padding: 16px 24px;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+      max-width: 860px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .btn {
+      background: #0284c7;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 13px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      padding: 40px;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 4px 12px;
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #94a3b8;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+
+    .meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 20px;
+      font-size: 12px;
+    }
+
+    .meta-label {
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-size: 10px;
+      font-weight: 700;
+      display: block;
+    }
+    .meta-value {
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .content {
+      padding: 40px;
+    }
+
+    .scene {
+      margin-bottom: 40px;
+      border-left: 4px solid #cbd5e1;
+      padding-left: 24px;
+    }
+    .scene-1 { border-color: #f43f5e; }
+    .scene-2 { border-color: #f59e0b; }
+    .scene-3 { border-color: #10b981; }
+    .scene-4 { border-color: #0ea5e9; }
+    .scene-5 { border-color: #6366f1; }
+
+    .scene-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .scene-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+    .scene-1 .scene-time { color: #f43f5e; }
+    .scene-2 .scene-time { color: #d97706; }
+    .scene-3 .scene-time { color: #059669; }
+    .scene-4 .scene-time { color: #0284c7; }
+    .scene-5 .scene-time { color: #4f46e5; }
+
+    .rubric-tag {
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      background: #f1f5f9;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    h2 {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 16px;
+      color: #0f172a;
+    }
+
+    .scene-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 16px;
+      font-size: 13px;
+    }
+
+    .box-vo {
+      background: #fefce8;
+      border-color: #fef08a;
+      color: #713f12;
+      font-style: italic;
+    }
+    .scene-1 .box-vo { background: #fff1f2; border-color: #fecdd3; color: #881337; }
+    .scene-3 .box-vo { background: #ecfdf5; border-color: #a7f3d0; color: #064e3b; }
+    .scene-4 .box-vo { background: #f0f9ff; border-color: #bae6fd; color: #0c4a6e; }
+    .scene-5 .box-vo { background: #eef2ff; border-color: #c7d2fe; color: #312e81; }
+
+    .box-title {
+      display: block;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+      font-style: normal;
+    }
+
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .badge {
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .checklist-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 24px;
+      margin-top: 32px;
+    }
+
+    .checklist-title {
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .checklist-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    @media print {
+      body { background: #ffffff; padding: 0; }
+      .no-print-bar { display: none; }
+      .container { box-shadow: none; border: none; max-width: 100%; }
+      header { background: #ffffff; color: #000000; border-bottom: 2px solid #000000; padding: 20px; }
+      .meta-label, .subtitle { color: #475569; }
+      .meta-value, h1 { color: #000000; }
+      .content { padding: 20px; }
+      .scene { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print-bar">
+    <div>
+      <strong style="font-size: 14px;">Tripbone Video Storyboard</strong>
+      <span style="font-size: 12px; color: #64748b; margin-left: 8px;">Google Cloud AI Builder Cup 2026</span>
+    </div>
+    <button class="btn" onclick="window.print()">
+      🖨️ Print / Save as PDF
+    </button>
+  </div>
+
+  <div class="container">
+    <header>
+      <div class="tag">Google Cloud AI Builder Cup 2026 Submission</div>
+      <h1>Tripbone: AI-Native Tour Commerce & Operating Engine</h1>
+      <div class="subtitle">Video Demo Production Script & Scene Timing Blueprint</div>
+      <div class="meta-grid">
+        <div>
+          <span class="meta-label">Category</span>
+          <span class="meta-value">Retail & Commerce</span>
+        </div>
+        <div>
+          <span class="meta-label">AI Engine</span>
+          <span class="meta-value">Google Gemini 2.5</span>
+        </div>
+        <div>
+          <span class="meta-label">Cloud Stack</span>
+          <span class="meta-value">Cloud Run + Firestore</span>
+        </div>
+        <div>
+          <span class="meta-label">Duration</span>
+          <span class="meta-value">2:55 (Max 3:00)</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="content">
+      
+      <!-- Scene 1 -->
+      <div class="scene scene-1">
+        <div class="scene-header">
+          <span class="scene-time">SCENE 1 • 0:00 – 0:35 (35 Seconds)</span>
+          <span class="rubric-tag">Problem Alignment & Impact (25%)</span>
+        </div>
+        <h2>The Hook & The Tourism Fragmentation Problem</h2>
+        <div class="scene-grid">
+          <div class="box">
+            <span class="box-title">Visual Action on Screen</span>
+            Fast split-screen montage showing typical operator friction: messy WhatsApp group chats with customer quotes, static Word/PDF booking receipts, and OTA fee statements taking 20–25% commission. Transitions into the sleek Tripbone homepage.
+          </div>
+          <div class="box box-vo">
+            <span class="box-title">Voiceover Script</span>
+            "Across Southeast Asia and the Asia-Pacific, independent tour operators power a multi-billion dollar tourism economy. Yet over 80% still manage direct bookings through fragmented WhatsApp chats, manual bank transfers, and static spreadsheets. This causes operators to lose up to 40% of international direct sales due to friction, timezone delays, and lack of dynamic pricing. Meet Tripbone — an AI-native, multi-tenant commerce and operating engine built on Google Cloud that turns any tour operator into a modern digital travel enterprise."
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Badge: Fragmented Offline Commerce</span>
+          <span class="badge">Badge: High OTA Commissions (25%)</span>
+          <span class="badge">Badge: Tripbone Commerce Engine</span>
+        </div>
+      </div>
+
+      <!-- Scene 2 -->
+      <div class="scene scene-2">
+        <div class="scene-header">
+          <span class="scene-time">SCENE 2 • 0:35 – 1:25 (50 Seconds)</span>
+          <span class="rubric-tag">Gen AI Implementation (40%) & UX (10%)</span>
+        </div>
+        <h2>The Traveler Experience & Google Gemini AI Planner</h2>
+        <div class="scene-grid">
+          <div class="box">
+            <span class="box-title">Visual Action on Screen</span>
+            1. Open AI Trip Planner (/planner). Type prompt: "3 days in Bali for a couple, budget $600, love waterfalls and sunrises".<br>
+            2. Gemini streams back day-by-day itineraries, interactive route maps, and bookable cards.<br>
+            3. Click a tour &rarr; Tour Details page with Airbnb Date & Guests picker &rarr; Checkout showing dynamic group pricing tiers and departure times.
+          </div>
+          <div class="box box-vo">
+            <span class="box-title">Voiceover Script</span>
+            "For travelers, Tripbone leverages Google's Gemini API to power an intelligent AI Trip Planner. Rather than static PDFs, travelers receive personalized daily itineraries with real-time route optimization, duration calculations, and instant bookable recommendations. Booking is effortless. With our minimal Airbnb-grade booking flow, travelers only pick their date and traveler count—no confusing options up front. On the checkout step, our dynamic group pricing engine automatically recalculates rates as traveler sizes scale, paired with seamless departure time slot selection."
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Badge: Powered by Google Gemini 2.5</span>
+          <span class="badge">Badge: Streaming Itinerary Gen</span>
+          <span class="badge">Badge: Dynamic Group Rate Tiers</span>
+        </div>
+      </div>
+
+      <!-- Scene 3 -->
+      <div class="scene scene-3">
+        <div class="scene-header">
+          <span class="scene-time">SCENE 3 • 1:25 – 1:55 (30 Seconds)</span>
+          <span class="rubric-tag">Technical Merit & Universal BYOPG</span>
+        </div>
+        <h2>Universal Multi-Gateway Checkout & Instant Digital Voucher</h2>
+        <div class="scene-grid">
+          <div class="box">
+            <span class="box-title">Visual Action on Screen</span>
+            1. Scroll through enabled gateways: Stripe, QRIS, Midtrans, Xendit, PayPal, Pay on Arrival.<br>
+            2. Complete payment &rarr; Instant redirect to Booking Success Voucher page with scannable QR code and itemized transport details.<br>
+            3. Click "Track Booking" to demonstrate zero-friction self-service lookup.
+          </div>
+          <div class="box box-vo">
+            <span class="box-title">Voiceover Script</span>
+            "Tripbone features a Universal BYOPG architecture. Operators can enable Stripe, Midtrans QRIS, Xendit, PayPal, and Pay-on-Arrival simultaneously—supporting multi-currency conversions for global travelers. Instantly, a tamper-proof digital travel voucher with a scannable check-in QR code is generated, and customers can self-track their booking status without needing to create an account."
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Badge: BYOPG: Stripe, QRIS, Midtrans, Xendit</span>
+          <span class="badge">Badge: Scannable Check-In QR</span>
+        </div>
+      </div>
+
+      <!-- Scene 4 -->
+      <div class="scene scene-4">
+        <div class="scene-header">
+          <span class="scene-time">SCENE 4 • 1:55 – 2:30 (35 Seconds)</span>
+          <span class="rubric-tag">Innovation & Operator Productivity (25%)</span>
+        </div>
+        <h2>The Operator OS, TinyFish Pricing Intelligence & Website Builder</h2>
+        <div class="scene-grid">
+          <div class="box">
+            <span class="box-title">Visual Action on Screen</span>
+            1. Switch to Admin Dashboard (/admin): Show revenue charts, driver/guide assignment workflow.<br>
+            2. Showcase TinyFish OTA competitor rate scraper extracting live OTA market rates.<br>
+            3. Open Website Builder / Theme Customizer: Change primary brand color, showing instant site-wide adaptation.
+          </div>
+          <div class="box box-vo">
+            <span class="box-title">Voiceover Script</span>
+            "For the tour operator, Tripbone is a complete operating system: managing bookings, assigning drivers and guides, issuing tickets, and monitoring cash flow in real time. With our integrated TinyFish market intelligence, operators can scrape and monitor live competitor prices across major OTAs, keeping their direct rates competitive automatically. And with our built-in Website Builder, operators can fully customize their branding colors, typography, and domain in seconds."
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Badge: Multi-Tenant Operating System</span>
+          <span class="badge">Badge: TinyFish OTA Price Intelligence</span>
+          <span class="badge">Badge: Real-Time Theming Engine</span>
+        </div>
+      </div>
+
+      <!-- Scene 5 -->
+      <div class="scene scene-5">
+        <div class="scene-header">
+          <span class="scene-time">SCENE 5 • 2:30 – 2:55 (25 Seconds)</span>
+          <span class="rubric-tag">Technical Architecture & Closing Call</span>
+        </div>
+        <h2>Google Cloud Native Architecture & Closing Call</h2>
+        <div class="scene-grid">
+          <div class="box">
+            <span class="box-title">Visual Action on Screen</span>
+            Full-screen Architecture Diagram: React SPA &rarr; Google Cloud Run (Node API) &rarr; Firebase Firestore & Auth &rarr; Google Gemini 2.5 Flash & Maps Platform. Concludes with live URL and GitHub link.
+          </div>
+          <div class="box box-vo">
+            <span class="box-title">Voiceover Script</span>
+            "Tripbone is 100% cloud-native, built with Google Cloud Run, Firebase Firestore, Google Maps Platform, and the Gemini API—delivering sub-second latency, enterprise multi-tenant isolation, and scale-to-zero efficiency. Tripbone democratizes enterprise travel tech for thousands of operators across the region. Thank you, and see you in Singapore at the Google Cloud AI Builder Cup Grand Finale!"
+          </div>
+        </div>
+        <div class="badges">
+          <span class="badge">Badge: Google Cloud Run + Firebase Firestore</span>
+          <span class="badge">Badge: See You in Singapore 2026!</span>
+        </div>
+      </div>
+
+      <!-- Checklist -->
+      <div class="checklist-box">
+        <div class="checklist-title">📋 Video Recording & Submission Checklist</div>
+        <div class="checklist-grid">
+          <div>✓ <strong>Duration:</strong> Exactly 2:55 (under 3:00 hard cutoff)</div>
+          <div>✓ <strong>Resolution:</strong> 1080p 60fps with 110% zoom</div>
+          <div>✓ <strong>Voice:</strong> Clear narration, low background synth (10%)</div>
+          <div>✓ <strong>Hosting:</strong> Public/Unlisted YouTube or Vimeo link</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

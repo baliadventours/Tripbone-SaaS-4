@@ -35,6 +35,9 @@ export function getCloudflareImageUrl(src: string, options: CloudflareTransformO
   // Cloudflare Image Resizing only works when the request passes through the Cloudflare proxy.
   const isDev = typeof window !== 'undefined' && (
     window.location.hostname.includes('run.app') || 
+    window.location.hostname.includes('ai.studio') || 
+    window.location.hostname.includes('vercel.app') || 
+    window.location.hostname.includes('web.app') || 
     window.location.hostname.includes('localhost') ||
     window.location.hostname.includes('127.0.0.1')
   );

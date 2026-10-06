@@ -232,7 +232,15 @@ export default function SaaSHome() {
     const protocol = window.location.protocol;
     const port = window.location.port ? `:${window.location.port}` : '';
 
-    if (hostname.includes('run.app')) {
+    const isAiStudioPlatform = 
+      hostname.includes('run.app') || 
+      hostname.includes('ai.studio') || 
+      hostname.includes('aistudio.google.com') || 
+      hostname.includes('vercel.app') || 
+      hostname.includes('web.app') || 
+      hostname.includes('firebaseapp.com');
+
+    if (isAiStudioPlatform) {
       return `${protocol}//${window.location.host}/?tenant=${slug}`;
     } else if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')) {
       return `http://${slug}.tripbone.com`;
@@ -874,7 +882,15 @@ export default function SaaSHome() {
       const port = window.location.port ? `:${window.location.port}` : '';
       
       let successUrl = '';
-      if (host.includes('run.app')) {
+      const isAiStudioPlatform = 
+        host.includes('run.app') || 
+        host.includes('ai.studio') || 
+        host.includes('aistudio.google.com') || 
+        host.includes('vercel.app') || 
+        host.includes('web.app') || 
+        host.includes('firebaseapp.com');
+
+      if (isAiStudioPlatform) {
         successUrl = `${protocol}//${host}/?billing_setup=success&tenant=${formData.slug}`;
       } else if (host.includes('localhost') || host.includes('127.0.0.1')) {
         successUrl = `http://localhost${port}/?billing_setup=success&tenant=${formData.slug}`;

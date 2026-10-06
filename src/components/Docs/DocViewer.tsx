@@ -266,15 +266,15 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
   return (
     <div className={`min-h-screen font-sans antialiased transition-colors duration-200 ${
       isDark 
-        ? 'bg-[#090d16] text-slate-100 selection:bg-cyan-500/20 selection:text-cyan-300' 
-        : 'bg-slate-50 text-slate-800 selection:bg-cyan-500/30 selection:text-cyan-900'
+        ? 'bg-[#0a0f0d] text-slate-100 selection:bg-emerald-500/20 selection:text-emerald-300' 
+        : 'bg-[#f8fafc] text-slate-800 selection:bg-emerald-500/30 selection:text-emerald-900'
     }`}>
       
       {/* Top Bar Navigation (Spacious & Clean Header) */}
       <header className={`sticky top-0 z-40 backdrop-blur-md border-b px-6 lg:px-10 py-4 transition-colors ${
         isDark 
-          ? 'bg-[#090d16]/95 border-slate-800/80' 
-          : 'bg-white/95 border-slate-200/90 shadow-xs'
+          ? 'bg-[#0a0f0d]/95 border-[#1b2620]' 
+          : 'bg-white/95 border-slate-200 shadow-xs'
       }`}>
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-6">
           
@@ -284,7 +284,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               className={`lg:hidden p-2.5 rounded-xl border transition ${
                 isDark 
-                  ? 'bg-slate-800/80 text-slate-300 hover:text-white border-slate-700/50' 
+                  ? 'bg-[#141e18] text-slate-300 hover:text-white border-[#223328]' 
                   : 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
               }`}
             >
@@ -294,20 +294,20 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
             <Link to="/docs" className="flex items-center space-x-3.5 group">
               <div className={`w-10 h-10 rounded-xl border flex items-center justify-center font-bold transition ${
                 isDark 
-                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 group-hover:bg-cyan-500/20' 
-                  : 'bg-cyan-50 border-cyan-200 text-cyan-600 group-hover:bg-cyan-100'
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/20' 
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-600 group-hover:bg-emerald-100'
               }`}>
                 <BookOpen className="w-5 h-5" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center space-x-2">
                   <span className={`font-extrabold text-base tracking-tight transition ${
-                    isDark ? 'text-white group-hover:text-cyan-400' : 'text-slate-900 group-hover:text-cyan-600'
+                    isDark ? 'text-white group-hover:text-emerald-400' : 'text-slate-900 group-hover:text-emerald-600'
                   }`}>
                     docs.tripbone.com
                   </span>
                   <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${
-                    isDark ? 'bg-slate-800/90 text-cyan-400 border-slate-700' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                    isDark ? 'bg-[#141e18] text-emerald-400 border-[#223328]' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   }`}>
                     v2.5
                   </span>
@@ -329,8 +329,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full border rounded-xl pl-10 pr-4 py-2 text-xs font-medium transition focus:outline-none ${
                 isDark 
-                  ? 'bg-slate-900/90 border-slate-800 text-slate-200 placeholder-slate-500 focus:border-cyan-500/60' 
-                  : 'bg-slate-100/80 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-cyan-500 focus:bg-white'
+                  ? 'bg-[#121a15] border-[#223328] text-slate-200 placeholder-slate-500 focus:border-emerald-500/60' 
+                  : 'bg-slate-100 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-emerald-500 focus:bg-white'
               }`}
             />
             {searchQuery && (
@@ -353,7 +353,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
               className={`p-2.5 rounded-xl border font-bold text-xs flex items-center space-x-2 transition ${
                 isDark 
-                  ? 'bg-slate-800/80 border-slate-700/60 text-amber-300 hover:bg-slate-800' 
+                  ? 'bg-[#141e18] border-[#223328] text-amber-300 hover:bg-[#1a2920]' 
                   : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
               }`}
             >
@@ -368,8 +368,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                 onClick={onOpenManageModal}
                 className={`px-3.5 py-2 rounded-xl border font-bold text-xs flex items-center space-x-1.5 transition ${
                   isDark 
-                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' 
-                    : 'bg-cyan-500 text-white border-cyan-600 hover:bg-cyan-600 shadow-xs'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20' 
+                    : 'bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700 shadow-xs'
                 }`}
               >
                 <Plus className="w-4 h-4" />
@@ -381,7 +381,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               to="/admin"
               className={`px-3.5 py-2 rounded-xl border text-xs font-semibold flex items-center space-x-1.5 transition ${
                 isDark 
-                  ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/60' 
+                  ? 'bg-[#141e18] hover:bg-[#1a2920] text-slate-300 hover:text-white border-[#223328]' 
                   : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
               }`}
             >
@@ -402,8 +402,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               onChange={(e) => setSearchQuery(e.target.value)}
               className={`w-full border rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none ${
                 isDark 
-                  ? 'bg-slate-900 border-slate-800 text-slate-200 focus:border-cyan-500' 
-                  : 'bg-slate-100 border-slate-200 text-slate-800 focus:border-cyan-500'
+                  ? 'bg-[#121a15] border-[#223328] text-slate-200 focus:border-emerald-500' 
+                  : 'bg-slate-100 border-slate-200 text-slate-800 focus:border-emerald-500'
               }`}
             />
           </div>
@@ -417,16 +417,16 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
         <aside className={`
           fixed lg:sticky top-[73px] z-30 w-68 h-[calc(100vh-73px)] border-r
           overflow-y-auto p-5 transition-transform duration-200 shrink-0
-          ${isDark ? 'bg-[#090d16] lg:bg-transparent border-slate-800/60' : 'bg-white lg:bg-transparent border-slate-200'}
+          ${isDark ? 'bg-[#0a0f0d] lg:bg-transparent border-[#1b2620]' : 'bg-white lg:bg-transparent border-slate-200'}
           ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}>
           {searchQuery && (
             <div className={`mb-5 border rounded-2xl p-3.5 space-y-2.5 ${
-              isDark ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-100/90 border-slate-200'
+              isDark ? 'bg-[#121a15] border-[#223328]' : 'bg-slate-100 border-slate-200'
             }`}>
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-400">
                 <span>Search ({searchResults.length})</span>
-                <button onClick={() => setSearchQuery('')} className="text-cyan-500 hover:underline">Clear</button>
+                <button onClick={() => setSearchQuery('')} className="text-emerald-500 hover:underline">Clear</button>
               </div>
               {searchResults.length === 0 ? (
                 <p className="text-xs text-slate-400">No matching docs.</p>
@@ -440,10 +440,10 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                       setIsSidebarOpen(false);
                     }}
                     className={`w-full text-left p-2 rounded-xl transition group ${
-                      isDark ? 'hover:bg-slate-800/80' : 'hover:bg-slate-200/80'
+                      isDark ? 'hover:bg-[#1a2920]' : 'hover:bg-slate-200'
                     }`}
                   >
-                    <p className={`text-xs font-bold transition group-hover:text-cyan-500 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
+                    <p className={`text-xs font-bold transition group-hover:text-emerald-500 ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>
                       {art.title}
                     </p>
                     <p className="text-[10px] text-slate-400 line-clamp-1">{art.category}</p>
@@ -455,7 +455,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
 
           <div className="space-y-4">
             {/* Global Expand / Collapse All Controls */}
-            <div className="flex items-center justify-between px-2 pb-2 border-b border-slate-700/30">
+            <div className={`flex items-center justify-between px-2 pb-2 border-b ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
               <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Categories ({Object.keys(groupedCategories).length})
               </span>
@@ -463,8 +463,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                 onClick={toggleAllCategories}
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition flex items-center space-x-1 ${
                   isDark 
-                    ? 'bg-slate-800/80 text-cyan-400 border-slate-700/70 hover:bg-slate-700' 
-                    : 'bg-slate-100 text-cyan-700 border-slate-200 hover:bg-slate-200'
+                    ? 'bg-[#141e18] text-emerald-400 border-[#223328] hover:bg-[#1a2920]' 
+                    : 'bg-slate-100 text-emerald-700 border-slate-200 hover:bg-slate-200'
                 }`}
               >
                 <span>{allCollapsed ? 'Expand All' : 'Collapse All'}</span>
@@ -482,20 +482,20 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                     onClick={() => toggleCategory(category)}
                     className={`w-full text-left px-2 py-1.5 rounded-xl flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wider transition ${
                       isDark 
-                        ? 'text-slate-300 hover:text-white hover:bg-slate-800/60' 
+                        ? 'text-slate-300 hover:text-white hover:bg-[#141e18]' 
                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                     }`}
                   >
                     <div className="flex items-center space-x-1.5 truncate">
                       {isCategoryCollapsed ? (
-                        <ChevronRight className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                        <ChevronRight className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                       ) : (
-                        <ChevronDown className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+                        <ChevronDown className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                       )}
                       <span className="truncate">{category}</span>
                     </div>
                     <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border shrink-0 ml-1 ${
-                      isDark ? 'bg-slate-800/80 text-slate-400 border-slate-700/50' : 'bg-slate-200/70 text-slate-600 border-slate-300/60'
+                      isDark ? 'bg-[#141e18] text-slate-400 border-[#223328]' : 'bg-slate-200/70 text-slate-600 border-slate-300/60'
                     }`}>
                       {categoryArticles.length}
                     </span>
@@ -503,7 +503,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
 
                   {/* Articles List when Category is Expanded */}
                   {!isCategoryCollapsed && (
-                    <div className={`space-y-1 border-l ml-3 pl-2 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+                    <div className={`space-y-1 border-l ml-3 pl-2 ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
                       {categoryArticles.map((art) => {
                         const isActive = activeArticle?.id === art.id || activeArticle?.slug === art.slug;
                         const hasSubHeadlines = Boolean(
@@ -538,11 +538,11 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                                   onClick={(e) => toggleArticleExpand(art.id, e)}
                                   title={isArticleExpanded ? "Collapse sub headlines" : "Expand sub headlines"}
                                   className={`p-1 rounded-md transition mr-0.5 ${
-                                    isDark ? 'text-slate-400 hover:text-cyan-400 hover:bg-slate-800' : 'text-slate-500 hover:text-cyan-600 hover:bg-slate-200'
+                                    isDark ? 'text-slate-400 hover:text-emerald-400 hover:bg-[#141e18]' : 'text-slate-500 hover:text-emerald-600 hover:bg-slate-200'
                                   }`}
                                 >
                                   {isArticleExpanded ? (
-                                    <ChevronDown className="w-3 h-3 text-cyan-500 shrink-0" />
+                                    <ChevronDown className="w-3 h-3 text-emerald-500 shrink-0" />
                                   ) : (
                                     <ChevronRight className="w-3 h-3 shrink-0" />
                                   )}
@@ -560,22 +560,22 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                                   w-full text-left px-2.5 py-1.5 rounded-xl text-xs transition flex items-center justify-between font-medium
                                   ${isActive 
                                     ? (isDark 
-                                        ? 'bg-cyan-500/10 text-cyan-400 font-bold border-l-2 border-cyan-400 -ml-[9px] pl-2' 
-                                        : 'bg-cyan-50 text-cyan-700 font-bold border-l-2 border-cyan-600 -ml-[9px] pl-2')
+                                        ? 'bg-emerald-500/10 text-emerald-400 font-bold border-l-2 border-emerald-400 -ml-[9px] pl-2' 
+                                        : 'bg-emerald-50 text-emerald-700 font-bold border-l-2 border-emerald-600 -ml-[9px] pl-2')
                                     : (isDark 
-                                        ? 'text-slate-300 hover:text-white hover:bg-slate-800/40' 
+                                        ? 'text-slate-300 hover:text-white hover:bg-[#141e18]' 
                                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80')}
                                 `}
                               >
                                 <span className="truncate">{art.title}</span>
-                                {isActive && <ChevronRight className="w-3.5 h-3.5 text-cyan-500 shrink-0 ml-1" />}
+                                {isActive && <ChevronRight className="w-3.5 h-3.5 text-emerald-500 shrink-0 ml-1" />}
                               </button>
                             </div>
 
                             {/* Collapsible Sub Headlines list */}
                             {hasSubHeadlines && isArticleExpanded && (
                               <div className={`ml-4 pl-2 border-l space-y-0.5 ${
-                                isDark ? 'border-cyan-500/20' : 'border-cyan-200'
+                                isDark ? 'border-emerald-500/20' : 'border-emerald-200'
                               }`}>
                                 {subItems.map((sub, sIdx) => (
                                   <button
@@ -595,8 +595,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                                     className={`
                                       w-full text-left px-2 py-1 rounded-lg text-[11px] transition block truncate font-medium
                                       ${isDark 
-                                        ? 'text-slate-400 hover:text-cyan-300 hover:bg-slate-800/60' 
-                                        : 'text-slate-500 hover:text-cyan-700 hover:bg-slate-100'}
+                                        ? 'text-slate-400 hover:text-emerald-300 hover:bg-[#141e18]' 
+                                        : 'text-slate-500 hover:text-emerald-700 hover:bg-slate-100'}
                                     `}
                                   >
                                     <span className="opacity-60 mr-1 font-mono text-[9px]">
@@ -620,26 +620,26 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
 
         {/* Center Main Doc Reader */}
         <main className={`flex-1 min-w-0 p-6 sm:p-8 lg:p-12 border-r ${
-          isDark ? 'border-slate-800/60' : 'border-slate-200'
+          isDark ? 'border-[#1b2620]' : 'border-slate-200'
         }`}>
           {activeArticle ? (
             <article className="max-w-3xl space-y-8">
               
               {/* Breadcrumb */}
               <div className={`flex items-center space-x-2 text-xs font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                <Link to="/docs" className="hover:text-cyan-500 transition">Docs</Link>
+                <Link to="/docs" className="hover:text-emerald-500 transition">Docs</Link>
                 <ChevronRight className="w-3.5 h-3.5" />
                 <span className={isDark ? 'text-slate-300' : 'text-slate-700'}>{activeArticle.category}</span>
                 <ChevronRight className="w-3.5 h-3.5" />
-                <span className="text-cyan-500 font-semibold truncate">{activeArticle.title}</span>
+                <span className="text-emerald-500 font-semibold truncate">{activeArticle.title}</span>
               </div>
 
               {/* Title Section */}
-              <div className={`space-y-4 pb-6 border-b ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
+              <div className={`space-y-4 pb-6 border-b ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-2">
                     <span className={`inline-block px-3 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider border ${
-                      isDark ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                      isDark ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     }`}>
                       {activeArticle.category}
                     </span>
@@ -655,7 +655,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                     title="Share Link"
                     className={`p-2.5 rounded-xl border text-xs font-medium flex items-center gap-1.5 shrink-0 transition ${
                       isDark 
-                        ? 'bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white border-slate-700/50' 
+                        ? 'bg-[#141e18] hover:bg-[#1a2920] text-slate-300 hover:text-white border-[#223328]' 
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
                     }`}
                   >
@@ -671,7 +671,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                 )}
 
                 {activeArticle.subSubTitle && (
-                  <p id="overview-subsubtitle" className={`text-xs font-semibold uppercase tracking-wider text-cyan-500`}>
+                  <p id="overview-subsubtitle" className={`text-xs font-semibold uppercase tracking-wider text-emerald-500`}>
                     {activeArticle.subSubTitle}
                   </p>
                 )}
@@ -686,8 +686,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                 <div 
                   className={`prose max-w-none text-sm sm:text-base leading-relaxed space-y-4 ${
                     isDark 
-                      ? 'prose-invert prose-headings:text-white prose-p:text-slate-300 prose-a:text-cyan-400 prose-strong:text-white' 
-                      : 'prose-slate prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-cyan-600 prose-strong:text-slate-900'
+                      ? 'prose-invert prose-headings:text-white prose-p:text-slate-300 prose-a:text-emerald-400 prose-strong:text-white' 
+                      : 'prose-slate prose-headings:text-slate-900 prose-p:text-slate-700 prose-a:text-emerald-600 prose-strong:text-slate-900'
                   }`}
                   dangerouslySetInnerHTML={{ __html: activeArticle.content }}
                 />
@@ -696,8 +696,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               {/* Step-by-Step Instructions */}
               {activeArticle.steps && activeArticle.steps.length > 0 && (
                 <div id="steps-section" className="space-y-4 pt-4">
-                  <div className={`flex items-center space-x-2 border-b pb-3 ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
-                    <ListOrdered className="w-4 h-4 text-cyan-500" />
+                  <div className={`flex items-center space-x-2 border-b pb-3 ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
+                    <ListOrdered className="w-4 h-4 text-emerald-500" />
                     <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       Step-by-Step Instructions
                     </h3>
@@ -710,15 +710,15 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                         id={`step-${idx}`}
                         className={`border rounded-2xl p-5 space-y-2.5 transition ${
                           isDark 
-                            ? 'bg-slate-900/60 border-slate-800 hover:border-slate-700/80' 
+                            ? 'bg-[#121a15] border-[#223328] hover:border-emerald-500/40' 
                             : 'bg-white border-slate-200 shadow-xs hover:border-slate-300'
                         }`}
                       >
                         <div className="flex items-center space-x-3">
                           <span className={`w-7 h-7 rounded-lg border font-extrabold text-xs flex items-center justify-center shrink-0 ${
                             isDark 
-                              ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/30' 
-                              : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' 
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                           }`}>
                             {idx + 1}
                           </span>
@@ -747,8 +747,8 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               {/* Images Reference */}
               {activeArticle.images && activeArticle.images.length > 0 && (
                 <div id="gallery-section" className="space-y-3 pt-4">
-                  <div className={`flex items-center space-x-2 border-b pb-3 ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
-                    <ImageIcon className="w-4 h-4 text-cyan-500" />
+                  <div className={`flex items-center space-x-2 border-b pb-3 ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
+                    <ImageIcon className="w-4 h-4 text-emerald-500" />
                     <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                       Visual Reference
                     </h3>
@@ -761,7 +761,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                         target="_blank" 
                         rel="noreferrer"
                         className={`group relative rounded-2xl overflow-hidden border transition block ${
-                          isDark ? 'border-slate-800 bg-slate-900 hover:border-cyan-500/40' : 'border-slate-200 bg-slate-100 hover:border-cyan-500'
+                          isDark ? 'border-[#223328] bg-[#121a15] hover:border-emerald-500/40' : 'border-slate-200 bg-slate-100 hover:border-emerald-500'
                         }`}
                       >
                         <img src={imgUrl} alt={`Ref ${i}`} className="w-full h-44 object-cover group-hover:scale-105 transition duration-300" />
@@ -776,21 +776,21 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
 
               {/* Navigation Pagination Buttons */}
               <div className={`pt-8 mt-8 border-t flex flex-col sm:flex-row items-center justify-between gap-4 ${
-                isDark ? 'border-slate-800/80' : 'border-slate-200'
+                isDark ? 'border-[#1b2620]' : 'border-slate-200'
               }`}>
                 {prevArticle ? (
                   <button
                     onClick={() => navigate(`/docs/${prevArticle.slug || prevArticle.id}`)}
                     className={`w-full sm:w-auto px-5 py-3.5 rounded-2xl border transition text-left group flex items-center space-x-3 ${
                       isDark 
-                        ? 'bg-slate-900/80 hover:bg-slate-800 border-slate-800' 
+                        ? 'bg-[#121a15] hover:bg-[#1a2920] border-[#223328]' 
                         : 'bg-white hover:bg-slate-100 border-slate-200 shadow-xs'
                     }`}
                   >
-                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 transition" />
+                    <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition" />
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Previous</span>
-                      <p className={`text-xs font-semibold truncate max-w-[200px] group-hover:text-cyan-500 ${
+                      <p className={`text-xs font-semibold truncate max-w-[200px] group-hover:text-emerald-500 ${
                         isDark ? 'text-slate-200' : 'text-slate-800'
                       }`}>
                         {prevArticle.title}
@@ -804,19 +804,19 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                     onClick={() => navigate(`/docs/${nextArticle.slug || nextArticle.id}`)}
                     className={`w-full sm:w-auto px-5 py-3.5 rounded-2xl border transition text-right group flex items-center justify-end space-x-3 ml-auto ${
                       isDark 
-                        ? 'bg-slate-900/80 hover:bg-slate-800 border-slate-800' 
+                        ? 'bg-[#121a15] hover:bg-[#1a2920] border-[#223328]' 
                         : 'bg-white hover:bg-slate-100 border-slate-200 shadow-xs'
                     }`}
                   >
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Next</span>
-                      <p className={`text-xs font-semibold truncate max-w-[200px] group-hover:text-cyan-500 ${
+                      <p className={`text-xs font-semibold truncate max-w-[200px] group-hover:text-emerald-500 ${
                         isDark ? 'text-slate-200' : 'text-slate-800'
                       }`}>
                         {nextArticle.title}
                       </p>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-cyan-500 transition" />
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-500 transition" />
                   </button>
                 ) : <div />}
               </div>
@@ -835,7 +835,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
         <aside className="hidden xl:block w-60 h-[calc(100vh-73px)] sticky top-[73px] p-6 overflow-y-auto shrink-0">
           <div className="space-y-5">
             <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-cyan-500" />
+              <FileText className="w-4 h-4 text-emerald-500" />
               On This Page
             </p>
 
@@ -846,7 +846,7 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
                     key={idx}
                     href={`#${item.id}`}
                     className={`
-                      block truncate transition hover:text-cyan-500 py-0.5
+                      block truncate transition hover:text-emerald-500 py-0.5
                       ${item.level === 1 
                         ? (isDark ? 'font-bold text-slate-200' : 'font-bold text-slate-800') 
                         : (isDark ? 'pl-3 text-slate-400' : 'pl-3 text-slate-600')}
@@ -860,17 +860,17 @@ export default function DocViewer({ onOpenManageModal, isSuperAdmin = false }: D
               <p className="text-xs text-slate-400 italic">No section headers</p>
             )}
 
-            <div className={`pt-6 border-t space-y-3 ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+            <div className={`pt-6 border-t space-y-3 ${isDark ? 'border-[#1b2620]' : 'border-slate-200'}`}>
               <div className={`p-4 rounded-2xl border space-y-2 ${
-                isDark ? 'bg-cyan-500/5 border-cyan-500/20' : 'bg-cyan-50/80 border-cyan-200'
+                isDark ? 'bg-emerald-500/5 border-emerald-500/20' : 'bg-emerald-50/80 border-emerald-200'
               }`}>
-                <p className="text-xs font-bold text-cyan-500">Merchant Support</p>
+                <p className="text-xs font-bold text-emerald-500">Merchant Support</p>
                 <p className={`text-[11px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                   Need help with setup or custom domain mapping? Contact system operations.
                 </p>
                 <Link
                   to="/contact"
-                  className="inline-flex items-center space-x-1 text-xs font-bold text-cyan-500 hover:underline pt-1"
+                  className="inline-flex items-center space-x-1 text-xs font-bold text-emerald-500 hover:underline pt-1"
                 >
                   <span>Contact Support</span>
                   <ExternalLink className="w-3.5 h-3.5" />

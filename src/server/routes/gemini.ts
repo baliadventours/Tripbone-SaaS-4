@@ -43,7 +43,7 @@ router.post("/ask-concierge", async (req, res) => {
 
     try {
       response = await generateContentWithFallback(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.8-flash",
         contents: query,
         config: {
           systemInstruction: `You are the Grounded AI Travel Concierge for "Bali Adventours", an ultra-premium tour operator, private driver service, and local adventure curator in Bali, Indonesia. 
@@ -73,7 +73,7 @@ router.post("/ask-concierge", async (req, res) => {
         fellBack = true;
 
         response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.8-flash",
           contents: query,
           config: {
             systemInstruction: `You are the AI Travel Concierge for "Bali Adventours", an ultra-premium tour operator, private driver service, and local adventure curator in Bali, Indonesia. 
@@ -161,7 +161,7 @@ router.post("/generate-tour", async (req, res) => {
     });
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         systemInstruction: `You are a professional travel tour designer for a luxury tour company in Bali called "Bali Adventours".
@@ -567,7 +567,7 @@ INSTRUCTIONS FOR AI:
 `;
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: promptText,
       config: {
         systemInstruction: `You are an elite travel designer and tour operator manager at ${agencyBrand}.
@@ -735,7 +735,7 @@ router.post("/generate-itinerary", async (req, res) => {
     `;
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         systemInstruction: `You are "Didi", the expert AI Travel Planner for Bali Adventours. 
@@ -862,7 +862,7 @@ router.post("/extract-booking", async (req, res) => {
     });
 
     const response = await generateContentWithFallback(ai, { 
-      model: "gemini-3.5-flash",
+      model: "gemini-3.8-flash",
       contents: `EXTRACT BOOKING DATA FROM THE FOLLOWING EMAIL TEXT.
       
       EMAIL TEXT:
@@ -975,7 +975,7 @@ router.post("/fetch-external-reviews", async (req, res) => {
     if (directPageContent && directPageContent.length > 200) {
       try {
         const response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.8-flash",
           contents: `Scraped raw web page content for ${platform} (${targetUrl}):\n\n${directPageContent}\n\nTask: Extract 3 to 6 actual, real customer reviews for "Bali Adventours". Output strictly a JSON array of objects with keys: userName, nationality, rating (number 1-5), comment, platform ("${platform}").`,
           config: {
             systemInstruction: `You are an expert review parser. Output ONLY a valid JSON array of objects with keys: userName, nationality, rating, comment, platform. Do NOT include markdown code fences or extra words.`
@@ -1013,7 +1013,7 @@ Example:
 `;
 
         const response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.8-flash",
           contents: searchPrompt,
           config: {
             systemInstruction: `You are a review search AI. Use Google Search to find real customer reviews for "Bali Adventours" on ${platform}. Output ONLY a raw valid JSON array. Do NOT wrap in \`\`\`json markdown blocks or include additional conversation.`,

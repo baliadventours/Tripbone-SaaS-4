@@ -149,18 +149,24 @@ export async function fetchFromREST(
   }
 }
 
-// Robust Gemini API helper that falls back to stable alternative models if the primary model is unavailable.
+// Robust Gemini API helper that falls back to stable alternative models if the primary model is unavailable or overloaded (503/429).
 export async function generateContentWithFallback(ai: any, params: any) {
-  const modelsToTry = ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-flash-latest", "gemini-3-flash-preview"];
-  const initialModel = params.model || "gemini-2.5-flash";
+  const modelsToTry = [
+    "gemini-3.8-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-flash-latest",
+    "gemini-2.5-flash"
+  ];
+  const initialModel = params.model || "gemini-3.8-flash";
   const uniqueModels = Array.from(new Set([initialModel, ...modelsToTry]));
 
   let lastError: any = null;
   let currentAi = ai;
 
-  for (const model of uniqueModels) {
+  for (let i = 0; i < uniqueModels.length; i++) {
+    const model = uniqueModels[i];
     try {
-      console.log(`[Gemini Fallback Router] Attempting generation with model: ${model}`);
+      console.log(`[Gemini Fallback Router] Attempting generation with model: ${model} (attempt ${i + 1}/${uniqueModels.length})`);
       const response = await currentAi.models.generateContent({
         ...params,
         model: model
@@ -170,9 +176,25 @@ export async function generateContentWithFallback(ai: any, params: any) {
     } catch (err: any) {
       lastError = err;
       const errMsg = String(err.message || err);
-      console.warn(`[Gemini Fallback Router] Failed with model ${model}:`, errMsg);
+      console.warn(`[Gemini Fallback Router] Model ${model} failed:`, errMsg);
 
-      // Check if error is related to API key or authorization or invalid argument or quota
+      // Check for transient 503 (high demand/unavailable) or 429 (rate limits)
+      const isTransientDemandError = 
+        errMsg.includes('503') || 
+        errMsg.includes('UNAVAILABLE') || 
+        errMsg.includes('high demand') || 
+        errMsg.includes('overloaded') ||
+        errMsg.includes('429') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('spikes in demand');
+
+      if (isTransientDemandError) {
+        console.log(`[Gemini Fallback Router] High demand on ${model}. Immediately falling back to next available model in queue...`);
+        // Short pause to avoid slamming rate limiter
+        await new Promise((r) => setTimeout(r, 250));
+      }
+
+      // Check if error is related to API key or authorization
       const isKeyError = errMsg.includes('API key not valid') || 
                          errMsg.includes('API_KEY_INVALID') || 
                          errMsg.includes('INVALID_ARGUMENT') || 

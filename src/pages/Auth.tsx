@@ -630,51 +630,57 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <Link to="/" className="flex items-center gap-2 group mb-8">
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4 sm:p-6 text-slate-900 font-sans antialiased">
+      {/* Brand Header */}
+      <Link to="/" className="flex items-center gap-2.5 group mb-8 transition-transform hover:scale-105">
         {settings?.logoURL ? (
-          <img src={settings.logoURL} alt={settings.siteName} className="h-16 md:h-24 w-auto object-contain transition-transform group-hover:scale-105" />
+          <img src={settings.logoURL} alt={settings.siteName} className="h-12 md:h-14 w-auto object-contain" />
         ) : (
-          <div className="flex flex-col -space-y-1 items-center">
-            <span className="text-2xl font-bold text-gray-900 leading-tight">{settings?.siteName.split(' ')[0] || 'bali'}</span>
-            <span className="text-2xl font-bold text-[#00A651] leading-tight">{settings?.siteName.split(' ').slice(1).join(' ') || 'adventours'}</span>
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black text-xl shadow-md">
+              T
+            </div>
+            <div className="flex flex-col text-left">
+              <span className="text-xl font-black text-slate-900 tracking-tight leading-none">Tripbone</span>
+              <span className="text-[10px] font-mono text-emerald-600 font-bold uppercase tracking-widest mt-0.5">Operator OS</span>
+            </div>
           </div>
         )}
       </Link>
 
       {awaitingVerificationEmail ? (
-        <div className="w-full max-w-md bg-white rounded-[24px] shadow-sm border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#00b272] flex items-center justify-center mx-auto mb-3 shadow-inner">
-              <Mail className="w-8 h-8 text-[#00b272] animate-bounce" />
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-3.5 shadow-2xs">
+              <Mail className="w-8 h-8 animate-bounce" />
             </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-1.5">
+            <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight">
               Verify Your Email Address
             </h2>
-            <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
-              We have dispatched a verification link to <strong className="font-mono text-gray-900 font-bold">{awaitingVerificationEmail}</strong>.
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+              We have dispatched a verification link to <strong className="font-mono text-slate-900 font-bold">{awaitingVerificationEmail}</strong>.
             </p>
           </div>
 
-          <div className="bg-emerald-50/60 border border-emerald-100 rounded-2xl p-4 mb-6 text-xs text-emerald-800 space-y-2">
-            <div className="flex items-center gap-2 font-bold text-emerald-900">
-              <ShieldCheck className="w-4 h-4 text-[#00b272] shrink-0" />
-              <span>Anti-Spam & Security Protection</span>
+          <div className="bg-emerald-50/60 border border-emerald-200 rounded-xl p-4 mb-6 text-xs text-emerald-900 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold text-emerald-950">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Security & Account Protection</span>
             </div>
-            <p className="text-[11px] leading-relaxed text-emerald-700">
-              Please open your email inbox and click the verification link before proceeding to set up your company workspace.
+            <p className="text-[11px] leading-relaxed text-emerald-800">
+              Please check your inbox (and spam folder) and click the confirmation link to activate your workspace.
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100 flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+            <div className="mb-4 p-3.5 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
               <span className="font-medium">{error}</span>
             </div>
           )}
 
           {verificationSuccessNotice && (
-            <div className="mb-4 p-3.5 bg-emerald-50 text-emerald-700 text-xs rounded-xl border border-emerald-100 flex items-center gap-2">
+            <div className="mb-4 p-3.5 bg-emerald-50 text-emerald-700 text-xs rounded-xl border border-emerald-200 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
               <span className="font-medium">{verificationSuccessNotice}</span>
             </div>
@@ -685,7 +691,7 @@ export default function Auth() {
               type="button"
               onClick={handleCheckVerification}
               disabled={isCheckingVerification}
-              className="w-full bg-[#00A651] hover:bg-emerald-700 text-white py-3.5 rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 cursor-pointer"
             >
               {isCheckingVerification ? (
                 <>
@@ -704,13 +710,13 @@ export default function Auth() {
               type="button"
               onClick={handleResendVerification}
               disabled={resendCooldown > 0}
-              className="w-full py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold text-xs rounded-xl border border-gray-200 transition-colors disabled:opacity-50 cursor-pointer"
+              className="w-full py-3 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs rounded-xl border border-slate-200 transition-colors disabled:opacity-50 cursor-pointer"
             >
               {resendCooldown > 0 ? `Resend Verification Email (${resendCooldown}s)` : 'Resend Verification Email'}
             </button>
           </div>
 
-          <div className="mt-6 text-center border-t border-gray-100 pt-4">
+          <div className="mt-6 text-center border-t border-slate-100 pt-4">
             <button
               type="button"
               onClick={async () => {
@@ -719,28 +725,28 @@ export default function Auth() {
                 setMode('signin');
                 setError(null);
               }}
-              className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+              className="text-xs text-slate-500 hover:text-slate-800 font-medium cursor-pointer"
             >
               ← Use a different email / Back to Login
             </button>
           </div>
         </div>
       ) : pendingSocialUser ? (
-        <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8 animate-in fade-in zoom-in-95 duration-200">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 animate-in fade-in zoom-in-95 duration-200">
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-full bg-emerald-50 text-[#00b272] flex items-center justify-center mx-auto mb-3 shadow-inner">
-              <MessageSquare className="w-8 h-8 text-emerald-600" />
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-200 flex items-center justify-center mx-auto mb-3 shadow-2xs">
+              <MessageSquare className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-black text-gray-900 mb-1.5">
+            <h2 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight">
               Welcome, {pendingSocialUser.user.displayName || 'Traveler'}!
             </h2>
-            <p className="text-xs text-gray-500 max-w-xs mx-auto leading-relaxed">
-              To connect your bookings and receive instant WhatsApp confirmation vouchers, please confirm your Country & WhatsApp number.
+            <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
+              To connect your bookings and receive automated WhatsApp vouchers, please confirm your WhatsApp number.
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 p-3.5 bg-red-50 text-red-700 text-xs rounded-xl border border-red-100 flex items-center gap-2">
+            <div className="mb-4 p-3.5 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 flex items-center gap-2">
               <span className="font-semibold">{error}</span>
             </div>
           )}
@@ -750,14 +756,15 @@ export default function Auth() {
               value={phoneData}
               onChange={setPhoneData}
               required={true}
-              inputBg="bg-gray-50"
+              inputBg="bg-slate-50"
               label="Country & Mobile / WhatsApp Number"
+              className="border-slate-200"
             />
 
             <button
               type="submit"
               disabled={socialSaving}
-              className="w-full bg-[#00A651] hover:bg-emerald-700 text-white py-3.5 rounded-[12px] font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 cursor-pointer"
+              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 disabled:opacity-50 cursor-pointer"
             >
               {socialSaving ? (
                 <>
@@ -777,14 +784,14 @@ export default function Auth() {
             <button
               type="button"
               onClick={() => navigate(pendingSocialUser.targetPath, { replace: true })}
-              className="text-xs text-gray-400 hover:text-gray-600 font-medium"
+              className="text-xs text-slate-400 hover:text-slate-600 font-medium cursor-pointer"
             >
               Skip for now →
             </button>
           </div>
         </div>
       ) : (
-        <div className="w-full max-w-md bg-white rounded-[20px] shadow-sm border border-gray-100 p-8">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-slate-200 p-8 sm:p-9">
           <AnimatePresence mode="wait">
             <motion.div
               key={mode}
@@ -794,26 +801,26 @@ export default function Auth() {
               transition={{ duration: 0.2 }}
             >
               <div className="text-center mb-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  {mode === 'signin' ? 'Welcome back!' : mode === 'signup' ? 'Create an account' : 'Reset password'}
+                <h1 className="text-2xl font-black text-slate-900 mb-1.5 tracking-tight">
+                  {mode === 'signin' ? 'Welcome back' : mode === 'signup' ? 'Create your operator account' : 'Reset password'}
                 </h1>
-                <p className="text-gray-500 text-sm">
-                  {mode === 'signin' ? 'Please sign in to your account' : mode === 'signup' ? 'Start your adventure with us' : "Enter your email to receive a reset link"}
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  {mode === 'signin' ? 'Sign in to access your tour operations cockpit' : mode === 'signup' ? 'Start your 7-day free trial with zero commissions' : "Enter your email address to receive a secure reset link"}
                 </p>
               </div>
 
               {error && (
-                <div className="mb-6 p-4 bg-red-50 text-red-700 text-sm rounded-[10px] border border-red-100 space-y-2">
-                  <p className="font-medium">{error}</p>
+                <div className="mb-6 p-4 bg-rose-50 text-rose-700 text-xs rounded-xl border border-rose-200 space-y-2">
+                  <p className="font-semibold">{error}</p>
                   {isCredentialError && (
-                    <div className="pt-2 border-t border-red-100/80 flex flex-col gap-2">
+                    <div className="pt-2 border-t border-rose-200/80 flex flex-col gap-1.5">
                       <Link 
                         to={`/forgot-password${email ? `?email=${encodeURIComponent(email)}` : ''}`}
-                        className="inline-flex items-center text-xs font-bold text-[#00A651] hover:underline"
+                        className="inline-flex items-center text-xs font-bold text-emerald-600 hover:underline"
                       >
-                        → Reset your password via secure code
+                        → Reset password via secure code
                       </Link>
-                      <p className="text-xs text-gray-500">
+                      <p className="text-[11px] text-slate-500">
                         If you registered using Google Sign-In, please use the <strong>Google</strong> button below.
                       </p>
                     </div>
@@ -822,15 +829,15 @@ export default function Auth() {
               )}
 
               {resetSent ? (
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-orange-50 text-[#00A651] rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-200 flex items-center justify-center mx-auto">
                     <Mail className="h-8 w-8" />
                   </div>
-                  <h3 className="text-lg font-bold mb-2">Check your email</h3>
-                  <p className="text-gray-500 mb-6 text-sm">We've sent a password reset link to <span className="font-semibold text-gray-900">{email}</span></p>
+                  <h3 className="text-lg font-black text-slate-900 tracking-tight">Check your email</h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">We've sent a password reset link to <span className="font-bold text-slate-900 font-mono">{email}</span></p>
                   <button 
                     onClick={() => setMode('signin')}
-                    className="text-[#00A651] font-bold text-sm hover:underline"
+                    className="text-emerald-600 font-bold text-xs hover:underline uppercase tracking-wider cursor-pointer"
                   >
                     Back to Sign In
                   </button>
@@ -839,32 +846,32 @@ export default function Auth() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {mode === 'signup' && (
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-gray-400 ml-1">Full name</label>
+                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Full Name</label>
                       <div className="relative">
-                        <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input 
                           type="text"
                           required
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
-                          className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
-                          placeholder="John Doe"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-emerald-500 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:outline-none transition-all text-slate-900 font-medium"
+                          placeholder="Captain John Doe"
                         />
                       </div>
                     </div>
                   )}
 
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-gray-400 ml-1">Email address</label>
+                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block">Email Address</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                       <input 
                         type="email"
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-4 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
-                        placeholder="john@example.com"
+                        className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-emerald-500 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:outline-none transition-all text-slate-900 font-medium"
+                        placeholder="operator@company.com"
                       />
                     </div>
                   </div>
@@ -875,46 +882,47 @@ export default function Auth() {
                         value={phoneData}
                         onChange={setPhoneData}
                         required={true}
-                        inputBg="bg-gray-50"
+                        inputBg="bg-slate-50"
                         label="Country & Mobile / WhatsApp Number"
+                        className="border-slate-200"
                       />
                     </div>
                   )}
 
                   {mode !== 'forgot' && (
                     <div className="space-y-1">
-                      <div className="flex justify-between items-center px-1">
-                        <label className="text-xs font-bold text-gray-400">Password</label>
+                      <div className="flex justify-between items-center px-0.5">
+                        <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Password</label>
                         {mode === 'signin' && (
                           <Link 
                             to={email ? `/forgot-password?email=${encodeURIComponent(email)}` : '/forgot-password'}
-                            className="text-xs font-bold text-[#00A651] hover:underline"
+                            className="text-[11px] font-bold text-emerald-600 hover:underline"
                           >
                             Forgot password?
                           </Link>
                         )}
                       </div>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <input 
                           type={showPassword ? "text" : "password"}
                           required
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="w-full bg-gray-50 border-none rounded-[10px] pl-11 pr-11 py-3 text-sm focus:ring-2 focus:ring-[#00A651] transition-all"
+                          className="w-full bg-slate-50 hover:bg-white focus:bg-white border border-slate-200 focus:border-emerald-500 rounded-xl pl-10 pr-10 py-2.5 text-xs focus:outline-none transition-all text-slate-900 font-medium"
                           placeholder="••••••••"
                         />
                         <button 
                           type="button"
                           onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
 
                       {mode === 'signup' && password && (
-                        <div className="pt-1.5 px-1 space-y-1 animate-in fade-in duration-200">
+                        <div className="pt-1.5 px-0.5 space-y-1 animate-in fade-in duration-200">
                           <div className="flex gap-1 h-1">
                             {[1, 2, 3, 4].map((step) => {
                               const strength = getPasswordStrength(password);
@@ -924,18 +932,18 @@ export default function Auth() {
                                   key={step}
                                   className={cn(
                                     "flex-1 rounded-full transition-colors duration-300",
-                                    isActive ? strength.color : "bg-gray-200"
+                                    isActive ? strength.color : "bg-slate-200"
                                   )}
                                 />
                               );
                             })}
                           </div>
-                          <div className="flex justify-between items-center text-[10px]">
-                            <span className="text-gray-400">Password strength:</span>
+                          <div className="flex justify-between items-center text-[10px] font-mono">
+                            <span className="text-slate-400">Strength:</span>
                             <span className={cn(
                               "font-bold",
                               getPasswordStrength(password).score >= 3 ? "text-emerald-600" :
-                              getPasswordStrength(password).score === 2 ? "text-amber-600" : "text-red-500"
+                              getPasswordStrength(password).score === 2 ? "text-amber-600" : "text-rose-500"
                             )}>
                               {getPasswordStrength(password).text}
                             </span>
@@ -948,11 +956,11 @@ export default function Auth() {
                   <button 
                     type="submit"
                     disabled={loading}
-                    className="w-full bg-[#00A651] text-white py-3 rounded-[10px] font-bold text-sm flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-sm shadow-emerald-600/20 cursor-pointer"
+                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-md shadow-emerald-600/20 cursor-pointer"
                   >
-                    {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
+                    {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
                       <>
-                        {mode === 'signin' ? 'Sign in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
+                        <span>{mode === 'signin' ? 'Sign in to Dashboard' : mode === 'signup' ? 'Create Free Account' : 'Send Reset Link'}</span>
                         <ArrowRight className="h-4 w-4" />
                       </>
                     )}
@@ -962,48 +970,48 @@ export default function Auth() {
 
             {mode !== 'forgot' && !resetSent && (
               <>
-                <div className="relative my-8">
+                <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-gray-100"></div>
+                    <div className="w-full border-t border-slate-200"></div>
                   </div>
-                  <div className="relative flex justify-center text-xs font-bold">
-                    <span className="bg-white px-4 text-gray-400">Or continue with</span>
+                  <div className="relative flex justify-center text-[10px] font-mono uppercase tracking-wider">
+                    <span className="bg-white px-3 text-slate-400">Or continue with</span>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <button 
                     onClick={() => handleSocialLogin('google')}
-                    className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 rounded-[10px] border border-gray-100 text-sm font-bold text-gray-700 hover:bg-gray-100 transition-all"
+                    className="flex items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
                   >
                     <Chrome className="h-4 w-4 text-red-500" />
-                    Google
+                    <span>Google</span>
                   </button>
                   <button 
                     onClick={() => handleSocialLogin('apple')}
-                    className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 rounded-[10px] border border-gray-100 text-sm font-bold text-gray-700 hover:bg-gray-100 transition-all"
+                    className="flex items-center justify-center gap-2 py-2.5 bg-slate-50 hover:bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-700 hover:border-slate-300 transition-all cursor-pointer shadow-2xs"
                   >
                     <Apple className="h-4 w-4" />
-                    Apple
+                    <span>Apple</span>
                   </button>
                 </div>
               </>
             )}
 
-            <div className="mt-8 text-center">
-              <p className="text-gray-500 text-sm">
-                {mode === 'signin' ? "Don't have an account?" : "Already have an account?"}{' '}
+            <div className="mt-6 text-center">
+              <p className="text-slate-500 text-xs">
+                {mode === 'signin' ? "Don't have a workspace yet?" : "Already have an account?"}{' '}
                 <button 
                   onClick={() => handleModeChange(mode === 'signin' ? 'signup' : 'signin')}
-                  className="text-[#00A651] font-bold hover:underline"
+                  className="text-emerald-600 font-bold hover:underline cursor-pointer"
                 >
-                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                  {mode === 'signin' ? 'Start Free Trial' : 'Sign In'}
                 </button>
               </p>
               {mode === 'forgot' && (
                 <button 
                   onClick={() => setMode('signin')}
-                  className="mt-2 text-gray-400 text-sm font-medium hover:text-[#00A651]"
+                  className="mt-2 text-slate-400 text-xs font-medium hover:text-emerald-600 cursor-pointer"
                 >
                   Back to Sign In
                 </button>
@@ -1014,15 +1022,9 @@ export default function Auth() {
       </div>
       )}
 
-      <Link to="/" className="mt-8 text-gray-400 text-sm font-medium hover:text-gray-600 transition-colors">
-        ← Back to home
+      <Link to="/" className="mt-6 text-slate-400 text-xs font-medium hover:text-slate-700 transition-colors">
+        ← Back to Tripbone Platform
       </Link>
-
-      <div className="mt-12 text-center max-w-sm">
-        <p className="text-xs text-gray-400 leading-relaxed">
-          "Just browsing? You can still book tours as a guest without creating an account."
-        </p>
-      </div>
     </div>
   );
 }

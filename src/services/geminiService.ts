@@ -116,19 +116,40 @@ export async function generateBlogPostData(prompt: string, apiKey?: string): Pro
   return response.json();
 }
 
-export async function generateItinerary(userData: any, apiKey?: string): Promise<GeneratedItinerary> {
-  const response = await fetch("/api/gemini/generate-itinerary", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userData, apiKey, tenantId: getActiveTenantId() })
-  });
+export async function generateItinerary(userData: any, apiKey?: string, retries = 2): Promise<GeneratedItinerary> {
+  let lastError: any = null;
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || "Failed to generate itinerary");
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      if (attempt > 0) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 800));
+      }
+
+      const response = await fetch("/api/gemini/generate-itinerary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userData, apiKey, tenantId: getActiveTenantId() })
+      });
+
+      if (response.ok) {
+        return await response.json();
+      }
+
+      const errorData = await response.json().catch(() => ({}));
+      const msg = errorData.error || `HTTP error ${response.status}`;
+      lastError = new Error(msg);
+
+      // If client error (400, 401, 403), do not retry
+      if (response.status >= 400 && response.status < 500) {
+        throw lastError;
+      }
+    } catch (err: any) {
+      lastError = err;
+      if (attempt === retries) throw lastError;
+    }
   }
 
-  return response.json();
+  throw lastError || new Error("Failed to generate itinerary");
 }
 
 export async function getChatResponse(

@@ -85,7 +85,15 @@ export default function SaaSLayout() {
     });
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
-    if (hostname.includes('run.app')) {
+    const isAiStudioPlatform = 
+      hostname.includes('run.app') || 
+      hostname.includes('ai.studio') || 
+      hostname.includes('aistudio.google.com') || 
+      hostname.includes('vercel.app') || 
+      hostname.includes('web.app') || 
+      hostname.includes('firebaseapp.com');
+
+    if (isAiStudioPlatform) {
       window.location.href = '/login';
     } else {
       window.location.href = hostname === 'localhost' 
@@ -103,7 +111,15 @@ export default function SaaSLayout() {
     });
     const hostname = window.location.hostname;
     const port = window.location.port ? `:${window.location.port}` : '';
-    if (hostname.includes('run.app')) {
+    const isAiStudioPlatform = 
+      hostname.includes('run.app') || 
+      hostname.includes('ai.studio') || 
+      hostname.includes('aistudio.google.com') || 
+      hostname.includes('vercel.app') || 
+      hostname.includes('web.app') || 
+      hostname.includes('firebaseapp.com');
+
+    if (isAiStudioPlatform) {
       window.location.href = '/signup';
     } else {
       window.location.href = hostname === 'localhost' 
@@ -126,101 +142,107 @@ export default function SaaSLayout() {
         .selection-brand-color::selection { background-color: ${brandColor} !important; color: white !important; }
       `}</style>
       
-      {/* Top Fixed Header with Clean Light Navigation */}
+      {/* Top Fixed Header with Clean Glassmorphism */}
       <div className="fixed top-0 left-0 right-0 z-50">
         <TopAnnouncementBar />
-        <header className="w-full transition-all duration-300 bg-white/95 backdrop-blur-xl border-b border-[#dce1dc] shadow-[0_1px_2px_rgba(6,30,10,0.05)] text-[#1a1d1b]">
+        <header className="w-full transition-all duration-300 bg-white/90 backdrop-blur-xl border-b border-slate-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] text-slate-900">
           <div className="max-w-7xl mx-auto px-6 h-18 flex items-center justify-between">
             
             {/* Logo + Primary Navigation */}
-            <div className="flex items-center space-x-8">
-              <Link to="/" className="flex items-center space-x-2.5 cursor-pointer group">
+            <div className="flex items-center space-x-10">
+              <Link to="/" className="flex items-center space-x-3 cursor-pointer group">
                 {globalBrand?.logoUrl || settings?.logoURL ? (
-                  <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[140px] object-contain" />
+                  <img src={globalBrand?.logoUrl || settings?.logoURL} alt={globalBrand?.platformName || settings?.siteName || "Tripbone"} className="h-8 max-w-[150px] object-contain" />
                 ) : (
                   <>
-                    <div className="w-9 h-9 rounded-xl bg-[#00aa13] flex items-center justify-center text-white shadow-[0_4px_12px_rgba(0,170,19,0.3)] group-hover:scale-105 transition-transform">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center text-white shadow-md shadow-emerald-600/20 group-hover:scale-105 transition-transform">
                       <Compass className="h-5 w-5 text-white" />
                     </div>
-                    <span className="text-xl font-extrabold tracking-tight text-[#1a1d1b]">
-                      {globalBrand?.platformName || settings?.siteName || "Tripbone"}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-lg font-black tracking-tight text-slate-950 font-sans">
+                        {globalBrand?.platformName || settings?.siteName || "Tripbone"}
+                      </span>
+                      <span className="text-[10px] tracking-wider font-semibold text-slate-400 uppercase -mt-1 font-mono">
+                        Tour OS & Engine
+                      </span>
+                    </div>
                   </>
                 )}
               </Link>
 
-              <nav className="hidden lg:flex items-center space-x-1 text-sm font-semibold text-[#4b4f4c]">
+              <nav className="hidden lg:flex items-center space-x-2 text-sm font-medium text-slate-600">
                 
-                {/* Features Mega Dropdown */}
+                {/* Features Dropdown */}
                 <div 
                   className="relative"
                   onMouseEnter={() => setIsFeaturesOpen(true)}
                   onMouseLeave={() => setIsFeaturesOpen(false)}
                 >
-                  <button className="flex items-center space-x-1 px-3.5 py-2 rounded-full transition-all cursor-pointer hover:text-[#00790d] hover:bg-[#e6f7e6] text-[#4b4f4c]">
-                    <span>Features</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-[#00aa13]' : 'text-slate-400'}`} />
+                  <button className="flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors cursor-pointer hover:text-slate-950 hover:bg-slate-100/80 text-slate-700">
+                    <span className="font-semibold text-[13px]">Platform Features</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isFeaturesOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400'}`} />
                   </button>
                   
                   {/* Mega Menu */}
-                  <div className={`absolute top-full left-0 w-[600px] bg-white rounded-3xl shadow-[0_20px_50px_rgba(6,30,10,0.12)] border border-[#dce1dc] p-5 grid grid-cols-2 gap-3 transition-all duration-200 origin-top-left text-slate-900 ${isFeaturesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
+                  <div className={`absolute top-full left-0 w-[620px] bg-white rounded-2xl shadow-2xl border border-slate-200/80 p-5 grid grid-cols-2 gap-3 transition-all duration-200 origin-top-left text-slate-900 ${isFeaturesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
                     
-                    <Link to="/features/ai" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-[#e6f7e6] border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#00aa13] group-hover/item:text-white text-[#00790d] transition-colors">
+                    <Link to="/features/ai" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-emerald-600 group-hover/item:text-white text-emerald-700 transition-colors">
                         <Sparkles className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">AI Tour Builder</h4>
-                        <p className="text-xs text-[#6f746f] leading-snug">Auto-generate tour pages, copy, and multi-language translation.</p>
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5 group-hover/item:text-emerald-700 transition-colors">Gemini AI Tour Studio</h4>
+                        <p className="text-[11px] text-slate-500 leading-snug">Auto-generate tour itineraries, SEO copy, and multi-language translations.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/operations" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-[#fef3eb] border border-[#f37c20]/20 flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#f37c20] group-hover/item:text-white text-[#f37c20] transition-colors">
+                    <Link to="/features/operations" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 border border-amber-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-amber-600 group-hover/item:text-white text-amber-700 transition-colors">
                         <Navigation className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">WhatsApp & Dispatches</h4>
-                        <p className="text-xs text-[#6f746f] leading-snug">Automated driver alerts, pickup drop-pins, and manifest logs.</p>
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5 group-hover/item:text-amber-700 transition-colors">WhatsApp & Driver Dispatch</h4>
+                        <p className="text-[11px] text-slate-500 leading-snug">Automated passenger notifications, live pickup GPS pins, and manifests.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/sales" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-[#e6f7e6] border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-[#00aa13] group-hover/item:text-white text-[#00790d] transition-colors">
+                    <Link to="/features/sales" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-blue-600 group-hover/item:text-white text-blue-700 transition-colors">
                         <BriefcaseBusiness className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">Integrated Booking Engine</h4>
-                        <p className="text-xs text-[#6f746f] leading-snug">Mobile-first checkout, instant card payments, and deposits.</p>
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5 group-hover/item:text-blue-700 transition-colors">BYOPG Payment Engine</h4>
+                        <p className="text-[11px] text-slate-500 leading-snug">Stripe, Midtrans, Xendit, PayPal, & offline transfers direct to your account.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/design" className="group/item flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors">
-                      <div className="w-9 h-9 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-purple-600 group-hover/item:text-white text-purple-600 transition-colors">
+                    <Link to="/features/design" className="group/item flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                      <div className="w-9 h-9 rounded-lg bg-purple-50 border border-purple-100 flex items-center justify-center flex-shrink-0 group-hover/item:bg-purple-600 group-hover/item:text-white text-purple-600 transition-colors">
                         <LayoutTemplate className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">High-Converting Layouts</h4>
-                        <p className="text-xs text-[#6f746f] leading-snug">Swiss typography, custom domains, and mobile speed.</p>
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5 group-hover/item:text-purple-700 transition-colors">Mobile-First Storefronts</h4>
+                        <p className="text-[11px] text-slate-500 leading-snug">JoyTime & modern themes with custom domains and sub-second loading.</p>
                       </div>
                     </Link>
 
-                    <Link to="/features/infrastructure" className="group/item col-span-2 flex items-start space-x-3.5 p-3 rounded-2xl hover:bg-[#f1f4f1] transition-colors border-t border-[#dce1dc] mt-1 pt-3">
-                      <div className="w-9 h-9 rounded-xl bg-slate-100 border border-[#dce1dc] flex items-center justify-center flex-shrink-0 group-hover/item:bg-slate-800 group-hover/item:text-white text-slate-700 transition-colors">
+                    <Link to="/features/infrastructure" className="group/item col-span-2 flex items-start space-x-3.5 p-3 rounded-xl hover:bg-slate-50 transition-colors border-t border-slate-100 mt-1 pt-3">
+                      <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center flex-shrink-0 group-hover/item:bg-slate-900 group-hover/item:text-white text-slate-700 transition-colors">
                         <ShieldCheck className="w-4.5 h-4.5" />
                       </div>
                       <div>
-                        <h4 className="font-extrabold text-[#1a1d1b] text-sm mb-0.5 group-hover/item:text-[#00790d] transition-colors">Zero Commission Infrastructure</h4>
-                        <p className="text-xs text-[#6f746f] leading-snug">Self-hosted custom domains, role permissions, and zero hidden platform cuts.</p>
+                        <h4 className="font-bold text-slate-900 text-xs mb-0.5 group-hover/item:text-emerald-700 transition-colors">Multi-Role Architecture & 0% Take Rate</h4>
+                        <p className="text-[11px] text-slate-500 leading-snug">Admin, Supplier, Agent, and Staff roles with automated settlement logs.</p>
                       </div>
                     </Link>
 
                   </div>
                 </div>
 
-                <Link to="/industries" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Industries</Link>
-                <Link to="/compare" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Compare</Link>
-                <Link to="/pricing" className="px-3.5 py-2 rounded-full transition-all hover:text-[#00790d] hover:bg-[#e6f7e6]">Pricing</Link>
+                <Link to="/industries" className="px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors hover:text-slate-950 hover:bg-slate-100/80">Industries</Link>
+                <Link to="/compare" className="px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors hover:text-slate-950 hover:bg-slate-100/80">Compare</Link>
+                <Link to="/pricing" className="px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors hover:text-slate-950 hover:bg-slate-100/80">Pricing</Link>
+                <Link to="/docs" className="px-3 py-2 rounded-lg text-[13px] font-semibold transition-colors hover:text-slate-950 hover:bg-slate-100/80">Academy</Link>
                 
                 {/* Resources Dropdown */}
                 <div 
@@ -228,26 +250,26 @@ export default function SaaSLayout() {
                   onMouseEnter={() => setIsResourcesOpen(true)}
                   onMouseLeave={() => setIsResourcesOpen(false)}
                 >
-                  <button className="flex items-center space-x-1 px-3.5 py-2 rounded-full transition-all cursor-pointer hover:text-[#00790d] hover:bg-[#e6f7e6]">
-                    <span>Resources</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isResourcesOpen ? 'rotate-180 text-[#00aa13]' : 'text-slate-400'}`} />
+                  <button className="flex items-center space-x-1 px-3 py-2 rounded-lg transition-colors cursor-pointer hover:text-slate-950 hover:bg-slate-100/80 text-slate-700">
+                    <span className="font-semibold text-[13px]">Resources</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isResourcesOpen ? 'rotate-180 text-emerald-600' : 'text-slate-400'}`} />
                   </button>
 
-                  <div className={`absolute top-full left-0 w-64 bg-white rounded-3xl shadow-[0_20px_50px_rgba(6,30,10,0.12)] border border-[#dce1dc] p-2 space-y-1 transition-all duration-200 origin-top-left text-slate-900 ${isResourcesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
-                    <Link to="/directory" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
-                      <Store className="w-4 h-4 text-[#00aa13]" />
-                      <span>Live Storefront Demos</span>
+                  <div className={`absolute top-full left-0 w-60 bg-white rounded-2xl shadow-xl border border-slate-200/80 p-2 space-y-1 transition-all duration-200 origin-top-left text-slate-900 ${isResourcesOpen ? 'opacity-100 scale-100 visible' : 'opacity-0 scale-95 invisible'}`}>
+                    <Link to="/directory" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-800 hover:text-emerald-700 transition-colors">
+                      <Store className="w-4 h-4 text-emerald-600" />
+                      <span>Live Client Showcases</span>
                     </Link>
-                    <Link to="/blog" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
-                      <BookOpen className="w-4 h-4 text-[#00aa13]" />
-                      <span>Blog & Operator Guides</span>
+                    <Link to="/blog" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-800 hover:text-emerald-700 transition-colors">
+                      <BookOpen className="w-4 h-4 text-emerald-600" />
+                      <span>Operator Playbook & Blog</span>
                     </Link>
-                    <Link to="/about" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
-                      <Building2 className="w-4 h-4 text-[#00aa13]" />
-                      <span>Company & Story</span>
+                    <Link to="/storyboard" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-800 hover:text-emerald-700 transition-colors">
+                      <Sparkles className="w-4 h-4 text-indigo-600" />
+                      <span>Pitch Storyboard & Vision</span>
                     </Link>
-                    <Link to="/contact" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-2xl hover:bg-[#f1f4f1] text-xs font-bold text-[#1a1d1b] hover:text-[#00790d] transition-colors">
-                      <HelpCircle className="w-4 h-4 text-[#00aa13]" />
+                    <Link to="/contact" className="flex items-center space-x-3 px-3.5 py-2.5 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-800 hover:text-emerald-700 transition-colors">
+                      <HelpCircle className="w-4 h-4 text-emerald-600" />
                       <span>Contact Support</span>
                     </Link>
                   </div>
@@ -256,29 +278,29 @@ export default function SaaSLayout() {
               </nav>
             </div>
 
-            {/* Right CTAs */}
+            {/* Right Action Buttons */}
             <div className="flex items-center space-x-3">
               <button 
                 onClick={handleLoginClick} 
-                className="text-sm font-semibold px-4 py-2 rounded-full transition-all cursor-pointer text-[#1a1d1b] hover:text-[#00aa13] hover:bg-[#e6f7e6]"
+                className="text-xs font-bold px-4 py-2 rounded-lg transition-colors cursor-pointer text-slate-700 hover:text-slate-950 hover:bg-slate-100"
               >
-                {user ? 'Dashboard' : 'Log in'}
+                {user ? 'Go to Cockpit' : 'Sign In'}
               </button>
 
               {!user && (
                 <button 
                   onClick={handleSignupClick} 
-                  className="btn-kelola-primary hidden sm:inline-flex items-center gap-1.5 text-white text-xs font-bold px-5 py-2.5 rounded-full cursor-pointer text-center"
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4.5 py-2.5 rounded-lg shadow-sm hover:shadow transition-all cursor-pointer text-center"
                 >
                   <span>Start Free Trial</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-400" />
                 </button>
               )}
 
               {/* Mobile Hamburger Toggle */}
               <button 
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="lg:hidden p-2 rounded-full transition-colors text-slate-700 hover:bg-slate-100 border border-[#dce1dc]"
+                className="lg:hidden p-2 rounded-lg transition-colors text-slate-700 hover:bg-slate-100 border border-slate-200"
                 aria-label="Toggle Navigation Menu"
               >
                 {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
