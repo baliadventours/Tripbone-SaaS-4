@@ -105,9 +105,10 @@ export default function SaaSHome() {
   });
   const [otpVerified, setOtpVerified] = useState<boolean>(() => {
     try {
-      return sessionStorage.getItem('otp_verified') === 'true';
+      const stored = sessionStorage.getItem('otp_verified');
+      return stored !== 'false';
     } catch {
-      return false;
+      return true;
     }
   });
   const [otpViewActive, setOtpViewActive] = useState(false);
@@ -553,45 +554,31 @@ export default function SaaSHome() {
     setLoginLoading(true);
     setError(null);
     try {
+      sessionStorage.setItem('otp_verified', 'true');
+      setOtpVerified(true);
+      setOtpViewActive(false);
+
       const provider = new GoogleAuthProvider();
       const userCred = await signInWithPopup(auth, provider);
       
-      if (authView === 'login') {
-        const code = Math.floor(100000 + Math.random() * 900000).toString();
-        setGeneratedOtp(code);
-        setOtpViewActive(true);
-        setOtpVerified(false);
-        sessionStorage.removeItem('otp_verified');
-        
-        const email = userCred.user?.email;
-        if (email) {
-          await sendOtpEmail(email, code);
-          setSuccess(`A 6-digit secure verification code has been sent to your email address (${email}). Please enter it below.`);
-        } else {
-          setSuccess("Please enter the 6-digit verification code to complete your secure Google login.");
-        }
-      } else {
-        sessionStorage.setItem('otp_verified', 'true');
-        setOtpVerified(true);
-        if (userCred.user) {
-          try {
-            await setDoc(doc(db, 'users', userCred.user.uid), {
-              uid: userCred.user.uid,
-              email: userCred.user.email,
-              displayName: userCred.user.displayName || 'Operator',
-              photoURL: userCred.user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userCred.user.displayName || 'O')}`,
-              phoneNumber: regPhoneData.phone || '',
-              whatsapp: regPhoneData.whatsapp || regPhoneData.phone || '',
-              country: regPhoneData.country || 'United States',
-              countryCode: regPhoneData.countryCode || 'US',
-              dialCode: regPhoneData.dialCode || '+1',
-              role: 'admin',
-              status: 'active',
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
-          } catch (e) {
-            console.warn("[Google Signup] Profile sync failed:", e);
-          }
+      if (userCred.user) {
+        try {
+          await setDoc(doc(db, 'users', userCred.user.uid), {
+            uid: userCred.user.uid,
+            email: userCred.user.email,
+            displayName: userCred.user.displayName || 'Operator',
+            photoURL: userCred.user.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(userCred.user.displayName || 'O')}`,
+            phoneNumber: regPhoneData.phone || '',
+            whatsapp: regPhoneData.whatsapp || regPhoneData.phone || '',
+            country: regPhoneData.country || 'United States',
+            countryCode: regPhoneData.countryCode || 'US',
+            dialCode: regPhoneData.dialCode || '+1',
+            role: 'admin',
+            status: 'active',
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (e) {
+          console.warn("[Google Signup] Profile sync failed:", e);
         }
       }
     } catch (err: any) {
@@ -670,19 +657,12 @@ export default function SaaSHome() {
     setLoginLoading(true);
     setError(null);
     try {
-      // First verify credentials via Firebase Auth
+      sessionStorage.setItem('otp_verified', 'true');
+      setOtpVerified(true);
+      setOtpViewActive(false);
+
+      // Verify credentials via Firebase Auth
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
-      
-      // Generate a secure 6-digit OTP code
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      setGeneratedOtp(code);
-      setOtpViewActive(true);
-      setOtpVerified(false);
-      sessionStorage.removeItem('otp_verified');
-      
-      // Dispatch secure OTP to email
-      await sendOtpEmail(loginEmail, code);
-      setSuccess(`A 6-digit secure verification code has been dispatched to ${loginEmail}. Please enter it below to complete authorization.`);
     } catch (err: any) {
       console.error(err);
       setError(translateFirebaseError(err));
@@ -704,6 +684,11 @@ export default function SaaSHome() {
     setLoginLoading(true);
     setError(null);
     try {
+      // Mark verified immediately so onAuthStateChanged does not flash OTP gate
+      sessionStorage.setItem('otp_verified', 'true');
+      setOtpVerified(true);
+      setOtpViewActive(false);
+
       // Create user profile in Firebase Auth
       const usrCredential = await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
       setCurrentUser(usrCredential.user);
@@ -766,9 +751,6 @@ export default function SaaSHome() {
         method: 'email_password'
       });
 
-      sessionStorage.setItem('otp_verified', 'true');
-      setOtpVerified(true);
-      
       const isSuperAdminEmail = ['baliadventours@gmail.com', 'admin@tripbone.com', 'kuotabox@gmail.com'].includes(loginEmail.toLowerCase());
       if (isSuperAdminEmail) {
         setStep(2);
@@ -1884,7 +1866,7 @@ export default function SaaSHome() {
             </span>
           </div>
 
-          {currentUser && !otpVerified ? (
+          {currentUser && otpViewActive && !otpVerified ? (
             // --- SECURE OTP VERIFICATION MODE ---
             <div>
               <h2 className="text-2xl font-black text-gray-900 mb-2 text-center flex items-center justify-center gap-2">
@@ -2266,31 +2248,11 @@ export default function SaaSHome() {
 
               <div className="flex items-center space-x-4">
                 <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step >= 2 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
-                  {isEmailVerified && step > 2 ? <Check className="w-4 h-4" /> : '2'}
+                  {trialActivated ? <Check className="w-4 h-4" /> : '2'}
                 </div>
                 <div>
-                  <h4 className={`text-sm font-bold ${isEmailVerified && step >= 2 ? 'text-white' : 'text-gray-400'}`}>Workspace Details</h4>
+                  <h4 className={`text-sm font-bold ${isEmailVerified && step >= 2 ? 'text-white' : 'text-gray-400'}`}>Website & 7-Day Trial</h4>
                   <p className="text-[10px] text-gray-500 font-medium">Company & Subdomain</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step >= 3 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
-                  {isEmailVerified && step > 3 ? <Check className="w-4 h-4" /> : '3'}
-                </div>
-                <div>
-                  <h4 className={`text-sm font-bold ${isEmailVerified && step >= 3 ? 'text-white' : 'text-gray-400'}`}>Select Plan</h4>
-                  <p className="text-[10px] text-gray-500 font-medium">Choose subscription</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                <div className={`w-8 h-8 rounded-full border flex items-center justify-center font-semibold text-sm ${isEmailVerified && step === 4 ? 'bg-[#00b272] border-[#00b272] text-white' : 'border-gray-700 text-gray-500'}`}>
-                  {'4'}
-                </div>
-                <div>
-                  <h4 className={`text-sm font-bold ${isEmailVerified && step === 4 ? 'text-white' : 'text-gray-400'}`}>Checkout</h4>
-                  <p className="text-[10px] text-gray-500 font-medium">Review & Provision</p>
                 </div>
               </div>
             </div>
@@ -2403,14 +2365,14 @@ export default function SaaSHome() {
               </div>
             )}
 
-            {/* STEP 2: Website Setup */}
-            {isEmailVerified && (step === 1 || step === 2) && (
-              <div>
+            {/* STEP 2: Website Setup & 7-Day Free Trial Launch */}
+            {isEmailVerified && !trialActivated && (
+              <div className="animate-fadeIn">
                 <h1 className="text-3xl font-black text-gray-900 mb-2">Setup Your Website</h1>
-                <p className="text-xs text-gray-500 mb-6 font-medium">Just a few details to provision your platform.</p>
-                <div className="w-12 h-1 bg-[#00b272] rounded-full mb-10" />
+                <p className="text-xs text-gray-500 mb-6 font-medium">Just a few details to provision your 7-Day Free Trial platform.</p>
+                <div className="w-12 h-1 bg-[#00b272] rounded-full mb-8" />
 
-                <form onSubmit={(e) => { e.preventDefault(); setStep(3); }} className="space-y-6">
+                <form onSubmit={handleRegisterTenant} className="space-y-6">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Company Name</label>
                     <input
@@ -2458,386 +2420,108 @@ export default function SaaSHome() {
                         .tripbone.com
                       </span>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-2.5 leading-relaxed">
-                      This is the URL to live preview your website. You can use your custom domain like yourwebsite.com and connect it to this website.
+                    <p className="text-[11px] text-gray-400 mt-2 leading-relaxed">
+                      This is the URL to live preview your website. You can connect your own custom domain (e.g. yourcompany.com) anytime from your dashboard.
                     </p>
                   </div>
 
-                  <div className="pt-6 border-t border-gray-200 flex justify-between items-center">
+                  {/* 7-Day Free Trial Benefit Box */}
+                  <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-2xl p-5 space-y-3 text-left">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                        <span className="text-xs font-bold text-emerald-950 uppercase tracking-wider">7-Day Free Trial (Starter Package)</span>
+                      </div>
+                      <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                        $0 DUE TODAY
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      Your website will be provisioned with full Starter capabilities, AI tour generator, booking engine, and 0% platform commissions. Upgrade or renew anytime directly from your dashboard.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-4 text-[11px] font-semibold text-emerald-800 pt-2 border-t border-emerald-200/60">
+                      <span>✓ No Credit Card Required</span>
+                      <span>✓ Provisioning in 2 Minutes</span>
+                      <span>✓ Your Data Stays Yours</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-gray-200 flex justify-between items-center">
                     <button
                       type="button"
                       onClick={() => signOut(auth)}
-                      className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center space-x-1"
+                      className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center space-x-1 cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
-                      <span>Back</span>
+                      <span>Sign Out</span>
                     </button>
                     <button
                       type="submit"
-                      disabled={!formData.companyName || !formData.slug}
-                      className="px-6 py-3 bg-[#00b272] hover:bg-[#00a065] text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all shadow-lg shadow-[#00b272]/20 disabled:opacity-50"
+                      disabled={!formData.companyName || !formData.slug || isProvisioning}
+                      className="px-6 py-3.5 bg-[#00b272] hover:bg-[#009e64] text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-2 transition-all shadow-lg shadow-[#00b272]/20 disabled:opacity-50 cursor-pointer"
                     >
-                      <span>Next</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {isProvisioning ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          <span>Provisioning in 2 Minutes...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Launch My 7-Day Free Trial Website</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
               </div>
             )}
 
-            {/* STEP 3: Select Package Plan */}
-            {step === 3 && (
+            {/* STEP 3: 7-Day Trial Activation Success Screen */}
+            {trialActivated && (
               <div className="animate-fadeIn">
-                <h1 className="text-3xl font-black text-gray-900 mb-2">Select Your Plan</h1>
-                <p className="text-xs text-gray-500 mb-6 font-medium">Choose a subscription plan that fits your business needs.</p>
-                <div className="w-12 h-1 bg-[#00b272] rounded-full mb-10" />
+                <div className="max-w-xl mx-auto space-y-8 bg-white border border-gray-200 p-8 rounded-2xl shadow-xl text-center">
+                  <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-black text-gray-900">7-Day Free Trial Activated!</h2>
+                  <p className="text-sm text-gray-500 leading-relaxed">
+                    Your premium travel storefront workspace <strong>{formData.companyName}</strong> has been created with an active <strong>7-Day Free Trial</strong> ($0 due today).
+                  </p>
+                  
+                  <div className="bg-emerald-50/50 border border-emerald-500/10 rounded-2xl p-6 text-left space-y-4">
+                    <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Workspace Summary</h3>
+                    <div className="text-xs space-y-2 text-slate-600">
+                      <p>💼 <strong>Workspace:</strong> {formData.companyName}</p>
+                      <p>🔗 <strong>Web Address:</strong> {formData.slug}.tripbone.com</p>
+                      <p>⏱️ <strong>Trial Ends:</strong> {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                      <p>🧾 <strong>Active Plan:</strong> Starter Package (Trial Activated — renew or upgrade anytime in dashboard).</p>
+                    </div>
+                  </div>
 
-                <div className="flex bg-white border border-gray-200 p-1.5 rounded-xl max-w-fit mb-8 mx-auto shadow-sm">
-                  {(['monthly', 'annual', 'lifetime'] as const).map(interval => (
+                  <div className="space-y-3 pt-4">
                     <button
-                      key={interval}
-                      type="button"
-                      onClick={() => setBillingInterval(interval)}
-                      className={cn(
-                        "px-6 py-2 text-xs font-bold rounded-lg transition-all capitalize",
-                        billingInterval === interval 
-                          ? "bg-[#00b272] text-white shadow-sm" 
-                          : "text-gray-500 hover:text-gray-900"
-                      )}
+                      onClick={async () => {
+                        setTrialActivated(false);
+                        setStep(1);
+                        try {
+                          const querySnapshot = await getDocs(collection(db, 'tenants'));
+                          const tenantList: Tenant[] = [];
+                          querySnapshot.forEach((docSnap) => {
+                            tenantList.push({ id: docSnap.id, ...(docSnap.data() as any) });
+                          });
+                          setTenants(tenantList);
+                        } catch (e) {
+                          console.error(e);
+                        }
+                        setShowDashboard(true);
+                      }}
+                      className="w-full py-3.5 bg-[#00b272] hover:bg-[#009e64] text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-600/15 cursor-pointer"
                     >
-                      {interval}
+                      Go to My Workspace Dashboard
                     </button>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {plans
-                    .filter(p => p.isActive && p.interval === billingInterval)
-                    .sort((a, b) => (a.price || 0) - (b.price || 0))
-                    .map((pkg: any) => {
-                    const isSelected = formData.plan === pkg.slug;
-                    const displayPrice = pkg.price;
-                    const priceStr = typeof displayPrice === 'number' ? `$${displayPrice} / ${pkg.interval || 'mo'}` : displayPrice;
-                    const descStr = Array.isArray(pkg.features) && pkg.features.length > 0 ? pkg.features[0] : (pkg.desc || '');
-                    
-                    return (
-                      <button
-                        key={pkg.slug}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, plan: pkg.slug }))}
-                        className={cn(
-                          "p-5 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-36 group cursor-pointer",
-                          isSelected 
-                            ? "border-[#00b272] bg-[#00b272]/5 ring-2 ring-[#00b272]/20"
-                            : "border-gray-200 bg-white hover:border-[#00b272]/50 hover:bg-slate-50"
-                        )}
-                      >
-                        <div>
-                          <div className="flex justify-between items-center">
-                            <span className={cn(
-                              "text-sm font-bold transition-colors",
-                              isSelected ? "text-[#00b272]" : "text-gray-900"
-                            )}>
-                              {pkg.name}
-                            </span>
-                            {isSelected && (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full border text-[#00b272] bg-[#00b272]/10 border-[#00b272]/20">
-                                Selected
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-gray-400 mt-1.5 line-clamp-2">{descStr}</p>
-                        </div>
-                        <span className={cn(
-                          "text-base font-extrabold transition-colors mt-2 capitalize",
-                          isSelected ? "text-[#00b272]" : "text-gray-900"
-                        )}>
-                          {priceStr}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="pt-8 mt-8 border-t border-gray-200 flex justify-between items-center">
-                  <button
-                    type="button"
-                    onClick={() => setStep(2)}
-                    className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center space-x-1"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setStep(4)}
-                    disabled={!formData.plan}
-                    className="px-6 py-3 bg-[#00b272] hover:bg-[#00a065] text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all shadow-lg shadow-[#00b272]/20 disabled:opacity-50"
-                  >
-                    <span>Continue to Summary</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* STEP 4: Package Summary */}
-            {step === 4 && (
-              <div className="animate-fadeIn">
-                {trialActivated ? (
-                  <div className="max-w-xl mx-auto space-y-8 bg-white border border-gray-200 p-8 rounded-2xl shadow-xl text-center">
-                    <div className="w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                      <Sparkles className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-gray-900">7-Day Free Trial Activated!</h2>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                      Your premium travel storefront workspace <strong>{formData.companyName}</strong> has been created with an active <strong>7-Day Free Trial</strong> (0 payment required today).
-                    </p>
-                    
-                    <div className="bg-emerald-50/50 border border-emerald-500/10 rounded-2xl p-6 text-left space-y-4">
-                      <h3 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Workspace Summary</h3>
-                      <div className="text-xs space-y-2 text-slate-600">
-                        <p>💼 <strong>Workspace:</strong> {formData.companyName}</p>
-                        <p>🔗 <strong>Web Address:</strong> app.{window.location.host.replace('app.', '')}/?tenant={formData.slug}</p>
-                        <p>⏱️ <strong>Trial Ends:</strong> {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                        <p>🧾 <strong>Invoice Generated:</strong> Premium {formatPlanName(formData.plan, plans, billingInterval)} Subscription invoice ($0 Trial Activated, package subscription invoice generated as unpaid and due in 7 days).</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3 pt-4">
-                      <button
-                        onClick={async () => {
-                          setTrialActivated(false);
-                          setStep(1);
-                          try {
-                            const querySnapshot = await getDocs(collection(db, 'tenants'));
-                            const tenantList: Tenant[] = [];
-                            querySnapshot.forEach((docSnap) => {
-                              tenantList.push({ id: docSnap.id, ...(docSnap.data() as any) });
-                            });
-                            setTenants(tenantList);
-                          } catch (e) {
-                            console.error(e);
-                          }
-                          setShowDashboard(true);
-                        }}
-                        className="w-full py-3 bg-[#00b272] hover:bg-[#009e64] text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-emerald-600/15 cursor-pointer"
-                      >
-                        Go to My Workspace Dashboard
-                      </button>
-                    </div>
                   </div>
-                ) : manualPending ? (
-                  <div className="max-w-xl mx-auto space-y-8 bg-white border border-gray-200 p-8 rounded-2xl shadow-xl text-center">
-                    <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/20 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                      <Building className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-2xl font-black text-gray-900">Registration Pending</h2>
-                    <p className="text-sm text-gray-500 leading-relaxed">
-                      Your travel storefront workspace <strong>{formData.companyName}</strong> has been registered successfully and is awaiting activation.
-                    </p>
-                    
-                    <div className="bg-amber-50/50 border border-amber-500/10 rounded-2xl p-6 text-left space-y-4">
-                      <h3 className="text-xs font-bold text-amber-800 uppercase tracking-wider">Manual Bank Transfer Details</h3>
-                      <p className="text-xs text-amber-900 font-mono whitespace-pre-wrap leading-relaxed">
-                        {manualInstructions || 'Bank Central Asia (BCA)\nAccount Number: 123-456-7890\nAccount Name: PT Tripbone Indonesia\n\nAfter making the payment, please email your transaction receipt to baliadventours@gmail.com along with your workspace name.'}
-                      </p>
-                    </div>
-
-                    <div className="space-y-3 pt-4">
-                      <button
-                        onClick={() => {
-                          setManualPending(false);
-                          setStep(1);
-                          setShowDashboard(true);
-                        }}
-                        className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-all shadow-lg shadow-indigo-600/15 cursor-pointer"
-                      >
-                        Go to My Workspace Dashboard
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <h1 className="text-3xl font-black text-gray-900 mb-2">Review & Checkout</h1>
-                    <p className="text-xs text-gray-500 mb-6 font-medium">Please review your workspace details and plan before provisioning.</p>
-                    <div className="w-12 h-1 bg-[#00b272] rounded-full mb-10" />
-
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8 space-y-6">
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Workspace Details</h4>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-sm font-semibold text-gray-600">Company Name</span>
-                          <span className="text-sm font-bold text-gray-900">{formData.companyName}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-sm font-semibold text-gray-600">Website URL</span>
-                          <span className="text-sm font-bold text-gray-900">{formData.slug}.tripbone.com</span>
-                        </div>
-                      </div>
-
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Subscription Details</h4>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-sm font-semibold text-gray-600">Package Name</span>
-                          <span className="text-sm font-bold text-gray-900">{formatPlanName(formData.plan, plans, billingInterval)}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                          <span className="text-sm font-semibold text-gray-600">Billing Interval</span>
-                          <span className="text-sm font-bold text-gray-900 capitalize">{billingInterval}</span>
-                        </div>
-                        <div className="flex justify-between items-center py-2 pt-4">
-                          <span className="text-sm font-bold text-gray-900">Total Due Today</span>
-                          <span className="text-xl font-black text-[#00b272]">
-                            {(() => {
-                              const matchedPlans = plans.filter(p => p.slug === formData.plan && p.isActive);
-                              const matchedPlan = matchedPlans.find(p => p.interval === billingInterval) || matchedPlans[0];
-                              const price = matchedPlan?.price;
-                              return typeof price === 'number' ? `$${price}` : price || '$0';
-                            })()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* PAYMENT METHOD SELECTION */}
-                    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm mb-8 space-y-4 text-left">
-                      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Select Payment Method</h3>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Creem.io option */}
-                        {creemEnabled && (
-                          <div
-                            onClick={() => setPaymentMethod('creem')}
-                            className={`p-4 border rounded-xl cursor-pointer flex flex-col justify-between transition-all ${paymentMethod === 'creem' ? 'border-indigo-600 bg-indigo-50/20 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
-                          >
-                            <div className="flex items-center space-x-2.5 mb-2">
-                              <input
-                                type="radio"
-                                name="payment_method_group"
-                                checked={paymentMethod === 'creem'}
-                                onChange={() => setPaymentMethod('creem')}
-                                className="text-indigo-600 focus:ring-indigo-500 h-4 w-4"
-                              />
-                              <span className="text-xs font-bold text-gray-900">Credit Card</span>
-                            </div>
-                            <p className="text-[10px] text-gray-500 leading-normal">
-                              Global Visa, Mastercard, and Apple Pay. Instant activation.
-                            </p>
-                            <div className="mt-3 text-[10px] font-semibold text-indigo-600 font-mono">by Creem.io</div>
-                          </div>
-                        )}
-
-                        {/* Tripay option */}
-                        {tripayEnabled && (
-                          <div
-                            onClick={() => setPaymentMethod('tripay')}
-                            className={`p-4 border rounded-xl cursor-pointer flex flex-col justify-between transition-all ${paymentMethod === 'tripay' ? 'border-emerald-600 bg-emerald-50/20 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
-                          >
-                            <div className="flex items-center space-x-2.5 mb-2">
-                              <input
-                                type="radio"
-                                name="payment_method_group"
-                                checked={paymentMethod === 'tripay'}
-                                onChange={() => setPaymentMethod('tripay')}
-                                className="text-emerald-600 focus:ring-emerald-500 h-4 w-4"
-                              />
-                              <span className="text-xs font-bold text-gray-900">VA & QRIS</span>
-                            </div>
-                            <p className="text-[10px] text-gray-500 leading-normal">
-                              Indonesian local transfers, e-wallets, and QR codes. Instant activation.
-                            </p>
-                            <div className="mt-3 text-[10px] font-semibold text-emerald-600 font-mono">by Tripay</div>
-                          </div>
-                        )}
-
-                        {/* Manual option */}
-                        {manualEnabled && (
-                          <div
-                            onClick={() => setPaymentMethod('manual')}
-                            className={`p-4 border rounded-xl cursor-pointer flex flex-col justify-between transition-all ${paymentMethod === 'manual' ? 'border-amber-600 bg-amber-50/20 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}
-                          >
-                            <div className="flex items-center space-x-2.5 mb-2">
-                              <input
-                                type="radio"
-                                name="payment_method_group"
-                                checked={paymentMethod === 'manual'}
-                                onChange={() => setPaymentMethod('manual')}
-                                className="text-amber-600 focus:ring-amber-500 h-4 w-4"
-                              />
-                              <span className="text-xs font-bold text-gray-900">Manual Transfer</span>
-                            </div>
-                            <p className="text-[10px] text-gray-500 leading-normal">
-                              Bank transfer with manual receipt confirmation. Activation pending verification.
-                            </p>
-                            <div className="mt-3 text-[10px] font-semibold text-amber-600 font-mono">Manual approval</div>
-                          </div>
-                        )}
-
-                        {!creemEnabled && !tripayEnabled && !manualEnabled && (
-                          <div className="col-span-full p-4 border border-red-200 rounded-xl bg-red-50 text-red-750 text-xs text-center font-bold">
-                            ⚠️ No payment methods are currently active. Please contact support.
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Tripay specific channel selection */}
-                      {paymentMethod === 'tripay' && (
-                        <div className="pt-4 border-t border-gray-100 animate-fadeIn">
-                          <label className="block text-[10px] font-bold text-gray-500 uppercase mb-2">Indonesian Payment Channel</label>
-                          <select
-                            value={tripayChannel}
-                            onChange={(e) => setTripayChannel(e.target.value)}
-                            className="w-full px-3.5 py-2 border border-gray-200 rounded-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500/30 text-gray-800 bg-white"
-                          >
-                            <option value="QRISC">QRIS (DANA, OVO, GoPay, ShopeePay, LinkAja)</option>
-                            <option value="MANDIRIV">Mandiri Virtual Account</option>
-                            <option value="BNIV">BNI Virtual Account</option>
-                            <option value="BRIV">BRI Virtual Account</option>
-                            <option value="PERMATAV">Permata Virtual Account</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* Manual Transfer notice */}
-                      {paymentMethod === 'manual' && (
-                        <div className="p-3 bg-amber-500/5 border border-amber-500/15 rounded-xl text-[10px] text-amber-700 leading-relaxed animate-fadeIn">
-                          <strong>⚠️ Registration Pending Notice:</strong> Your store will be successfully created in <strong>Pending</strong> state. You will get immediate access to your dashboard, but your public travel agency website will launch only after our operators verify your bank receipt.
-                        </div>
-                      )}
-                    </div>
-
-                    <form onSubmit={handleRegisterTenant}>
-                      <div className="flex justify-between items-center">
-                        <button
-                          type="button"
-                          onClick={() => setStep(3)}
-                          className="text-xs font-bold text-gray-400 hover:text-gray-600 transition-colors flex items-center space-x-1"
-                        >
-                          <ArrowLeft className="w-3.5 h-3.5" />
-                          <span>Back</span>
-                        </button>
-                        <button
-                          type="submit"
-                          disabled={isProvisioning}
-                          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs rounded-xl flex items-center justify-center space-x-1.5 transition-all shadow-lg shadow-indigo-600/20"
-                        >
-                          {isProvisioning ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              <span>Processing...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Proceed to Payment</span>
-                              <ArrowRight className="w-4 h-4" />
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </form>
-                  </>
-                )}
+                </div>
               </div>
             )}
           </div>

@@ -37,35 +37,60 @@ export const sendEmail = async (options: EmailOptions) => {
 
 export const sendWelcomeEmail = async (email: string, name: string) => {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #005ea6;">Welcome to Tripbone!</h2>
-      <p>Hi ${name},</p>
-      <p>We are thrilled to have you on board. Your account has been successfully created.</p>
-      <p>Log in to your dashboard to start setting up your travel workspaces and building your storefronts.</p>
-      <div style="margin: 30px 0;">
-        <a href="https://app.tripbone.com" style="background-color: #005ea6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Go to Dashboard</a>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">Trip<span style="color: #00b272;">bone</span></span>
       </div>
-      <p style="color: #666; font-size: 12px;">If you didn't create this account, please ignore this email.</p>
+      <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.3px;">Welcome to Tripbone!</h2>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 16px;">Hi ${name},</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 20px;">We're excited to have you on board. Your operator account has been created, and your <strong>7-Day Free Trial</strong> is active with full Starter features and zero platform commissions.</p>
+      
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 24px 0;">
+        <p style="font-size: 12px; font-weight: 700; color: #00b272; text-transform: uppercase; margin: 0 0 8px 0; letter-spacing: 0.5px;">Your Free Trial Includes:</p>
+        <ul style="font-size: 13px; color: #334155; margin: 0; padding-left: 20px; line-height: 1.6;">
+          <li>AI-powered tour website & booking engine</li>
+          <li>0% platform commissions (BYOPG enabled)</li>
+          <li>WhatsApp automations & instant guest dispatch</li>
+        </ul>
+      </div>
+
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="https://app.tripbone.com" style="background-color: #00b272; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(0,178,114,0.25);">Go to My Dashboard</a>
+      </div>
+      <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 28px 0;" />
+      <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">Tripbone SaaS · Travel Automation & Booking Engine<br />If you didn't create this account, please disregard this email.</p>
     </div>
   `;
   return sendEmail({
     toEmail: email,
     toName: name,
-    subject: 'Welcome to Tripbone!',
+    subject: 'Welcome to Tripbone — 7-Day Free Trial Activated',
     htmlPart: html,
   });
 };
 
 export const sendVerificationEmail = async (email: string, link: string) => {
   const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #005ea6;">Verify your Email</h2>
-      <p>Hello,</p>
-      <p>Thank you for registering with Tripbone. Please confirm your email address by clicking the link below:</p>
-      <div style="margin: 30px 0;">
-        <a href="${link}" style="background-color: #00b272; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Confirm Email</a>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 32px 24px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; color: #1e293b;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="font-size: 24px; font-weight: 900; color: #0f172a; letter-spacing: -0.5px;">Trip<span style="color: #00b272;">bone</span></span>
       </div>
-      <p style="color: #666; font-size: 12px;">This link will expire soon. If you didn't request this, please safely ignore it.</p>
+      <h2 style="color: #0f172a; font-size: 20px; font-weight: 800; margin-bottom: 12px; letter-spacing: -0.3px;">Confirm Your Email Address</h2>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 16px;">Hello,</p>
+      <p style="font-size: 14px; line-height: 1.6; color: #475569; margin-bottom: 24px;">Thank you for creating an operator account on Tripbone. Please click the button below to verify your email address and launch your 7-day free trial workspace:</p>
+      
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${link}" style="background-color: #00b272; color: #ffffff; padding: 14px 36px; text-decoration: none; border-radius: 10px; font-weight: 800; font-size: 14px; display: inline-block; box-shadow: 0 4px 14px rgba(0,178,114,0.3);">Confirm Email & Launch Workspace</a>
+      </div>
+
+      <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 16px; margin: 20px 0;">
+        <p style="font-size: 11px; color: #64748b; margin: 0; word-break: break-all;">
+          <strong>Direct link:</strong> <a href="${link}" style="color: #00b272; text-decoration: underline;">${link}</a>
+        </p>
+      </div>
+
+      <hr style="border: none; border-top: 1px solid #f1f5f9; margin: 28px 0;" />
+      <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">Tripbone SaaS · Travel Automation & Booking Engine<br />If you didn't sign up for Tripbone, please ignore this message.</p>
     </div>
   `;
   return sendEmail({

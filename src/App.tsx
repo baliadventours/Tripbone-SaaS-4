@@ -85,6 +85,7 @@ const AppSumoRedeem = lazyWithRetry(() => import('./pages/AppSumoRedeem'));
 const GuideView = lazyWithRetry(() => import('./pages/GuideView'));
 const DocsPage = lazyWithRetry(() => import('./pages/DocsPage'));
 const StoryboardPage = lazyWithRetry(() => import('./pages/StoryboardPage'));
+const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 
 // Lazy load non-critical components
 import { useTenantSEO } from './hooks/useTenantSEO';
@@ -245,6 +246,8 @@ function AppContent() {
               <Route path="/superadmin/*" element={<SaaSSuperAdmin />} />
               <Route path="/login" element={<SaaSHome />} />
               <Route path="/signup" element={<SaaSHome />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/auth/action" element={<VerifyEmail />} />
               <Route path="/redeem" element={<AppSumoRedeem />} />
               <Route path="/appsumo" element={<AppSumoRedeem />} />
               <Route path="/docs" element={<DocsPage />} />

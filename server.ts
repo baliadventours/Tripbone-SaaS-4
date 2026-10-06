@@ -5367,17 +5367,36 @@ export async function createServer() {
   app.post("/api/mail/verify", async (req: any, res: any) => {
     try {
       const { email, link } = req.body;
-      // In a real scenario, you might generate the link here using admin.auth().generateEmailVerificationLink(email)
-      // and then send it. For now, we accept the link from the client or fallback.
       if (!email) return res.status(400).json({ error: "Missing email" });
       
+      const host = req.headers.host || 'app.tripbone.com';
+      const protocol = req.headers['x-forwarded-proto'] || (host.includes('localhost') ? 'http' : 'https');
+      const appOrigin = `${protocol}://${host}`;
+
       let verificationLink = link;
       if (!verificationLink) {
-         try {
-           verificationLink = await admin.auth().generateEmailVerificationLink(email);
-         } catch(e) {
-           console.error('Failed to generate verification link via admin sdk', e);
-         }
+        try {
+          const actionCodeSettings = {
+            url: `${appOrigin}/verify-email?email=${encodeURIComponent(email)}`,
+            handleCodeInApp: true
+          };
+          const rawLink = await admin.auth().generateEmailVerificationLink(email, actionCodeSettings);
+          
+          try {
+            const parsedUrl = new URL(rawLink);
+            const oobCode = parsedUrl.searchParams.get('oobCode');
+            const apiKey = parsedUrl.searchParams.get('apiKey');
+            if (oobCode) {
+              verificationLink = `${appOrigin}/verify-email?oobCode=${encodeURIComponent(oobCode)}&apiKey=${encodeURIComponent(apiKey || '')}&email=${encodeURIComponent(email)}&mode=verifyEmail`;
+            } else {
+              verificationLink = rawLink;
+            }
+          } catch {
+            verificationLink = rawLink;
+          }
+        } catch(e) {
+          console.error('Failed to generate verification link via admin sdk', e);
+        }
       }
 
       if (!verificationLink) return res.status(400).json({ error: "Could not generate or find verification link" });
