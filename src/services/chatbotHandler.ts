@@ -1,6 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { getAdminDb } from "./firebaseAdmin.js";
 import { moderateCreemContent } from "./creemService.js";
+import { fetchFromREST } from "./apiHelpers.js";
 
 let genAI: any = null;
 let db: any = null;
@@ -193,27 +194,49 @@ export async function handleChatbotRequest(messages: any[], origin: string, tena
   let tenantApiKey: string | undefined;
   try {
     let tenantPhone: string | undefined;
-    const settingsDoc = await adminDb.collection('settings').doc(tenantId || 'general').get();
-    if (settingsDoc.exists) {
-      const data = settingsDoc.data();
-      if (data?.siteName) brandName = data.siteName;
-      if (data?.whatsappNumber || data?.supportPhone || data?.phone) {
-        tenantPhone = data.whatsappNumber || data.supportPhone || data.phone;
+    try {
+      const settingsDoc = await adminDb.collection('settings').doc(tenantId || 'general').get();
+      if (settingsDoc.exists) {
+        const data = settingsDoc.data();
+        if (data?.siteName) brandName = data.siteName;
+        if (data?.whatsappNumber || data?.supportPhone || data?.phone) {
+          tenantPhone = data.whatsappNumber || data.supportPhone || data.phone;
+        }
       }
+    } catch (dbErr) {
+      // Fallback via REST
+      try {
+        const data = await fetchFromREST('settings', tenantId || 'general');
+        if (data?.siteName) brandName = data.siteName;
+        if (data?.whatsappNumber || data?.supportPhone || data?.phone) {
+          tenantPhone = data.whatsappNumber || data.supportPhone || data.phone;
+        }
+      } catch (e) {}
     }
 
-    const commSettingsDoc = await adminDb.collection('communicationSettings').doc(tenantId || 'global').get();
+    let commSettingsData: any = null;
+    try {
+      const commSettingsDoc = await adminDb.collection('communicationSettings').doc(tenantId || 'global').get();
+      if (commSettingsDoc.exists) {
+        commSettingsData = commSettingsDoc.data();
+      }
+    } catch (commErr) {
+      try {
+        commSettingsData = await fetchFromREST('communicationSettings', tenantId || 'global');
+      } catch (e) {}
+    }
+
     let num = '6281246502939'; // default fallback
-    if (commSettingsDoc.exists) {
-      const s = commSettingsDoc.data();
+    if (commSettingsData) {
+      const s = commSettingsData;
       const communicationPhone = s.whatsappNumber || s.supportPhone;
       if (communicationPhone) {
         num = communicationPhone.replace(/\D/g, '');
       } else if (tenantPhone) {
         num = tenantPhone.replace(/\D/g, '');
       }
-      if (s?.geminiApiKey) {
-        tenantApiKey = s.geminiApiKey;
+      if (s?.geminiApiKey && typeof s.geminiApiKey === 'string' && s.geminiApiKey.trim().length > 15) {
+        tenantApiKey = s.geminiApiKey.trim();
       }
     } else if (tenantPhone) {
       num = tenantPhone.replace(/\D/g, '');
@@ -246,24 +269,23 @@ CONVENTIONS:
 - If you cannot solve a problem or if the user asks for a real person, suggest they chat with us on WhatsApp for human assistance: [Chat on WhatsApp](${whatsappLink})
 - If a technical error occurs during your tool usage, politely inform the user and share the WhatsApp link.`;
   
-  const history = messages.slice(0, -1).map((m: any) => ({
+  // Format history safely: Gemini API requires chat history to alternate user/model starting with user
+  let history = messages.slice(0, -1).map((m: any) => ({
     role: m.role,
-    parts: [{ text: m.parts }]
+    parts: [{ text: typeof m.parts === 'string' ? m.parts : JSON.stringify(m.parts) }]
   }));
 
-  const chat = ai.chats.create({
-    model: "gemini-2.5-flash",
-    history,
-    config: {
-      systemInstruction,
-      tools: chatbotTools,
-    }
-  });
+  // If initial welcome greeting was role: 'model', drop it so history begins with user
+  if (history.length > 0 && history[0].role === 'model') {
+    history = history.slice(1);
+  }
 
   const lastMessage = messages[messages.length - 1];
-  if (lastMessage?.parts) {
+  const userMessageText = typeof lastMessage?.parts === 'string' ? lastMessage.parts : JSON.stringify(lastMessage?.parts || '');
+
+  if (userMessageText) {
     try {
-      await moderateCreemContent(typeof lastMessage.parts === 'string' ? lastMessage.parts : JSON.stringify(lastMessage.parts));
+      await moderateCreemContent(userMessageText);
     } catch (modErr: any) {
       if (modErr.message?.includes('violates') || modErr.message?.includes('safety guidelines')) {
         console.warn("[Chatbot Moderation Blocked]:", modErr.message);
@@ -273,11 +295,59 @@ CONVENTIONS:
     }
   }
 
-  let result;
-  try {
-    result = await chat.sendMessage({ message: lastMessage.parts });
-  } catch (chatErr: any) {
-    console.error("[Chatbot Gemini API Error]:", chatErr);
+  const modelsToTry = ["gemini-3.8-flash", "gemini-2.5-flash"];
+  const keysToTry = [apiKey, process.env.GEMINI_API_KEY].filter(Boolean) as string[];
+  const uniqueKeys = Array.from(new Set(keysToTry));
+
+  let activeChat: any = null;
+  let result: any = null;
+
+  // 1. Try with tools across candidate keys and models
+  for (const currentKey of uniqueKeys) {
+    const clientAi = new GoogleGenAI({ apiKey: currentKey });
+    for (const model of modelsToTry) {
+      try {
+        const candidateChat = clientAi.chats.create({
+          model,
+          history,
+          config: {
+            systemInstruction,
+            tools: chatbotTools,
+          }
+        });
+        result = await candidateChat.sendMessage({ message: userMessageText });
+        activeChat = candidateChat;
+        break;
+      } catch (err: any) {
+        console.warn(`[Chatbot] Model ${model} with key ${currentKey.substring(0, 8)} failed:`, err?.message || err);
+      }
+    }
+    if (result) break;
+  }
+
+  // 2. If tools failed (e.g. 503 or tool schema issue), try without tools across keys and models
+  if (!result) {
+    for (const currentKey of uniqueKeys) {
+      const clientAi = new GoogleGenAI({ apiKey: currentKey });
+      for (const model of modelsToTry) {
+        try {
+          const candidateChat = clientAi.chats.create({
+            model,
+            history,
+            config: { systemInstruction }
+          });
+          result = await candidateChat.sendMessage({ message: userMessageText });
+          activeChat = candidateChat;
+          break;
+        } catch (err: any) {
+          console.warn(`[Chatbot] Model ${model} sans-tools failed:`, err?.message || err);
+        }
+      }
+      if (result) break;
+    }
+  }
+
+  if (!result || !activeChat) {
     return { 
       text: `Halo! I'm here to help you. How can I assist you with booking or tour information for ${brandName}? You can also [chat with us on WhatsApp](${whatsappLink}) anytime!` 
     };
@@ -311,8 +381,13 @@ CONVENTIONS:
         })
       );
       
-      const nextResult = await chat.sendMessage({ message: functionResponses });
-      return handleFunctionCalls(nextResult);
+      try {
+        const nextResult = await activeChat.sendMessage({ message: functionResponses });
+        return handleFunctionCalls(nextResult);
+      } catch (fnErr) {
+        console.warn("[Chatbot] Error sending function responses:", fnErr);
+        return response;
+      }
     }
     return response;
   };

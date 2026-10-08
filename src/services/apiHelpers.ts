@@ -85,9 +85,16 @@ export async function fetchFromREST(
   }
 
   if (docId) {
-    const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents/${collectionName}/${docId}${apiKey ? `?key=${apiKey}` : ''}`;
-    const res = await axios.get(url, { headers });
-    return parseRestDocument(res.data);
+    try {
+      const url = `https://firestore.googleapis.com/v1/projects/${projectId}/databases/${databaseId}/documents/${collectionName}/${docId}${apiKey ? `?key=${apiKey}` : ''}`;
+      const res = await axios.get(url, { headers });
+      return parseRestDocument(res.data);
+    } catch (err: any) {
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw err;
+    }
   } else {
     const structuredQuery: any = {
       from: [{ collectionId: collectionName }]
@@ -153,9 +160,7 @@ export async function fetchFromREST(
 export async function generateContentWithFallback(ai: any, params: any) {
   const modelsToTry = [
     "gemini-3.8-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-flash-latest",
-    "gemini-2.5-flash"
+    "gemini-3.1-pro-preview"
   ];
   const initialModel = params.model || "gemini-3.8-flash";
   const uniqueModels = Array.from(new Set([initialModel, ...modelsToTry]));
@@ -262,27 +267,51 @@ export async function generateContentWithFallback(ai: any, params: any) {
   throw lastError;
 }
 
-// Helper to dynamically resolve per-tenant Gemini API Key
+function isUsableKey(rawKey: any): boolean {
+  return (
+    typeof rawKey === 'string' && 
+    rawKey.trim().length > 15 && 
+    !rawKey.includes('...') && 
+    !rawKey.toLowerCase().includes('your') &&
+    !rawKey.toLowerCase().includes('key')
+  );
+}
+
+// Helper to dynamically resolve per-tenant Gemini API Key (with REST fallback)
 export async function resolveTenantGeminiKey(tenantId?: string | null): Promise<string | undefined> {
-  if (!tenantId) return undefined;
-  const db = getAdminDb();
+  const idsToCheck = [tenantId, 'global'].filter(Boolean) as string[];
+
+  // 1. Try Firestore Admin SDK first
   try {
-    const commSettingsDoc = await db.collection('communicationSettings').doc(tenantId).get();
-    if (commSettingsDoc.exists) {
-      const data = commSettingsDoc.data();
-      const rawKey = data?.geminiApiKey;
-      if (
-        typeof rawKey === 'string' && 
-        rawKey.trim().length > 15 && 
-        !rawKey.includes('...') && 
-        !rawKey.toLowerCase().includes('your') &&
-        !rawKey.toLowerCase().includes('key')
-      ) {
-        return rawKey.trim();
+    const db = getAdminDb();
+    for (const id of idsToCheck) {
+      try {
+        const commSettingsDoc = await db.collection('communicationSettings').doc(id).get();
+        if (commSettingsDoc.exists) {
+          const data = commSettingsDoc.data();
+          if (isUsableKey(data?.geminiApiKey)) {
+            return data.geminiApiKey.trim();
+          }
+        }
+      } catch (innerErr) {
+        // Doc level error, keep checking
       }
     }
   } catch (err) {
-    console.error("[resolveTenantGeminiKey Error]:", err);
+    // Admin DB initialization or ADC error, fall through to REST
   }
+
+  // 2. Fallback to Firestore REST API
+  for (const id of idsToCheck) {
+    try {
+      const doc = await fetchFromREST('communicationSettings', id);
+      if (doc && isUsableKey(doc.geminiApiKey)) {
+        return doc.geminiApiKey.trim();
+      }
+    } catch (e) {
+      // Ignore REST lookup error
+    }
+  }
+
   return undefined;
 }

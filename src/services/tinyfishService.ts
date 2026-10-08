@@ -313,7 +313,7 @@ Extract and normalize this into a JSON object matching this schema EXACTLY:
 Respond ONLY with valid JSON.`;
 
     const requestParams: any = {
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json"

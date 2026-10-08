@@ -162,7 +162,18 @@ Reservations Support`
 ];
 
 export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ initialTab = 'email' }) => {
-  const [activeTab, setActiveTab] = useState<'email' | 'whatsapp' | 'gemini'>(initialTab);
+  const resolveInitialTab = (tab?: string): 'email' | 'whatsapp' | 'gemini' => {
+    if (tab === 'ai' || tab === 'gemini') return 'gemini';
+    if (tab === 'whatsapp') return 'whatsapp';
+    return 'email';
+  };
+  const [activeTab, setActiveTab] = useState<'email' | 'whatsapp' | 'gemini'>(() => resolveInitialTab(initialTab));
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(resolveInitialTab(initialTab));
+    }
+  }, [initialTab]);
   const [settings, setSettings] = useState<CommunicationSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -209,8 +220,11 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
     message?: string;
     error?: string;
     model?: string;
+    keyMode?: string;
     latencyMs?: number;
     sampleResponse?: string;
+    platformFallbackActive?: boolean;
+    notice?: string;
   } | null>(null);
 
   // Load Settings from Firestore
@@ -593,14 +607,7 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
 
   // 3. Gemini Connection Checker
   const handleCheckGeminiConnection = async () => {
-    const keyToTest = settings?.geminiApiKey?.trim();
-    if (!keyToTest) {
-      setTestGeminiResult({
-        success: false,
-        error: "Please enter your Google Gemini API Key in the field above before running the connection check."
-      });
-      return;
-    }
+    const keyToTest = settings?.geminiApiKey?.trim() || '';
     setTestGeminiLoading(true);
     setTestGeminiResult(null);
     try {
@@ -617,14 +624,18 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
         setTestGeminiResult({
           success: true,
           message: data.message || "Successfully connected to Google Gemini API!",
-          model: data.model || "gemini-2.5-flash",
+          model: data.model || "gemini-3.8-flash",
+          keyMode: data.keyMode,
           latencyMs: data.latencyMs,
           sampleResponse: data.sampleResponse || "CONNECTED"
         });
       } else {
         setTestGeminiResult({
           success: false,
-          error: data.error || "Connection failed. Please verify that your Gemini API key is valid and has active quotas in Google AI Studio."
+          error: data.error || "Connection failed. Please verify that your Gemini API key is valid.",
+          keyMode: data.keyMode,
+          platformFallbackActive: data.platformFallbackActive,
+          notice: data.notice
         });
       }
     } catch (err: any) {
@@ -1627,31 +1638,59 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                     type={showGeminiKey ? "text" : "password"}
                     value={settings.geminiApiKey || ''}
                     onChange={e => setSettings({ ...settings, geminiApiKey: e.target.value })}
-                    placeholder="AIzaSy..."
+                    placeholder="AIzaSy... (leave blank to use Tripbone Platform Engine)"
                     className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono font-bold text-gray-900 focus:outline-none focus:border-indigo-500 focus:bg-white shadow-2xs"
                   />
-                  <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
-                    This per-tenant key powers the 1-Click AI Tour Builder, automated SEO blog generator, personalized itinerary planner, and AI travel concierge.
-                  </p>
+                  {!settings.geminiApiKey?.trim() && (
+                    <div className="flex items-start gap-2.5 p-3.5 bg-emerald-50/90 border border-emerald-200/80 rounded-xl text-emerald-900 text-xs">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <div className="space-y-0.5">
+                        <p className="font-bold text-emerald-900 text-xs">Platform Managed Gemini Engine: Active & Ready</p>
+                        <p className="text-[11px] text-emerald-700 leading-relaxed font-normal">
+                          All AI tools (1-Click Tour Builder, AI Itinerary Planner, Grounded Concierge, AI Proposal Builder, and Email Extractor) run smoothly using Tripbone&apos;s built-in Google Gemini engine. Enter a custom key only if you wish to use your own Google Cloud quotas.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {settings.geminiApiKey?.trim() && (
+                    <p className="text-[11px] text-indigo-700 font-medium leading-relaxed">
+                      Custom Tenant Gemini Key configured. System will use your Google AI Studio quota, with automated platform fallback for zero downtime.
+                    </p>
+                  )}
                 </div>
 
                 {/* Live Connection Checker Button */}
-                <div className="pt-2">
+                <div className="pt-2 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={handleCheckGeminiConnection}
-                    disabled={testGeminiLoading || !settings.geminiApiKey}
+                    disabled={testGeminiLoading}
                     className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all shadow-md flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-50"
                   >
                     {testGeminiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-                    <span>{testGeminiLoading ? "Checking Connection..." : "Test Gemini Connection"}</span>
+                    <span>
+                      {testGeminiLoading 
+                        ? "Testing Connection..." 
+                        : settings.geminiApiKey?.trim() 
+                          ? "Test Custom Gemini Key" 
+                          : "Test Platform Gemini Engine"}
+                    </span>
                   </button>
+                  {settings.geminiApiKey?.trim() && (
+                    <button
+                      type="button"
+                      onClick={() => setSettings({ ...settings, geminiApiKey: '' })}
+                      className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                    >
+                      Clear & Use Platform Engine
+                    </button>
+                  )}
                 </div>
 
                 {/* Connection Checker Result Display */}
                 {testGeminiResult && (
                   <div className={cn(
-                    "p-4 rounded-xl border text-xs font-bold space-y-2 animate-in fade-in duration-200",
+                    "p-4 rounded-xl border text-xs font-bold space-y-2.5 animate-in fade-in duration-200",
                     testGeminiResult.success ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-red-50 border-red-200 text-red-900"
                   )}>
                     <div className="flex items-center gap-2">
@@ -1683,9 +1722,17 @@ export const CommunicationManager: React.FC<CommunicationManagerProps> = ({ init
                         </div>
                       </div>
                     ) : (
-                      <p className="text-red-700 text-[11px] font-normal leading-relaxed pl-7">
-                        {testGeminiResult.error}
-                      </p>
+                      <div className="space-y-2 pl-7">
+                        <p className="text-red-700 text-[11px] font-medium leading-relaxed">
+                          {testGeminiResult.error}
+                        </p>
+                        {testGeminiResult.notice && (
+                          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-[11px] font-normal leading-relaxed">
+                            <span className="font-bold block mb-0.5 text-amber-950">Safety Fallback Active:</span>
+                            {testGeminiResult.notice}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

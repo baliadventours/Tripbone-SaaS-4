@@ -3788,7 +3788,7 @@ export async function createServer() {
 
       if (type === 'faq') {
         const response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.8-flash",
           contents: `Create exactly 3 relevant, highly human questions and highly detailed, expert answers about: "${prompt}" in the category: "${category}".
           For Bali Tourism SEO, provide informative responses containing specific Balinese words (like "Kulkul", "Warung", "Santi", "Sari", "Pura") with exact explanations. Keep the language natural, helpful, and highly detailed.
           Respond in JSON format complying with the schema.`,
@@ -3814,7 +3814,7 @@ export async function createServer() {
       } else {
         // Tips
         const response = await generateContentWithFallback(ai, {
-          model: "gemini-3.5-flash",
+          model: "gemini-3.8-flash",
           contents: `Create a single highly actionable, incredibly detailed, specific Travel Tip about: "${prompt}" under the category: "${category}".
           Write a short title and paragraph-length content containing local Balinese terms or culture insights. Avoid generic ideas.
           Respond in JSON format complying with the schema.`,

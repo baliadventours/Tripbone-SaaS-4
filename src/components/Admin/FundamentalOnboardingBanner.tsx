@@ -95,14 +95,14 @@ export const FundamentalOnboardingBanner: React.FC<FundamentalOnboardingBannerPr
     {
       id: 'gemini',
       number: 4,
-      title: 'Setup Gemini API Key',
+      title: 'Google Gemini AI Engine',
       category: 'AI Engine',
-      description: 'Unlock 1-Click AI Tour Builder, Itinerary Generator, AI Proposals & Grounded Chatbot.',
+      description: 'Platform AI is active. Optionally connect your personal Google AI Studio key in Communication Settings.',
       icon: Sparkles,
       targetMenu: 'communication',
-      targetTab: 'ai',
+      targetTab: 'gemini',
       docAnchor: 'gemini',
-      checkCompleted: (s, t) => Boolean(s?.geminiApiKey)
+      checkCompleted: () => true
     },
     {
       id: 'dress-site',

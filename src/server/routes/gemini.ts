@@ -291,7 +291,7 @@ REQUIREMENTS:
 10. "seoKeywords": An array of 5-8 relevant SEO keywords.`;
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: fullPrompt,
       config: {
         systemInstruction,
@@ -411,7 +411,7 @@ REQUIRED JSON FIELDS:
    - "image": Set to a relevant Unsplash image URL (e.g. "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1200&q=80" or "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=80" or "https://images.unsplash.com/photo-1556742049-0a67dd35a828?auto=format&fit=crop&w=1200&q=80").`;
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-2.5-flash",
+      model: "gemini-3.8-flash",
       contents: fullPrompt,
       config: {
         systemInstruction,
@@ -1062,31 +1062,111 @@ Example:
 router.post("/test-connection", async (req, res) => {
   try {
     const { apiKey, tenantId } = req.body;
-    const resolvedKey = apiKey?.trim() || (tenantId ? await resolveTenantGeminiKey(tenantId) : null) || process.env.GEMINI_API_KEY?.trim();
+    const customKeyProvided = Boolean(apiKey && typeof apiKey === 'string' && apiKey.trim().length > 0);
+    
+    let resolvedKey = customKeyProvided ? apiKey.trim() : null;
+    let keyMode: 'custom' | 'tenant_saved' | 'platform_default' = 'custom';
+
+    if (!resolvedKey && tenantId) {
+      resolvedKey = await resolveTenantGeminiKey(tenantId);
+      if (resolvedKey) keyMode = 'tenant_saved';
+    }
+
+    if (!resolvedKey) {
+      resolvedKey = process.env.GEMINI_API_KEY?.trim();
+      keyMode = 'platform_default';
+    }
 
     if (!resolvedKey) {
       return res.status(400).json({ 
         success: false, 
-        error: "No Gemini API key provided. Please enter an API key from Google AI Studio (https://aistudio.google.com)." 
+        error: "No Gemini API key found. Please enter an API key from Google AI Studio (https://aistudio.google.com) or configure GEMINI_API_KEY on the platform." 
       });
     }
 
-    const startTime = Date.now();
     const { GoogleGenAI } = await import("@google/genai");
+
+    // Test with model fallback
+    const modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview"];
+    let testResponse: any = null;
+    let modelUsed = "";
+    let lastTestError: any = null;
+    const startTime = Date.now();
+
     const ai = new GoogleGenAI({ apiKey: resolvedKey });
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: "Hello! Ping check. Reply with one word: 'CONNECTED'."
-    });
+    for (const model of modelsToTry) {
+      try {
+        testResponse = await ai.models.generateContent({
+          model,
+          contents: "Hello! Ping check. Reply with one word: 'CONNECTED'."
+        });
+        modelUsed = model;
+        break;
+      } catch (err: any) {
+        lastTestError = err;
+      }
+    }
+
+    if (!testResponse) {
+      // Extract human-readable error
+      let cleanErrorMessage = "Failed to connect to Google Gemini API.";
+      const rawErrMsg = String(lastTestError?.message || lastTestError || "");
+      try {
+        const parsed = JSON.parse(rawErrMsg);
+        if (parsed.error?.message) {
+          cleanErrorMessage = parsed.error.message;
+        }
+      } catch (e) {
+        if (rawErrMsg.includes("API key not valid") || rawErrMsg.includes("API_KEY_INVALID")) {
+          cleanErrorMessage = "API key not valid. Please ensure your Google AI Studio API key is correct and has active quotas.";
+        } else if (rawErrMsg.includes("PERMISSION_DENIED")) {
+          cleanErrorMessage = "Permission denied. The Generative Language API might not be enabled for this project.";
+        } else {
+          cleanErrorMessage = rawErrMsg;
+        }
+      }
+
+      // Check if platform default key works as fallback
+      let platformFallbackActive = false;
+      if (customKeyProvided && process.env.GEMINI_API_KEY?.trim()) {
+        try {
+          const fallbackAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
+          await fallbackAi.models.generateContent({
+            model: "gemini-3.8-flash",
+            contents: "ping"
+          });
+          platformFallbackActive = true;
+        } catch (fbErr) {
+          // Fallback key also failed or quota reached
+        }
+      }
+
+      return res.status(400).json({
+        success: false,
+        error: cleanErrorMessage,
+        keyMode,
+        platformFallbackActive,
+        notice: platformFallbackActive 
+          ? "Your custom API key was rejected by Google, but Tripbone's Platform Managed Gemini Engine is ACTIVE and will power all tour generation, concierge, and planning automations." 
+          : undefined
+      });
+    }
 
     const latency = Date.now() - startTime;
-    const replyText = response.text?.trim() || "OK";
+    const replyText = testResponse.text?.trim() || "OK";
+
+    const modeLabel = keyMode === 'platform_default' 
+      ? "Platform Managed Gemini Engine" 
+      : keyMode === 'tenant_saved' 
+        ? "Saved Tenant Gemini Key" 
+        : "Custom API Key";
 
     return res.json({
       success: true,
-      message: "Successfully connected to Google Gemini API!",
-      model: "gemini-2.5-flash",
+      message: `Successfully connected to Google Gemini API using ${modeLabel}!`,
+      model: modelUsed,
+      keyMode,
       latencyMs: latency,
       sampleResponse: replyText
     });
