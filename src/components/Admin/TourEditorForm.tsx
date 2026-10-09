@@ -918,7 +918,7 @@ export const TourEditorForm: React.FC<TourEditorFormProps> = ({
                         <h3 className="text-2xl font-black text-gray-900 tracking-tight">Tiered Pricing Packages</h3>
                         <button 
                           type="button" 
-                          onClick={() => addArrayItem('packages', { name: '', details: '', inclusions: [], exclusions: [], meetingPoint: '', meetingPointType: 'Meeting Point', pickupAreas: '', transportIds: formData.transportIds || [], tiers: [{ minParticipants: 1, maxParticipants: 1, adultPrice: 0, childPrice: 0 }] })} 
+                          onClick={() => addArrayItem('packages', { name: '', details: '', description: '', inclusions: [], exclusions: [], meetingPoint: '', meetingPointType: 'Meeting Point', pickupAreas: '', transportIds: formData.transportIds || [], tiers: [{ minParticipants: 1, maxParticipants: 1, adultPrice: 0, childPrice: 0 }] })} 
                           className="flex items-center gap-2 rounded-[10px] bg-primary px-6 py-2 text-sm font-bold text-white shadow-lg shadow-orange-100 hover:bg-orange-700 transition-all"
                         >
                           <PlusCircle className="h-4 w-4" /> New Package
@@ -997,16 +997,24 @@ export const TourEditorForm: React.FC<TourEditorFormProps> = ({
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Package Details / Intro</label>
-                                    <input
-                                      value={pkg.details || ''}
+                                    <div className="flex items-center justify-between">
+                                      <label className="text-xs font-black text-gray-400 uppercase tracking-widest">Package Description / Intro (Paragraph)</label>
+                                      <span className="text-[10px] font-bold text-gray-400">Multi-line text</span>
+                                    </div>
+                                    <textarea
+                                      rows={4}
+                                      value={pkg.description || pkg.details || ''}
                                       onChange={e => {
-                                        const newPkg = { ...pkg, details: e.target.value };
+                                        const val = e.target.value;
+                                        const newPkg = { ...pkg, details: val, description: val };
                                         updateArrayItem('packages', pIdx, newPkg);
                                       }}
-                                      className="w-full rounded-[10px] border-2 border-gray-100 p-4 font-medium text-sm focus:border-primary focus:outline-none transition-all"
-                                      placeholder="A brief explanation of this package option..."
+                                      className="w-full rounded-[10px] border-2 border-gray-100 p-4 font-medium text-sm focus:border-primary focus:outline-none transition-all resize-y min-h-[105px] leading-relaxed whitespace-pre-wrap"
+                                      placeholder="A multi-line explanation or paragraph describing this package option..."
                                     />
+                                    <p className="text-[11px] text-gray-400 leading-snug">
+                                      Write full paragraphs or bullet points explaining this package. Displays on the customer tour page.
+                                    </p>
                                   </div>
                                 </div>
                               </div>

@@ -556,6 +556,101 @@ export default function TourDetail() {
             </div>
           </section>
 
+          {/* Tour Packages (Mobile) */}
+          {tour.packages && tour.packages.length > 0 && (
+            <section id="mobile-packages" className="space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-xl font-black text-gray-900 tracking-tight">Available Packages</h2>
+                <p className="text-xs text-gray-500 font-medium">
+                  {tour.packages.length} {tour.packages.length === 1 ? 'option' : 'options'} tailored for your experience
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {tour.packages.map((pkg, idx) => {
+                  const hasTiers = pkg.tiers && pkg.tiers.length > 0;
+                  const startingRate = hasTiers ? pkg.tiers[0].adultPrice : (tour.discountPrice || tour.regularPrice);
+                  const pkgInclusions = (pkg.inclusions || []).filter(item => item && item.trim() !== '');
+                  const pkgExclusions = (pkg.exclusions || []).filter(item => item && item.trim() !== '');
+                  const packageDesc = pkg.description || pkg.details;
+
+                  return (
+                    <div 
+                      key={idx} 
+                      className="border border-gray-200/90 rounded-2xl p-4 bg-white shadow-xs space-y-3 text-left"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider text-primary bg-orange-50 px-2 py-0.5 rounded-md border border-orange-100/60">
+                            Option {idx + 1}
+                          </span>
+                          <h3 className="font-extrabold text-gray-900 text-base mt-1">{pkg.name || `Package ${idx + 1}`}</h3>
+                        </div>
+                        {startingRate !== undefined && startingRate > 0 && (
+                          <div className="text-right shrink-0">
+                            <span className="font-black text-primary text-base">
+                              <FormattedPrice amount={startingRate} />
+                            </span>
+                            <span className="text-[10px] text-gray-400 block font-medium">/ person</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Package Description (Multi-line paragraph) */}
+                      {packageDesc && (
+                        <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line font-medium bg-gray-50/80 p-3 rounded-xl border border-gray-100">
+                          {packageDesc}
+                        </p>
+                      )}
+
+                      {/* Meeting Point / Pickup */}
+                      {(pkg.meetingPoint || pkg.pickupAreas) && (
+                        <div className="flex flex-wrap gap-1.5 text-[11px] text-gray-500">
+                          {pkg.meetingPoint && (
+                            <span className="flex items-center gap-1 bg-gray-50 px-2 py-0.5 rounded border border-gray-100">
+                              <MapPin className="h-3 w-3 text-primary shrink-0" />
+                              <span className="truncate max-w-[220px]">{pkg.meetingPoint}</span>
+                            </span>
+                          )}
+                          {pkg.pickupAreas && (
+                            <span className="bg-orange-50/60 text-primary px-2 py-0.5 rounded border border-orange-100">
+                              Pickup: {pkg.pickupAreas}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Inclusions / Exclusions */}
+                      {(pkgInclusions.length > 0 || pkgExclusions.length > 0) && (
+                        <div className="space-y-1.5 text-xs pt-1">
+                          {pkgInclusions.slice(0, 3).map((inc, iIdx) => (
+                            <div key={iIdx} className="flex items-start gap-1.5 text-gray-600">
+                              <Check className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                              <span>{inc}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const bookingForm = document.getElementById('package') || document.getElementById('tour-booking-form');
+                          if (bookingForm) {
+                            bookingForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }}
+                        className="w-full py-2 px-3 rounded-xl bg-orange-50 hover:bg-primary hover:text-white text-primary text-xs font-bold transition-all border border-orange-200/80 text-center cursor-pointer"
+                      >
+                        Select this package &rarr;
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           {/* Included / Not Included */}
           <section className="space-y-8">
             <div className="space-y-4">

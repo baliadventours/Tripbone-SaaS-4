@@ -179,6 +179,12 @@ export default function PriceList() {
                         <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                         <h3 className="text-xs font-black text-gray-800 uppercase tracking-tight">{pkg.name}</h3>
                       </div>
+
+                      {(pkg.description || pkg.details) && (
+                        <p className="text-[11px] text-gray-500 leading-relaxed whitespace-pre-line px-1">
+                          {pkg.description || pkg.details}
+                        </p>
+                      )}
                       
                       {pkg.meetingPoint && (
                         <div className="flex items-start gap-2 px-1 py-1 bg-orange-50/50 rounded-lg border border-orange-100/30">

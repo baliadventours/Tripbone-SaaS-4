@@ -252,6 +252,18 @@ export default function PriceSummaryModal({
                 </div>
               )}
 
+              {/* Package Description */}
+              {selectedPackage && (selectedPackage.description || selectedPackage.details) && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1 text-left">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                    Package Description
+                  </span>
+                  <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-line font-medium">
+                    {selectedPackage.description || selectedPackage.details}
+                  </p>
+                </div>
+              )}
+
               {/* Dynamic Group Rates Tier Table */}
               {selectedPackage && selectedPackage.tiers && selectedPackage.tiers.length > 0 && (
                 <div className="space-y-2">

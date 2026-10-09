@@ -4,6 +4,7 @@ import { Tour } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSettings } from '../../lib/SettingsContext';
 import SmartImage from '../SmartImage';
+import FormattedPrice from '../FormattedPrice';
 
 interface TourInfoProps {
   tour: Tour;
@@ -74,6 +75,168 @@ export default function TourInfo({ tour }: TourInfoProps) {
           ))}
         </ul>
       </section>
+
+      {/* Tour Packages & Options */}
+      {tour.packages && tour.packages.length > 0 && (
+        <section id="packages" className="scroll-mt-[116px] space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 rounded-lg bg-orange-100/80 text-primary">
+                  <Layers className="h-5 w-5" />
+                </span>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">Tour Packages & Options</h2>
+              </div>
+              <p className="text-xs text-gray-500 font-medium mt-1">
+                Choose the best package option tailored for your travel party
+              </p>
+            </div>
+            <span className="text-xs font-bold text-primary bg-orange-50 px-3 py-1 rounded-full border border-orange-100 self-start sm:self-auto">
+              {tour.packages.length} {tour.packages.length === 1 ? 'Package' : 'Packages'} Available
+            </span>
+          </div>
+
+          <div className="grid gap-6">
+            {tour.packages.map((pkg, idx) => {
+              const hasTiers = pkg.tiers && pkg.tiers.length > 0;
+              const startingRate = hasTiers ? pkg.tiers[0].adultPrice : (tour.discountPrice || tour.regularPrice);
+              const pkgInclusions = (pkg.inclusions || []).filter(item => item && item.trim() !== '');
+              const pkgExclusions = (pkg.exclusions || []).filter(item => item && item.trim() !== '');
+              const packageDesc = pkg.description || pkg.details;
+
+              return (
+                <div 
+                  key={idx}
+                  className="rounded-2xl border-2 border-gray-100 bg-white p-6 shadow-sm hover:border-orange-200 transition-all space-y-4 group text-left"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="h-6 w-6 rounded-lg bg-orange-100 text-primary text-xs font-black flex items-center justify-center shrink-0">
+                          {idx + 1}
+                        </span>
+                        <h3 className="text-xl font-black text-gray-900 tracking-tight group-hover:text-primary transition-colors">
+                          {pkg.name || `Package Option ${idx + 1}`}
+                        </h3>
+                      </div>
+                      {(pkg.pickupAreas || pkg.meetingPoint) && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-gray-500">
+                          {pkg.meetingPoint && (
+                            <span className="flex items-center gap-1 bg-gray-50 px-2.5 py-0.5 rounded-md border border-gray-100">
+                              <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span className="truncate max-w-[260px]">{pkg.meetingPoint}</span>
+                            </span>
+                          )}
+                          {pkg.pickupAreas && (
+                            <span className="flex items-center gap-1 bg-orange-50/60 px-2.5 py-0.5 rounded-md border border-orange-100 text-primary font-medium">
+                              Pickup: {pkg.pickupAreas}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {startingRate !== undefined && startingRate > 0 && (
+                      <div className="sm:text-right shrink-0 bg-gray-50 sm:bg-transparent p-3 sm:p-0 rounded-xl">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-gray-400">Starting from</div>
+                        <div className="flex sm:justify-end items-baseline gap-1">
+                          <span className="text-2xl font-black text-gray-900 font-display">
+                            <FormattedPrice amount={startingRate} />
+                          </span>
+                          <span className="text-xs text-gray-500 font-medium">/ person</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Multi-line / Paragraph Package Description */}
+                  {packageDesc && (
+                    <div className="bg-gray-50/80 rounded-xl p-4 border border-gray-100">
+                      <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line font-medium">
+                        {packageDesc}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Group Pricing Tiers Table/Badges if applicable */}
+                  {hasTiers && pkg.tiers.length > 1 && (
+                    <div className="space-y-2 pt-1">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                        Tiered Group Rates
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {pkg.tiers.map((tier, tIdx) => (
+                          <div key={tIdx} className="bg-gray-50 p-2.5 rounded-xl border border-gray-100 text-xs">
+                            <div className="text-gray-500 font-semibold text-[11px]">
+                              {tier.maxParticipants >= 99
+                                ? `${tier.minParticipants}+ pax`
+                                : tier.minParticipants === tier.maxParticipants
+                                  ? `${tier.minParticipants} pax`
+                                  : `${tier.minParticipants}–${tier.maxParticipants} pax`}
+                            </div>
+                            <div className="font-bold text-gray-900 mt-0.5">
+                              <FormattedPrice amount={tier.adultPrice} />
+                              <span className="text-[10px] text-gray-400 font-normal"> / pax</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Specific Inclusions / Exclusions for this package */}
+                  {(pkgInclusions.length > 0 || pkgExclusions.length > 0) && (
+                    <div className="grid sm:grid-cols-2 gap-3 pt-1 text-xs">
+                      {pkgInclusions.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-green-700">Package Inclusions:</span>
+                          <ul className="space-y-1">
+                            {pkgInclusions.map((inc, iIdx) => (
+                              <li key={iIdx} className="flex items-start gap-1.5 text-gray-600">
+                                <Check className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                                <span>{inc}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {pkgExclusions.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">Not Included:</span>
+                          <ul className="space-y-1">
+                            {pkgExclusions.map((exc, eIdx) => (
+                              <li key={eIdx} className="flex items-start gap-1.5 text-gray-600">
+                                <X className="h-3.5 w-3.5 text-rose-500 shrink-0 mt-0.5" />
+                                <span>{exc}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Booking shortcut */}
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const bookingForm = document.getElementById('package') || document.getElementById('tour-booking-form');
+                        if (bookingForm) {
+                          bookingForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-orange-50 hover:bg-primary hover:text-white text-primary text-xs font-bold transition-all border border-orange-200/80 cursor-pointer"
+                    >
+                      Book with this package &rarr;
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Inclusion & Exclusion */}
       <section id="inclusion" className="scroll-mt-[116px]">

@@ -1790,10 +1790,13 @@ const toggleAddOn = (addon: AddOn) => {
                               </div>
                             )}
 
-                            {(pkg.details || (pkg as any).description) && (
-                              <p className="text-neutral-600 font-medium leading-relaxed bg-white p-3 rounded-xl border border-neutral-200">
-                                {pkg.details || (pkg as any).description}
-                              </p>
+                            {(pkg.description || pkg.details || (pkg as any).description) && (
+                              <div className="bg-white p-3.5 rounded-xl border border-neutral-200 text-left">
+                                <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Package Details</span>
+                                <p className="text-neutral-600 font-medium leading-relaxed whitespace-pre-line">
+                                  {pkg.description || pkg.details || (pkg as any).description}
+                                </p>
+                              </div>
                             )}
 
                             {/* Free Cancellation Guarantee */}
@@ -2578,6 +2581,16 @@ const toggleAddOn = (addon: AddOn) => {
                                           </button>
                                         ))}
                                       </div>
+                                    </div>
+                                  )}
+
+                                  {/* Package Description (Multi-line paragraph) */}
+                                  {(pkg.description || pkg.details || (pkg as any).description) && (
+                                    <div className="bg-white p-3.5 rounded-xl border border-neutral-200 text-left mb-4">
+                                      <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider block mb-1">Package Details</span>
+                                      <p className="text-neutral-600 text-xs font-medium leading-relaxed whitespace-pre-line">
+                                        {pkg.description || pkg.details || (pkg as any).description}
+                                      </p>
                                     </div>
                                   )}
 

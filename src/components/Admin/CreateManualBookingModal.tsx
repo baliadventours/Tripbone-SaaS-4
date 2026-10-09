@@ -768,8 +768,8 @@ export const CreateManualBookingModal: FC<CreateManualBookingModalProps> = ({
                               <span className="text-xs font-black text-gray-900">{pkg.name}</span>
                               <span className="text-xs font-extrabold text-primary">{formatPrice(displayPrice)}</span>
                             </div>
-                            {pkg.details && (
-                              <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{pkg.details}</p>
+                            {(pkg.description || pkg.details) && (
+                              <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{pkg.description || pkg.details}</p>
                             )}
                           </div>
                           {pkg.tiers && pkg.tiers.length > 0 && (

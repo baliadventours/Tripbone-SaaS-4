@@ -2507,6 +2507,8 @@ export default function Admin({ overrideMenu, overrideTab, isCentralPortal = fal
         languages: languagesText.split('\n').filter(line => line.trim() !== ''),
         packages: (formData.packages || []).map(pkg => ({
           ...pkg,
+          description: pkg.description || pkg.details || '',
+          details: pkg.details || pkg.description || '',
           transportIds: pkg.transportIds ?? (formData.transportIds && formData.transportIds.length > 0 ? formData.transportIds : globalTransports.map(gt => gt.id)),
           inclusions: (pkg.inclusions || []).filter(l => l.trim() !== ''),
           exclusions: (pkg.exclusions || []).filter(l => l.trim() !== '')

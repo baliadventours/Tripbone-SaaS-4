@@ -46,6 +46,7 @@ export interface PricingTier {
 export interface TourPackage {
   name: string;
   details?: string; // Made optional
+  description?: string; // Multi-line package description
   inclusions: string[];
   exclusions: string[];
   meetingPoint?: string; // New: map embed URL or address
