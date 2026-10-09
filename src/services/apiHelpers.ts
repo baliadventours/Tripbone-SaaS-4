@@ -160,7 +160,7 @@ export async function fetchFromREST(
 export async function generateContentWithFallback(ai: any, params: any) {
   const modelsToTry = [
     "gemini-3.8-flash",
-    "gemini-3.1-pro-preview"
+    "gemini-2.5-flash"
   ];
   const initialModel = params.model || "gemini-3.8-flash";
   const uniqueModels = Array.from(new Set([initialModel, ...modelsToTry]));
@@ -183,51 +183,48 @@ export async function generateContentWithFallback(ai: any, params: any) {
       const errMsg = String(err.message || err);
       console.warn(`[Gemini Fallback Router] Model ${model} failed:`, errMsg);
 
-      // Check for transient 503 (high demand/unavailable) or 429 (rate limits)
-      const isTransientDemandError = 
-        errMsg.includes('503') || 
-        errMsg.includes('UNAVAILABLE') || 
-        errMsg.includes('high demand') || 
-        errMsg.includes('overloaded') ||
+      // Check if error is related to quota, key, authorization, or service capacity
+      const isRecoverableError = 
+        errMsg.includes('API key not valid') || 
+        errMsg.includes('API_KEY_INVALID') || 
+        errMsg.includes('INVALID_ARGUMENT') || 
+        errMsg.includes('UNAUTHENTICATED') || 
+        errMsg.includes('PermissionDenied') || 
+        errMsg.includes('400') ||
+        errMsg.includes('401') ||
+        errMsg.includes('403') ||
         errMsg.includes('429') ||
         errMsg.includes('RESOURCE_EXHAUSTED') ||
-        errMsg.includes('spikes in demand');
+        errMsg.includes('quota') ||
+        errMsg.includes('503') ||
+        errMsg.includes('UNAVAILABLE') ||
+        errMsg.includes('high demand') ||
+        errMsg.includes('overloaded');
 
-      if (isTransientDemandError) {
-        console.log(`[Gemini Fallback Router] High demand on ${model}. Immediately falling back to next available model in queue...`);
-        // Short pause to avoid slamming rate limiter
-        await new Promise((r) => setTimeout(r, 250));
-      }
-
-      // Check if error is related to API key or authorization
-      const isKeyError = errMsg.includes('API key not valid') || 
-                         errMsg.includes('API_KEY_INVALID') || 
-                         errMsg.includes('INVALID_ARGUMENT') || 
-                         errMsg.includes('UNAUTHENTICATED') || 
-                         errMsg.includes('PermissionDenied') || 
-                         errMsg.includes('400') ||
-                         errMsg.includes('401') ||
-                         errMsg.includes('403');
-
-      // If key is invalid and server process.env.GEMINI_API_KEY exists, switch client to environment key and retry immediately
-      if (isKeyError && process.env.GEMINI_API_KEY?.trim()) {
+      // If tenant key failed or hit limits and platform key is available, attempt recovery across models with platform key
+      if (isRecoverableError && process.env.GEMINI_API_KEY?.trim()) {
         try {
-          console.log(`[Gemini Fallback Router] Key/model error detected. Retrying model ${model} with process.env.GEMINI_API_KEY...`);
           const { GoogleGenAI } = await import("@google/genai");
-          currentAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
-          const response = await currentAi.models.generateContent({
-            ...params,
-            model: model
-          });
-          console.log(`[Gemini Fallback Router] Successfully recovered using env key with model: ${model}`);
-          return response;
+          const envAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
+          for (const fallbackModel of ["gemini-3.8-flash", "gemini-2.5-flash"]) {
+            try {
+              console.log(`[Gemini Fallback Router] Retrying with platform env key and model: ${fallbackModel}...`);
+              const response = await envAi.models.generateContent({
+                ...params,
+                model: fallbackModel
+              });
+              console.log(`[Gemini Fallback Router] Successfully recovered using platform key with model: ${fallbackModel}`);
+              return response;
+            } catch (fbModelErr: any) {
+              console.warn(`[Gemini Fallback Router] Platform key attempt with ${fallbackModel} failed:`, fbModelErr?.message || fbModelErr);
+            }
+          }
         } catch (keyFallbackErr: any) {
-          console.warn(`[Gemini Fallback Router] Env key retry failed for ${model}:`, keyFallbackErr.message || keyFallbackErr);
-          lastError = keyFallbackErr;
+          console.warn(`[Gemini Fallback Router] Platform key recovery failed:`, keyFallbackErr.message || keyFallbackErr);
         }
       }
 
-      // If we failed and there are tools configured, try one more time for this model without tools (in case of tool support issues)
+      // If we failed and there are tools configured, try one more time for this model without tools
       if (params.config?.tools || params.tools) {
         try {
           console.log(`[Gemini Fallback Router] Retrying model ${model} without tools...`);

@@ -257,6 +257,13 @@ function AppContent() {
               <Route path="/fundamental-setup" element={<Navigate to="/docs/fundamental-setup" replace />} />
               <Route path="/onboarding" element={<Navigate to="/docs/fundamental-setup" replace />} />
               
+              {/* Tour and Planner Routes Accessible from Platform/Demo context */}
+              <Route path="/planner" element={<AIPlanner />} />
+              <Route path="/tour/:slug" element={<TourDetail />} />
+              <Route path="/tours/:slug" element={<TourDetail />} />
+              <Route path="/tours" element={<Tours />} />
+              <Route path="/checkout/:tourId" element={<Checkout />} />
+
               {/* SaaS App Gate (Legacy Mode) */}
               {isAppGate && (
                 <>
@@ -299,6 +306,9 @@ function AppContent() {
             </Routes>
           </Suspense>
         </ChunkErrorBoundary>
+        <Suspense fallback={null}>
+          <Chatbot />
+        </Suspense>
       </div>
     );
   }

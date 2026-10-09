@@ -204,7 +204,7 @@ export function updateDoc(reference: any, data: any): Promise<any> {
 }
 
 // Re-export standard query variables & functions
-export { rawWhere as where, rawDoc as doc, rawGetDoc as getDoc };
+export { rawWhere as where, rawDoc as doc, rawGetDoc as getDoc, rawCollection, rawQuery, rawWhere, rawGetDocs, rawDoc, rawGetDoc };
 export * from 'firebase/firestore';
 
 // Test connection

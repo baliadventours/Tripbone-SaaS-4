@@ -668,33 +668,67 @@ router.post("/generate-itinerary", async (req, res) => {
     }
 
     const db = getDb();
-    // Fetch active tours context from Admin SDK or REST fallback
+    // Fetch live published & active tours context from Admin SDK or REST fallback
     let availableTours: any[] = [];
     try {
-      const toursSnap = await db.collection('tours').where('status', '==', 'active').limit(20).get();
+      let q = db.collection('tours').where('status', 'in', ['published', 'active']);
+      if (tenantId) {
+        q = q.where('tenantId', '==', tenantId);
+      }
+      const toursSnap = await q.limit(40).get();
       if (!toursSnap.empty) {
-        availableTours = toursSnap.docs.map(doc => ({
-          id: doc.id,
-          title: doc.data().title,
-          slug: doc.data().slug,
-          category: doc.data().category,
-          highlights: doc.data().highlights?.join(', ') || ''
-        }));
+        availableTours = toursSnap.docs
+          .map(doc => {
+            const data = doc.data();
+            const safeSlug = (data.slug && data.slug !== 'undefined' && data.slug.trim())
+              ? data.slug.trim()
+              : (data.title ? data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : doc.id);
+            return {
+              id: doc.id,
+              tourId: doc.id,
+              title: data.title || '',
+              slug: safeSlug,
+              category: data.category || '',
+              location: data.location || '',
+              price: data.discountPrice || data.regularPrice || 0,
+              highlights: data.highlights?.join(', ') || ''
+            };
+          })
+          .filter(t => t.title && t.title.trim().length > 2);
       }
     } catch (sdkErr: any) {
       console.warn("[Itinerary Fetch Admin SDK failed, using REST fallback]:", sdkErr.message);
+    }
+
+    // If tenant has fewer than 4 tours, augment with live catalog tours from all tenants
+    if (availableTours.length < 4) {
       try {
-        const toursRest = await fetchFromREST('tours', undefined, {
-          whereFilters: [{ field: 'status', op: 'EQUAL', value: 'active' }],
-          limit: 20
-        });
-        availableTours = (toursRest || []).map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          slug: t.slug,
-          category: t.category,
-          highlights: Array.isArray(t.highlights) ? t.highlights.join(', ') : ''
-        }));
+        const allTours = await fetchFromREST('tours', undefined, { limit: 100 });
+        if (Array.isArray(allTours)) {
+          const liveTours = allTours
+            .filter((t: any) => (t.status === 'published' || t.status === 'active') && t.title && t.title.trim().length > 2)
+            .map((t: any) => {
+              const safeSlug = (t.slug && t.slug !== 'undefined' && t.slug.trim())
+                ? t.slug.trim()
+                : (t.title ? t.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : t.id);
+              return {
+                id: t.id,
+                tourId: t.id,
+                title: t.title,
+                slug: safeSlug,
+                category: t.category || '',
+                location: t.location || '',
+                price: t.discountPrice || t.regularPrice || 0,
+                highlights: Array.isArray(t.highlights) ? t.highlights.join(', ') : ''
+              };
+            });
+
+          for (const lt of liveTours) {
+            if (!availableTours.some(existing => existing.id === lt.id)) {
+              availableTours.push(lt);
+            }
+          }
+        }
       } catch (restErr: any) {
         console.error("[Itinerary Fetch REST fallback failed]:", restErr.message);
       }
@@ -725,12 +759,15 @@ router.post("/generate-itinerary", async (req, res) => {
       Hotel Preference: ${userData.hotelType}
       Budget Range: ${userData.budget}
 
-      Context - Available Tours from Bali Adventours:
-      ${JSON.stringify(availableTours)}
+      Context - Real Available Tours from our Catalog:
+      ${JSON.stringify(availableTours.map(t => ({ tourId: t.tourId, title: t.title, slug: t.slug, category: t.category, price: t.price, highlights: t.highlights })))}
 
       Please design a realistic, high-quality, and personalized itinerary from airport pickup to airport drop-off.
       Recommend specific hotels that match their preference.
-      Match their interests with our existing tours listed above where appropriate.
+      CRITICAL INSTRUCTION FOR RECOMMENDED TOURS:
+      You MUST select 2 to 4 tours from the provided "Context - Real Available Tours" list.
+      For each item in recommendedTours, use the exact "tourId", "title", and "slug" as given in the list.
+      NEVER invent, hallucinate, or alter a tour slug or title.
       Provide a day-by-day breakdown with various activity types (activity, hotel, meal, transport).
     `;
 
@@ -738,15 +775,15 @@ router.post("/generate-itinerary", async (req, res) => {
       model: "gemini-3.8-flash",
       contents: prompt,
       config: {
-        systemInstruction: `You are "Didi", the expert AI Travel Planner for Bali Adventours. 
-Your goal is to create a dream Bali vacation plan that feels authentic, luxurious, and perfectly tailored.
+        systemInstruction: `You are "Didi", the expert AI Travel Planner. 
+Your goal is to create a dream vacation plan that feels authentic, luxurious, and perfectly tailored.
 
 RULES:
 1. Use a warm, professional, yet adventurous tone.
 2. Ensure the flow of the trip makes geographical sense (e.g., don't jump from South Bali to North Bali twice in one day).
-3. Recommend our actual tours (from the provided list) where they fit the user's interests.
+3. Recommend our actual tours (from the provided list) where they fit the user's interests. For recommendedTours, ONLY use exact tourId, title, and slug from the provided list.
 4. Include estimated budgets in the local currency (IDR) or USD if more appropriate for the user's origin.
-5. The output MUST be valid JSON.`,
+5. The output MUST be valid JSON conforming to the schema.`,
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -795,7 +832,8 @@ RULES:
                   title: { type: Type.STRING },
                   reason: { type: Type.STRING },
                   slug: { type: Type.STRING }
-                }
+                },
+                required: ["title", "reason", "slug"]
               }
             },
             estimatedTotalBudget: {
@@ -822,7 +860,77 @@ RULES:
       text = text.split("```")[1].split("```")[0].trim();
     }
 
-    res.json(JSON.parse(text));
+    const parsedPlan = JSON.parse(text);
+
+    // Cross-reference and sanitize recommendedTours against real availableTours
+    if (availableTours.length > 0) {
+      const sanitizedRecommendations: any[] = [];
+      const rawRecs = Array.isArray(parsedPlan.recommendedTours) ? parsedPlan.recommendedTours : [];
+
+      for (const rec of rawRecs) {
+        // Find exact match by slug or id
+        const exactMatch = availableTours.find(t => 
+          (rec.slug && t.slug === rec.slug) || 
+          (rec.tourId && (t.id === rec.tourId || t.tourId === rec.tourId)) ||
+          (rec.slug && (t.id === rec.slug || t.slug === rec.slug))
+        );
+
+        if (exactMatch) {
+          const matchedSlug = (exactMatch.slug && exactMatch.slug !== 'undefined' && exactMatch.slug.trim())
+            ? exactMatch.slug.trim()
+            : (exactMatch.title ? exactMatch.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : (exactMatch.id || exactMatch.tourId));
+
+          sanitizedRecommendations.push({
+            tourId: exactMatch.id || exactMatch.tourId,
+            title: exactMatch.title,
+            slug: matchedSlug,
+            reason: rec.reason || "Recommended experience tailored to your itinerary."
+          });
+        } else {
+          // Fuzzy match by title or words
+          const recTitle = (rec.title || '').toLowerCase();
+          const fuzzyMatch = availableTours.find(t => {
+            const availTitle = (t.title || '').toLowerCase();
+            return (recTitle.length > 3 && availTitle.includes(recTitle)) || 
+                   (availTitle.length > 3 && recTitle.includes(availTitle)) ||
+                   (rec.slug && availTitle.includes(rec.slug.replace(/[-_]/g, ' ')));
+          });
+
+          if (fuzzyMatch && !sanitizedRecommendations.some(sr => sr.tourId === (fuzzyMatch.id || fuzzyMatch.tourId))) {
+            const matchedSlug = (fuzzyMatch.slug && fuzzyMatch.slug !== 'undefined' && fuzzyMatch.slug.trim())
+              ? fuzzyMatch.slug.trim()
+              : (fuzzyMatch.title ? fuzzyMatch.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : (fuzzyMatch.id || fuzzyMatch.tourId));
+
+            sanitizedRecommendations.push({
+              tourId: fuzzyMatch.id || fuzzyMatch.tourId,
+              title: fuzzyMatch.title,
+              slug: matchedSlug,
+              reason: rec.reason || `Handpicked experience matching ${fuzzyMatch.category || 'your trip'}.`
+            });
+          }
+        }
+      }
+
+      // If recommendations were hallucinated or empty, seed with real top tours
+      if (sanitizedRecommendations.length === 0) {
+        availableTours.slice(0, 3).forEach(t => {
+          const matchedSlug = (t.slug && t.slug !== 'undefined' && t.slug.trim())
+            ? t.slug.trim()
+            : (t.title ? t.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : (t.id || t.tourId));
+
+          sanitizedRecommendations.push({
+            tourId: t.id || t.tourId,
+            title: t.title,
+            slug: matchedSlug,
+            reason: "Popular top-rated adventure recommended for your travel profile."
+          });
+        });
+      }
+
+      parsedPlan.recommendedTours = sanitizedRecommendations;
+    }
+
+    res.json(parsedPlan);
   } catch (error: any) {
     console.error("[Generate Itinerary Server Error]:", error);
     res.status(500).json({ error: error.message || "Failed to generate itinerary" });
@@ -1087,7 +1195,7 @@ router.post("/test-connection", async (req, res) => {
     const { GoogleGenAI } = await import("@google/genai");
 
     // Test with model fallback
-    const modelsToTry = ["gemini-3.8-flash", "gemini-3.1-pro-preview"];
+    const modelsToTry = ["gemini-3.8-flash", "gemini-2.5-flash"];
     let testResponse: any = null;
     let modelUsed = "";
     let lastTestError: any = null;

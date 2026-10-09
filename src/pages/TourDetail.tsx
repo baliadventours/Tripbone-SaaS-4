@@ -1,13 +1,27 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { db, getActiveTenantId } from '../lib/firebase';
-import { doc, getDoc, collection, query, limit, getDocs, where } from '@/src/lib/firebase';
+import { 
+  doc, 
+  getDoc, 
+  collection, 
+  query, 
+  limit, 
+  getDocs, 
+  where,
+  rawDoc,
+  rawGetDoc,
+  rawCollection,
+  rawQuery,
+  rawWhere,
+  rawGetDocs
+} from '@/src/lib/firebase';
 import { Tour, UrgencyPoint } from '../types';
 import { 
   Share2, MapPin, Clock, Star, 
   ChevronRight, Calendar, Users, 
   Info, Languages, MessageCircle, ShieldCheck, LucideIcon, ArrowLeft, Globe, CheckCircle2, ChevronDown, ChevronUp, Check, X,
-  Hotel, Bed, UserCheck
+  Hotel, Bed, UserCheck, Compass
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import TourGallery from '../components/TourDetails/TourGallery';
@@ -58,7 +72,7 @@ export default function TourDetail() {
   const [showPriceSummaryModal, setShowPriceSummaryModal] = useState(false);
   const navigate = useNavigate();
 
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -69,33 +83,156 @@ export default function TourDetail() {
 
   const tourLabels = labels.filter(l => tour?.labelIds?.includes(l.id));
 
+  const location = useLocation();
+
   useEffect(() => {
     const fetchTour = async () => {
-      if (!slug) return;
+      // Extract target identifier from pathname or params to preserve characters like '&'
+      const pathSlug = location.pathname.replace(/^\/(tour|tours)\/?/, '').split('?')[0].trim();
+      let rawTarget = pathSlug || slug || '';
+      // If location.search exists and looks like part of the slug from an unencoded &
+      if (location.search && !location.search.includes('=')) {
+        const extraPart = location.search.replace(/^\?/, '&');
+        rawTarget = `${rawTarget}${extraPart}`;
+      }
+      if (!rawTarget || rawTarget === 'undefined' || rawTarget === 'null') {
+        setLoading(false);
+        setTour(null);
+        return;
+      }
+      const decodedSlug = decodeURIComponent(rawTarget).trim();
       setLoading(true);
-      try {
-        let qSnap = await getDocs(query(collection(db, 'tours'), where('slug', '==', slug), limit(1)));
-        
-        let docSnap: any = !qSnap.empty ? qSnap.docs[0] : null;
 
-        if (!docSnap) {
-          // Fallback: try fetching as ID
-          const idRef = doc(db, 'tours', slug);
-          const idSnap = await getDoc(idRef);
-          if (idSnap.exists()) {
-            docSnap = idSnap;
+      try {
+        let docData: any = null;
+        let docId: string | null = null;
+
+        // 1. Try Firestore within active tenant
+        try {
+          const qSnap = await getDocs(query(collection(db, 'tours'), where('slug', '==', decodedSlug), limit(1)));
+          if (!qSnap.empty) {
+            docId = qSnap.docs[0].id;
+            docData = qSnap.docs[0].data();
+          }
+        } catch (e) {}
+
+        // 2. Try raw Firestore without tenant interceptor
+        if (!docData) {
+          try {
+            const rawSnap = await rawGetDocs(rawQuery(rawCollection(db, 'tours'), rawWhere('slug', '==', decodedSlug), limit(1)));
+            if (!rawSnap.empty) {
+              docId = rawSnap.docs[0].id;
+              docData = rawSnap.docs[0].data();
+            }
+          } catch (e) {}
+        }
+
+        // 3. Try fetching as direct Document ID
+        if (!docData) {
+          try {
+            const idSnap = await rawGetDoc(rawDoc(db, 'tours', decodedSlug));
+            if (idSnap.exists()) {
+              docId = idSnap.id;
+              docData = idSnap.data();
+            }
+          } catch (e) {}
+        }
+
+        // 4. Try stripping brackets or surrounding whitespace
+        if (!docData) {
+          const cleaned = decodedSlug.replace(/^\[|\]$/g, '').trim();
+          if (cleaned && cleaned !== decodedSlug) {
+            try {
+              const cleanSnap = await rawGetDocs(rawQuery(rawCollection(db, 'tours'), rawWhere('slug', '==', cleaned), limit(1)));
+              if (!cleanSnap.empty) {
+                docId = cleanSnap.docs[0].id;
+                docData = cleanSnap.docs[0].data();
+              }
+            } catch (e) {}
           }
         }
-        
-        if (docSnap) {
-          const fetchedTour = { id: docSnap.id, ...docSnap.data() } as Tour;
-          
-          // Check if it's either published or active
-          const allowedStatuses = ['published', 'active'];
-          if (fetchedTour.status && !allowedStatuses.includes(fetchedTour.status)) {
-            navigate('/tours');
-            return;
+
+        // 5. Try fuzzy matching title or slug across all tours
+        if (!docData) {
+          const cleanSearch = decodedSlug.toLowerCase().replace(/[-_]/g, ' ').replace(/\[.*?\]/g, '').trim();
+          if (cleanSearch && cleanSearch.length > 2) {
+            try {
+              const allToursSnap = await rawGetDocs(rawQuery(rawCollection(db, 'tours'), limit(50)));
+              const match = allToursSnap.docs.find((d: any) => {
+                const data = d.data();
+                const tSlug = (data.slug || d.id || '').toLowerCase();
+                const tTitle = (data.title || '').toLowerCase();
+                return tSlug === decodedSlug.toLowerCase() ||
+                       tSlug.includes(decodedSlug.toLowerCase()) || 
+                       decodedSlug.toLowerCase().includes(tSlug) ||
+                       tTitle.includes(cleanSearch) || 
+                       cleanSearch.includes(tTitle);
+              });
+              if (match) {
+                docId = match.id;
+                docData = match.data();
+              }
+            } catch (e) {}
           }
+        }
+
+        // 6. Server REST Fallback proxy
+        if (!docData) {
+          try {
+            const res = await fetch(`/api/tour-detail/${encodeURIComponent(decodedSlug)}`);
+            if (res.ok) {
+              const restData = await res.json();
+              if (restData && restData.id) {
+                docId = restData.id;
+                docData = restData;
+              }
+            }
+          } catch (e) {}
+        }
+
+        if (docData && docId) {
+          const fetchedTour = { id: docId, ...docData } as Tour;
+
+          // Normalize and defensively sanitize all array fields to prevent rendering runtime crashes
+          fetchedTour.highlights = Array.isArray(fetchedTour.highlights)
+            ? fetchedTour.highlights
+            : (typeof fetchedTour.highlights === 'string' ? (fetchedTour.highlights as string).split(',').map(s => s.trim()).filter(Boolean) : []);
+
+          fetchedTour.inclusions = Array.isArray(fetchedTour.inclusions)
+            ? fetchedTour.inclusions
+            : (typeof fetchedTour.inclusions === 'string' ? (fetchedTour.inclusions as string).split('\n').map(s => s.trim()).filter(Boolean) : []);
+
+          fetchedTour.exclusions = Array.isArray(fetchedTour.exclusions)
+            ? fetchedTour.exclusions
+            : (typeof fetchedTour.exclusions === 'string' ? (fetchedTour.exclusions as string).split('\n').map(s => s.trim()).filter(Boolean) : []);
+
+          fetchedTour.gallery = Array.isArray(fetchedTour.gallery)
+            ? fetchedTour.gallery
+            : (Array.isArray((fetchedTour as any).images) ? (fetchedTour as any).images : []);
+
+          if (!fetchedTour.featuredImage && fetchedTour.gallery.length > 0) {
+            fetchedTour.featuredImage = fetchedTour.gallery[0];
+          }
+
+          fetchedTour.languages = Array.isArray(fetchedTour.languages)
+            ? fetchedTour.languages
+            : (typeof fetchedTour.languages === 'string' ? [fetchedTour.languages] : ['English']);
+
+          fetchedTour.faqs = Array.isArray(fetchedTour.faqs) ? fetchedTour.faqs : [];
+          fetchedTour.itinerary = Array.isArray(fetchedTour.itinerary) ? fetchedTour.itinerary : [];
+          fetchedTour.urgencyPointIds = Array.isArray(fetchedTour.urgencyPointIds) ? fetchedTour.urgencyPointIds : [];
+          fetchedTour.packages = Array.isArray(fetchedTour.packages) ? fetchedTour.packages : [];
+          fetchedTour.multiDayItinerary = Array.isArray(fetchedTour.multiDayItinerary) ? fetchedTour.multiDayItinerary : [];
+          fetchedTour.accommodations = Array.isArray(fetchedTour.accommodations) ? fetchedTour.accommodations : [];
+          fetchedTour.timeSlots = Array.isArray(fetchedTour.timeSlots) ? fetchedTour.timeSlots : [];
+          fetchedTour.infoSections = Array.isArray(fetchedTour.infoSections)
+            ? fetchedTour.infoSections.map((sec: any) => ({
+                title: sec?.title || '',
+                content: Array.isArray(sec?.content)
+                  ? sec.content
+                  : (typeof sec?.content === 'string' ? sec.content.split('\n').map((l: string) => l.trim()).filter(Boolean) : [])
+              }))
+            : [];
 
           setTour(fetchedTour);
           trackGAViewItem({
@@ -115,27 +252,25 @@ export default function TourDetail() {
           // Fetch similar tours logic
           const getSimilarTours = async () => {
             try {
-              // 1. Try same category
               let finalSimilar: Tour[] = [];
-              if (docSnap.data().categoryId) {
-                const qCat = query(
-                  collection(db, 'tours'), 
-                  where('categoryId', '==', docSnap.data().categoryId),
+              if (docData.categoryId) {
+                const qCat = rawQuery(
+                  rawCollection(db, 'tours'), 
+                  rawWhere('categoryId', '==', docData.categoryId),
                   limit(5)
                 );
-                const qSnapCat = await getDocs(qCat);
+                const qSnapCat = await rawGetDocs(qCat);
                 finalSimilar = qSnapCat.docs
-                  .map(d => ({ id: d.id, ...d.data() } as Tour))
-                  .filter(t => t.id !== docSnap.id);
+                  .map((d: any) => ({ id: d.id, ...d.data() } as Tour))
+                  .filter((t: any) => t.id !== docId);
               }
 
-              // 2. Fallback to any tours if not enough
               if (finalSimilar.length < 3) {
-                const qAll = query(collection(db, 'tours'), limit(10));
-                const qSnapAll = await getDocs(qAll);
+                const qAll = rawQuery(rawCollection(db, 'tours'), limit(10));
+                const qSnapAll = await rawGetDocs(qAll);
                 const otherTours = qSnapAll.docs
-                  .map(d => ({ id: d.id, ...d.data() } as Tour))
-                  .filter(t => t.id !== docSnap.id && !finalSimilar.some(st => st.id === t.id));
+                  .map((d: any) => ({ id: d.id, ...d.data() } as Tour))
+                  .filter((t: any) => t.id !== docId && !finalSimilar.some((st: any) => st.id === t.id));
                 
                 finalSimilar = [...finalSimilar, ...otherTours];
               }
@@ -148,39 +283,44 @@ export default function TourDetail() {
 
           getSimilarTours();
 
-          // Fetch all urgency points
-          const tenantId = getActiveTenantId();
-          let urgencySnap;
-          if (tenantId) {
-            urgencySnap = await getDocs(query(collection(db, 'urgencyPoints'), where('tenantId', '==', tenantId)));
-          } else {
-            urgencySnap = await getDocs(collection(db, 'urgencyPoints'));
-          }
-          const allPoints = urgencySnap.docs.map(d => ({ id: d.id, ...d.data() } as UrgencyPoint));
-          const seen = new Set<string>();
-          const uniquePoints: UrgencyPoint[] = [];
-          for (const pItem of allPoints) {
-            const title = (pItem.title || (pItem as any).text || '').trim().toLowerCase();
-            if (title && !seen.has(title)) {
-              seen.add(title);
-              uniquePoints.push(pItem);
-            } else if (!title) {
-              uniquePoints.push(pItem);
+          // Fetch all urgency points (isolated so failure never breaks tour display)
+          try {
+            const tenantId = getActiveTenantId();
+            let urgencySnap;
+            if (tenantId) {
+              urgencySnap = await getDocs(query(collection(db, 'urgencyPoints'), where('tenantId', '==', tenantId)));
+            } else {
+              urgencySnap = await rawGetDocs(rawCollection(db, 'urgencyPoints'));
             }
+            const allPoints = urgencySnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as UrgencyPoint));
+            const seen = new Set<string>();
+            const uniquePoints: UrgencyPoint[] = [];
+            for (const pItem of allPoints) {
+              const title = (pItem.title || (pItem as any).text || '').trim().toLowerCase();
+              if (title && !seen.has(title)) {
+                seen.add(title);
+                uniquePoints.push(pItem);
+              } else if (!title) {
+                uniquePoints.push(pItem);
+              }
+            }
+            setUrgencyPoints(uniquePoints);
+          } catch (urgencyErr) {
+            console.warn("Non-fatal urgency points fetch note:", urgencyErr);
           }
-          setUrgencyPoints(uniquePoints);
         } else {
           setTour(null);
         }
       } catch (error) {
         console.error("Error fetching tour", error);
+        setTour(null);
       } finally {
         setLoading(false);
       }
     };
 
     fetchTour();
-  }, [slug]);
+  }, [slug, location.pathname]);
 
   const handleShare = () => {
     if (navigator.share) {
@@ -205,9 +345,17 @@ export default function TourDetail() {
       .replace('{{siteName}}', siteName) : 
     siteName;
 
+  const safeDuration = typeof tour?.duration === 'number' 
+    ? `${tour.duration} ${(tour as any).durationUnit || 'Day'}` 
+    : String(tour?.duration || 'Full Day');
+
+  const tourRatingFormatted = typeof tour?.rating === 'number' 
+    ? tour.rating.toFixed(1) 
+    : (tour?.rating ? String(tour.rating) : '5.0');
+
   const seoDescription = tour ? 
-    `Book ${tour.title} from just $${tourPrice}. Explore ${tour.location} with Bali's top-rated guides. ${tour.duration} experience with ${tour.rating || 5.0}/5 stars.` : 
-    "Discover amazing Bali tours and activities with Bali Adventours.";
+    `Book ${tour.title} from just $${tourPrice}. Explore ${tour.location || 'Bali'} with top-rated guides. ${safeDuration} experience with ${tour.rating || 5.0}/5 stars.` : 
+    "Discover amazing Bali tours and activities.";
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -238,15 +386,48 @@ export default function TourDetail() {
 
   if (loading) return <Loader />;
 
-  if (!tour) return <div className="p-20 text-center">Tour not found</div>;
+  if (!tour) {
+    return (
+      <div className="min-h-[70vh] bg-zinc-50/50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full bg-white border border-zinc-200/80 rounded-3xl p-8 sm:p-10 shadow-xl space-y-6">
+          <div className="w-16 h-16 bg-orange-50 text-primary border border-orange-200/60 rounded-2xl flex items-center justify-center mx-auto shadow-sm">
+            <Compass className="w-8 h-8" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">Experience Not Found</h1>
+            <p className="text-xs sm:text-sm text-gray-500 leading-relaxed font-medium">
+              We couldn&apos;t find this specific tour link. It may have been updated, renamed, or moved.
+            </p>
+          </div>
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link
+              to="/tours"
+              className="w-full sm:w-auto px-6 py-3.5 bg-primary hover:bg-orange-600 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition shadow-md shadow-orange-500/20 text-center"
+            >
+              Browse All Tours
+            </Link>
+            <Link
+              to="/"
+              className="w-full sm:w-auto px-6 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold text-xs uppercase tracking-wider rounded-xl transition text-center"
+            >
+              Return Home
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const galleryImages = (() => {
-    const baseGallery = tour.gallery || [];
-    if (tour.featuredImage) {
-      const cleaned = baseGallery.filter(img => img !== tour.featuredImage);
-      return [tour.featuredImage, ...cleaned];
+    const rawGallery = Array.isArray(tour.gallery) && tour.gallery.length > 0 
+      ? tour.gallery 
+      : (Array.isArray((tour as any).images) && (tour as any).images.length > 0 ? (tour as any).images : []);
+    const feat = tour.featuredImage || rawGallery[0] || '';
+    if (feat) {
+      const cleaned = rawGallery.filter(img => img !== feat);
+      return [feat, ...cleaned];
     }
-    return baseGallery;
+    return rawGallery.length > 0 ? rawGallery : [settings?.heroImage || settings?.ogImage || "https://i.ibb.co.com/pvLCVYkM/ALAS-HARUM8-optimized.webp"];
   })();
 
   return (
@@ -277,7 +458,7 @@ export default function TourDetail() {
         />
       </Helmet>
       {isMobile ? (
-        <div className="block md:hidden w-full">
+        <div className="w-full">
         {/* Hero Gallery Slider */}
         <div className="relative w-full">
           <TourGallery images={galleryImages} />
@@ -298,11 +479,11 @@ export default function TourDetail() {
             <div className="flex flex-wrap items-center gap-2 mt-4">
               <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-white text-[10px] font-black">
                 <Star className="h-3 w-3 fill-current text-amber-400" />
-                {tour.rating ? `${tour.rating.toFixed(1)} Rating` : 'New'}
+                {tour?.rating ? `${tourRatingFormatted} Rating` : 'New'}
               </div>
               <div className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-white text-[10px] font-black">
                 <Clock className="h-3 w-3" />
-                {tour.duration}
+                {safeDuration}
               </div>
             </div>
           </div>
@@ -698,7 +879,7 @@ export default function TourDetail() {
         </div>
         </div>
       ) : (
-        <div className="hidden md:block">
+        <div className="w-full">
         {/* Breadcrumb */}
         <div className="bg-gray-50 py-4">
           <div className="container mx-auto px-4 lg:px-8">
@@ -724,7 +905,7 @@ export default function TourDetail() {
                   <div className="flex text-amber-500">
                     <Star className="h-4 w-4 fill-current" />
                   </div>
-                  <span className="text-gray-900 font-bold">{tour.rating || 'No rating'}</span>
+                  <span className="text-gray-900 font-bold">{tourRatingFormatted}</span>
                   <span className="text-xs font-bold text-gray-400">({tour.reviewsCount || 0} Reviews)</span>
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-primary rounded-full text-xs font-bold border border-orange-100">
@@ -733,7 +914,7 @@ export default function TourDetail() {
                 </div>
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-orange-50 text-primary rounded-full text-xs font-bold border border-orange-100">
                   <Clock className="h-3 w-3" />
-                  <span>{tour.duration}</span>
+                  <span>{safeDuration}</span>
                 </div>
               </div>
             </div>
@@ -751,7 +932,7 @@ export default function TourDetail() {
           {/* Dynamic Urgency Points */}
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {urgencyPoints
-              .filter(point => tour?.urgencyPointIds?.includes(point.id))
+              .filter(point => Array.isArray(tour?.urgencyPointIds) && tour.urgencyPointIds.includes(point.id))
               .map(point => {
                 const IconComponent = (Icons as any)[point.icon] || ShieldCheck;
                 return (

@@ -709,6 +709,67 @@ export async function createServer() {
   });
 
   // ==========================================
+  // 0. RELIABLE TOUR DETAIL PROXY ENDPOINT
+  // ==========================================
+  app.get("/api/tour-detail/:slug", async (req, res) => {
+    try {
+      const rawSlug = req.params.slug;
+      if (!rawSlug) {
+        return res.status(400).json({ error: "Missing tour identifier" });
+      }
+      const slug = decodeURIComponent(rawSlug).trim();
+
+      // 1. Try matching strictly by slug
+      let docData: any = null;
+      try {
+        const matches = await fetchFromREST('tours', undefined, {
+          whereFilters: [{ field: 'slug', op: 'EQUAL', value: slug }],
+          limit: 1
+        });
+        if (Array.isArray(matches) && matches.length > 0) {
+          docData = matches[0];
+        }
+      } catch (e) {}
+
+      // 2. Try fetching as direct Document ID
+      if (!docData) {
+        try {
+          docData = await fetchFromREST('tours', slug);
+        } catch (e) {}
+      }
+
+      // 3. Fallback: Scan live tours for fuzzy match by slug or title
+      if (!docData) {
+        try {
+          const allTours = await fetchFromREST('tours', undefined, { limit: 100 });
+          if (Array.isArray(allTours)) {
+            const cleanSearch = slug.toLowerCase().replace(/[-_]/g, ' ').replace(/\[.*?\]/g, '').trim();
+            const match = allTours.find((t: any) => {
+              const tSlug = (t.slug || t.id || '').toLowerCase();
+              const tTitle = (t.title || '').toLowerCase();
+              return tSlug === slug.toLowerCase() ||
+                     tSlug.includes(slug.toLowerCase()) ||
+                     slug.toLowerCase().includes(tSlug) ||
+                     (cleanSearch && cleanSearch.length > 2 && (tTitle.includes(cleanSearch) || cleanSearch.includes(tTitle)));
+            });
+            if (match) docData = match;
+          }
+        } catch (e) {}
+      }
+
+      if (!docData) {
+        return res.status(404).json({ error: "Tour not found in catalog" });
+      }
+
+      res.setHeader('Cache-Control', 'public, max-age=60');
+      res.json(docData);
+    } catch (err: any) {
+      console.error("[API /api/tour-detail] Error:", err.message);
+      res.status(500).json({ error: "Failed to fetch tour details" });
+    }
+  });
+
+  // ==========================================
   // 1. AUTOMATED ICAL FEED EXPORTER ENDPOINTS
   // ==========================================
   app.get(["/api/ical/:tenantId/:tourId.ics", "/api/ical/:tourId.ics", "/api/ical/:tenantId/feed.ics", "/api/ical/feed.ics"], async (req, res) => {

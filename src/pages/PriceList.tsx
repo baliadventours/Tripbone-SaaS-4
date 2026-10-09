@@ -25,7 +25,7 @@ export default function PriceList() {
     const fetchData = async () => {
       try {
         const [toursSnap, catsSnap, transportsSnap] = await Promise.all([
-          getDocs(query(collection(db, 'tours'), where('status', '==', 'active'), orderBy('title', 'asc'))),
+          getDocs(query(collection(db, 'tours'), where('status', 'in', ['published', 'active']), orderBy('title', 'asc'))),
           getDocs(collection(db, 'categories')),
           getDocs(collection(db, 'globalTransports'))
         ]);

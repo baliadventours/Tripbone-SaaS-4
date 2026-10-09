@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bot, X, MessageCircle, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Markdown from 'react-markdown';
 
 interface Message {
@@ -22,6 +22,7 @@ export default function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
+  const navigate = useNavigate();
 
   const suggestedActions = [
     { label: "Check booking status", icon: "🔍", action: "I want to check my booking status" },
@@ -152,15 +153,61 @@ export default function Chatbot() {
                     <div className="markdown-content prose prose-sm prose-orange max-w-none text-inherit">
                       <Markdown
                         components={{
-                          a: ({ node, ...props }) => (
-                            <a 
-                              {...props} 
-                              target="_blank" 
-                              rel="noreferrer" 
-                              className="text-primary font-bold underline hover:text-orange-700 transition-colors cursor-pointer"
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                          )
+                          a: ({ node, href, children, ...props }) => {
+                            let cleanHref = href || '#';
+                            // Strip any literal placeholder [slug] artifacts if present
+                            cleanHref = cleanHref.replace(/\[slug\]/gi, '').trim();
+
+                            let internalPath = '';
+                            if (cleanHref.startsWith('/')) {
+                              internalPath = cleanHref;
+                            } else {
+                              try {
+                                const parsed = new URL(cleanHref);
+                                if (
+                                  parsed.origin === window.location.origin ||
+                                  parsed.pathname.startsWith('/tour/') ||
+                                  parsed.pathname.startsWith('/tours') ||
+                                  parsed.pathname.startsWith('/planner') ||
+                                  parsed.pathname.startsWith('/price-list') ||
+                                  parsed.pathname.startsWith('/checkout')
+                                ) {
+                                  internalPath = parsed.pathname + parsed.search;
+                                }
+                              } catch (e) {
+                                if (cleanHref.startsWith('/')) internalPath = cleanHref;
+                              }
+                            }
+
+                            // Safely preserve tour path parameter so unencoded & or special characters don't get split into query params
+                            if (internalPath.startsWith('/tour/') || internalPath.startsWith('/tours/')) {
+                              const prefix = internalPath.startsWith('/tours/') ? '/tours/' : '/tour/';
+                              const rawTargetSlug = internalPath.slice(prefix.length).split('?')[0];
+                              const safeTourSlug = rawTargetSlug.replace(/&/g, '%26');
+                              internalPath = `${prefix}${safeTourSlug}`;
+                            }
+
+                            const isInternal = Boolean(internalPath);
+
+                            return (
+                              <a 
+                                {...props} 
+                                href={internalPath || cleanHref}
+                                target={isInternal ? '_self' : '_blank'} 
+                                rel="noreferrer" 
+                                className="text-primary font-bold underline hover:text-orange-700 transition-colors cursor-pointer"
+                                onClick={(e) => {
+                                  if (isInternal) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    navigate(internalPath);
+                                  }
+                                }}
+                              >
+                                {children}
+                              </a>
+                            );
+                          }
                         }}
                       >
                         {m.parts}

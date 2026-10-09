@@ -85,48 +85,110 @@ export const chatbotTools = [
   },
 ];
 
-const getToolImplementations = (tenantId?: string | null) => {
+const getToolImplementations = (tenantId?: string | null, origin: string = '') => {
   const adminDb = getChatbotDb();
   return {
     search_tours: async ({ searchTerm }: { searchTerm: string }) => {
-      let q = adminDb.collection('tours').where('status', '==', 'active');
-      if (tenantId) {
-        q = q.where('tenantId', '==', tenantId);
+      let tours: any[] = [];
+      try {
+        let q = adminDb.collection('tours').where('status', 'in', ['published', 'active']);
+        if (tenantId) {
+          q = q.where('tenantId', '==', tenantId);
+        }
+        const snap = await q.limit(40).get();
+        if (!snap.empty) {
+          tours = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+        }
+      } catch (e) {}
+
+      // If tenant has fewer than 3 tours, augment with live catalog tours from all tenants
+      if (tours.length < 3) {
+        try {
+          const allRest = await fetchFromREST('tours', undefined, { limit: 100 });
+          if (Array.isArray(allRest)) {
+            const liveTours = allRest.filter((t: any) => t.status === 'published' || t.status === 'active');
+            for (const lt of liveTours) {
+              if (!tours.some(existing => existing.id === lt.id)) {
+                tours.push(lt);
+              }
+            }
+          }
+        } catch (e) {}
       }
-      const snap = await q.limit(20).get();
-      
-      const all = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
-      const filtered = all.filter((t: any) => 
-        t.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        t.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      return filtered.map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        price: t.regularPrice,
-        duration: t.duration,
-        slug: t.slug
-      }));
+
+      // Filter out invalid/empty tours
+      tours = tours.filter((t: any) => t && t.title && t.title.trim().length > 2);
+
+      const term = (searchTerm || '').toLowerCase().trim();
+      let filtered = tours;
+      if (term && !['tour', 'tours', 'all', 'bali', 'book', 'trip', 'package'].includes(term)) {
+        const words = term.split(/\s+/).filter(w => w.length > 2);
+        filtered = tours.filter((t: any) => {
+          const title = (t.title || '').toLowerCase();
+          const desc = (t.description || '').toLowerCase();
+          const cat = (t.category || '').toLowerCase();
+          const loc = (t.location || '').toLowerCase();
+          return words.some(w => title.includes(w) || desc.includes(w) || cat.includes(w) || loc.includes(w)) ||
+                 title.includes(term) || desc.includes(term);
+        });
+        if (filtered.length === 0) filtered = tours;
+      }
+
+      return filtered.slice(0, 6).map((t: any) => {
+        const safeSlug = (t.slug && t.slug !== 'undefined' && t.slug.trim())
+          ? t.slug.trim()
+          : (t.title ? t.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : t.id);
+
+        return {
+          tourId: t.id,
+          title: t.title,
+          price: t.discountPrice || t.regularPrice || 0,
+          duration: t.duration ? `${t.duration} ${t.durationUnit || 'Day'}` : 'Full Day',
+          slug: safeSlug,
+          bookingUrl: `/tours/${encodeURIComponent(safeSlug)}`
+        };
+      });
     },
     get_tour_details: async ({ tourId }: { tourId: string }) => {
-      const snap = await adminDb.collection('tours').doc(tourId).get();
-      if (!snap.exists) return { error: "Tour not found" };
-      
-      const t = { id: snap.id, ...snap.data() };
-      if (tenantId && t.tenantId !== tenantId) {
-        return { error: "Tour not found in this workspace" };
+      let t: any = null;
+      try {
+        const snap = await adminDb.collection('tours').doc(tourId).get();
+        if (snap.exists) t = { id: snap.id, ...snap.data() };
+      } catch (e) {}
+
+      if (!t) {
+        try {
+          t = await fetchFromREST('tours', tourId);
+        } catch (e) {}
       }
+
+      // Fallback: search by slug or ID across live catalog
+      if (!t) {
+        try {
+          const allRest = await fetchFromREST('tours', undefined, { limit: 100 });
+          if (Array.isArray(allRest)) {
+            t = allRest.find((x: any) => x.slug === tourId || x.id === tourId || (x.title && x.title.toLowerCase() === tourId.toLowerCase()));
+          }
+        } catch (e) {}
+      }
+
+      if (!t) return { error: "Tour not found in live catalog" };
+
+      const safeSlug = (t.slug && t.slug !== 'undefined' && t.slug.trim())
+        ? t.slug.trim()
+        : (t.title ? t.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '') : t.id);
+
       return {
-        id: t.id,
+        tourId: t.id,
         title: t.title,
         description: t.description,
-        price: t.regularPrice,
+        price: t.discountPrice || t.regularPrice,
         packages: t.packages?.map((p: any) => ({
           name: p.name,
           tiers: p.tiers
         })),
-        bookingLink: `/tours/${t.slug}`,
+        bookingUrl: `/tours/${encodeURIComponent(safeSlug)}`,
+        slug: safeSlug,
         highlights: t.highlights,
         itinerary: t.itinerary?.map((i: any) => ({ day: i.day, title: i.title }))
       };
@@ -264,7 +326,9 @@ CAPABILITIES:
 CONVENTIONS:
 - Be warm and welcoming.
 - Keep responses concise. Use double line breaks between paragraphs for readability.
-- ALWAYS provide the direct booking link: [Tour Title](${origin}/tours/[slug])
+- When recommending any tour, search our real catalog using search_tours. Always provide direct relative internal links using the tour's real slug or id from the tool result: [Tour Title](/tours/<slug>).
+- ALWAYS format tour links as relative internal paths starting with "/tours/" (e.g. [Tour Title](/tours/tour-slug-or-id)). NEVER write absolute URLs with https:// or http:// or localhost.
+- NEVER write literal placeholder text like "/tours/[slug]" or fake tour URLs. Only link to real tours found in the database.
 - Use English as your primary language for communication.
 - If you cannot solve a problem or if the user asks for a real person, suggest they chat with us on WhatsApp for human assistance: [Chat on WhatsApp](${whatsappLink})
 - If a technical error occurs during your tool usage, politely inform the user and share the WhatsApp link.`;
@@ -355,7 +419,7 @@ CONVENTIONS:
   
   const handleFunctionCalls = async (response: any): Promise<any> => {
     const functionCalls = response.functionCalls;
-    const toolImplementations = getToolImplementations(tenantId);
+    const toolImplementations = getToolImplementations(tenantId, origin);
 
     if (functionCalls && functionCalls.length > 0) {
       const functionResponses = await Promise.all(

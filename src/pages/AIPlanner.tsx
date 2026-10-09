@@ -553,23 +553,28 @@ export default function AIPlanner() {
                 <p className="text-xs text-zinc-400 font-medium mb-4">The AI Assistant has linked these proprietary private tours with your passion details:</p>
                 <div className="space-y-3">
                   {itinerary.recommendedTours && itinerary.recommendedTours.length > 0 ? (
-                    itinerary.recommendedTours.map((rec) => (
-                      <Link 
-                        to={`/tour/${rec.slug}`}
-                        key={rec.tourId || rec.slug} 
-                        className="block group bg-zinc-50 rounded-2xl p-4 hover:bg-primary transition-all duration-300"
-                      >
-                        <h4 className="text-sm font-extrabold text-zinc-800 group-hover:text-white transition-colors mb-1">
-                          {rec.title}
-                        </h4>
-                        <p className="text-[11px] text-zinc-500 group-hover:text-orange-100/90 transition-colors leading-relaxed font-semibold">
-                          {rec.reason}
-                        </p>
-                        <div className="mt-3 flex items-center gap-1 text-[9px] font-black uppercase text-primary group-hover:text-white transition-colors">
-                          Explore Experience <ChevronRight className="h-3 w-3" />
-                        </div>
-                      </Link>
-                    ))
+                    itinerary.recommendedTours.map((rec) => {
+                      const cleanSlug = (rec.slug && rec.slug !== 'undefined' && rec.slug.trim()) ? rec.slug.trim() : '';
+                      const targetSlug = cleanSlug || rec.tourId || '';
+                      const safeLink = targetSlug ? `/tour/${encodeURIComponent(targetSlug)}` : '/tours';
+                      return (
+                        <Link 
+                          to={safeLink}
+                          key={rec.tourId || rec.slug || Math.random()} 
+                          className="block group bg-zinc-50 rounded-2xl p-4 hover:bg-primary transition-all duration-300"
+                        >
+                          <h4 className="text-sm font-extrabold text-zinc-800 group-hover:text-white transition-colors mb-1">
+                            {rec.title}
+                          </h4>
+                          <p className="text-[11px] text-zinc-500 group-hover:text-orange-100/90 transition-colors leading-relaxed font-semibold">
+                            {rec.reason}
+                          </p>
+                          <div className="mt-3 flex items-center gap-1 text-[9px] font-black uppercase text-primary group-hover:text-white transition-colors">
+                            Explore Experience <ChevronRight className="h-3 w-3" />
+                          </div>
+                        </Link>
+                      );
+                    })
                   ) : (
                     <div className="text-center py-6 text-zinc-400 text-xs">
                       No matching set tours found. Contact the AI Assistant via WhatsApp for a custom invoice!

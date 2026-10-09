@@ -39,7 +39,7 @@ export default function ImportBooking({ onSuccess, commSettings }: ImportBooking
   useEffect(() => {
     async function fetchTours() {
       try {
-        const q = query(collection(db, 'tours'), where('status', '==', 'active'));
+        const q = query(collection(db, 'tours'), where('status', 'in', ['published', 'active']));
         const snap = await getDocs(q);
         setTours(snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Tour)));
       } catch (err) {
