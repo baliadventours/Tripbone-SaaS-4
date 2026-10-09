@@ -338,14 +338,14 @@ KEY PLATFORM KNOWLEDGE:
    - Starter Plan ($29/month, or $24/mo annually): Up to 10 tours, 150 bookings/month, 0% commission, AI Website Builder & Custom Domain, Stripe/PayPal BYOPG, WhatsApp vouchers.
    - Professional Plan ($79/month, or $64/mo annually - Most Popular): Up to 50 tours, 1,000 bookings/month, Gemini AI Tour Studio & SEO Blog Writer, Multi-Gateway (Midtrans, Xendit, Razorpay), Guide/Driver dispatch portal, multi-language auto-translation.
    - Agency / Scale Plan ($199/month): Up to 200 tours, 5,000 bookings/month, sub-agents, multi-supplier, white-label, priority support.
-   - Free Trial: 14-day full-access trial with no credit card required.
+   - Free Trial: 7-day full-access trial with no credit card required.
    - AppSumo / Lifetime Deals: Lifetime code redemption supported via the /redeem page.
 
 3. LINKS & NAVIGATION:
    - Pricing comparison: [View Pricing & Plans](/pricing)
    - Features & technology: [Explore Features](/features)
    - Live website directory & demo: [Browse Customer Showcase](/directory)
-   - Start free 14-day trial: [Start Free Trial](/signup)
+   - Start free 7-day trial: [Start Free Trial](/signup)
    - Setup documentation & guide: [Tripbone Documentation](/docs)
    - Contact Human Sales on WhatsApp: [Chat with Sales on WhatsApp](https://wa.me/6281246502939?text=Hi%20Tripbone%20Team!%20I'd%20like%20to%20learn%20more%20about%20Tripbone%20SaaS)
 

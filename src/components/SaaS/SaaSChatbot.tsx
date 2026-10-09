@@ -16,7 +16,7 @@ export default function SaaSChatbot() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'model',
-      parts: `Hi there! 👋 Welcome to **Tripbone SaaS**.\n\nI'm your Tripbone AI Advisor. I can help you explore:\n- **0% Commission Direct Booking Websites**\n- **AI Tour Studio & Itinerary Builder**\n- **BYOPG Payment Gateways** (Stripe, Midtrans, PayPal, etc.)\n- **Pricing Plans & 14-Day Free Trial**\n\nHow can I help you grow your tour business today?`
+      parts: `Hi there! 👋 Welcome to **Tripbone SaaS**.\n\nI'm your Tripbone AI Advisor. I can help you explore:\n- **0% Commission Direct Booking Websites**\n- **AI Tour Studio & Itinerary Builder**\n- **BYOPG Payment Gateways** (Stripe, Midtrans, PayPal, etc.)\n- **Pricing Plans & 7-Day Free Trial**\n\nHow can I help you grow your tour business today?`
     }
   ]);
   const [input, setInput] = useState('');
@@ -235,7 +235,7 @@ export default function SaaSChatbot() {
                     navigate('/signup');
                   }}
                 >
-                  <span>14-day free trial</span>
+                  <span>7-day free trial</span>
                   <ArrowRight className="w-2.5 h-2.5" />
                 </a>
               </div>
