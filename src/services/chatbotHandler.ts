@@ -359,7 +359,7 @@ CONVENTIONS:
     }
   }
 
-  const modelsToTry = ["gemini-3.8-flash", "gemini-2.5-flash"];
+  const modelsToTry = ["gemini-3.1-flash-lite", "gemini-3.8-flash"];
   const keysToTry = [apiKey, process.env.GEMINI_API_KEY].filter(Boolean) as string[];
   const uniqueKeys = Array.from(new Set(keysToTry));
 

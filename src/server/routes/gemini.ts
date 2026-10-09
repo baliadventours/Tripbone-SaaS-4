@@ -772,7 +772,7 @@ router.post("/generate-itinerary", async (req, res) => {
     `;
 
     const response = await generateContentWithFallback(ai, {
-      model: "gemini-3.8-flash",
+      model: "gemini-3.1-flash-lite",
       contents: prompt,
       config: {
         systemInstruction: `You are "Didi", the expert AI Travel Planner. 
@@ -1195,7 +1195,7 @@ router.post("/test-connection", async (req, res) => {
     const { GoogleGenAI } = await import("@google/genai");
 
     // Test with model fallback
-    const modelsToTry = ["gemini-3.8-flash", "gemini-2.5-flash"];
+    const modelsToTry = ["gemini-3.1-flash-lite", "gemini-3.8-flash"];
     let testResponse: any = null;
     let modelUsed = "";
     let lastTestError: any = null;

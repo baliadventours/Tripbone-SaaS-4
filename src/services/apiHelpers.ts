@@ -159,10 +159,10 @@ export async function fetchFromREST(
 // Robust Gemini API helper that falls back to stable alternative models if the primary model is unavailable or overloaded (503/429).
 export async function generateContentWithFallback(ai: any, params: any) {
   const modelsToTry = [
-    "gemini-3.8-flash",
-    "gemini-2.5-flash"
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash"
   ];
-  const initialModel = params.model || "gemini-3.8-flash";
+  const initialModel = params.model || "gemini-3.1-flash-lite";
   const uniqueModels = Array.from(new Set([initialModel, ...modelsToTry]));
 
   let lastError: any = null;
@@ -206,7 +206,7 @@ export async function generateContentWithFallback(ai: any, params: any) {
         try {
           const { GoogleGenAI } = await import("@google/genai");
           const envAi = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY.trim() });
-          for (const fallbackModel of ["gemini-3.8-flash", "gemini-2.5-flash"]) {
+          for (const fallbackModel of ["gemini-3.1-flash-lite", "gemini-3.8-flash"]) {
             try {
               console.log(`[Gemini Fallback Router] Retrying with platform env key and model: ${fallbackModel}...`);
               const response = await envAi.models.generateContent({
