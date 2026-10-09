@@ -91,6 +91,7 @@ const VerifyEmail = lazyWithRetry(() => import('./pages/VerifyEmail'));
 import { useTenantSEO } from './hooks/useTenantSEO';
 
 const Chatbot = lazyWithRetry(() => import('./components/Chatbot'));
+const SaaSChatbot = lazyWithRetry(() => import('./components/SaaS/SaaSChatbot'));
 
 function AppContent() {
   const { isMaster, isAppGate, tenant, tenantId, loading: tenantLoading, setPreviewTenant, isImpersonating, error: tenantError } = useTenant();
@@ -307,7 +308,7 @@ function AppContent() {
           </Suspense>
         </ChunkErrorBoundary>
         <Suspense fallback={null}>
-          <Chatbot />
+          <SaaSChatbot />
         </Suspense>
       </div>
     );

@@ -11,10 +11,12 @@ interface Message {
 }
 
 import { useSettings } from '../lib/SettingsContext';
+import { useTenant } from '../lib/TenantContext';
 import { handleChatbotRequest } from '../services/chatbotService';
 import { getActiveTenantId } from '../lib/firebase';
 
 export default function Chatbot() {
+  const { isMaster, tenant } = useTenant();
   const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -23,6 +25,8 @@ export default function Chatbot() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
+
+  const brandName = settings?.siteName || tenant?.companyName || 'Tour Assistant';
 
   const suggestedActions = [
     { label: "Check booking status", icon: "🔍", action: "I want to check my booking status" },
@@ -35,29 +39,30 @@ export default function Chatbot() {
   const handleAction = (action: { label: string, icon: string, action: string }) => {
     if (action.action === 'whatsapp') {
       const waNumber = (settings?.whatsappNumber || settings?.supportPhone || '+6281234567890').replace(/\D/g, '');
-      const waText = encodeURIComponent("Hi! I have a question about Bali Adventours.");
+      const waText = encodeURIComponent(`Hi! I have a question about ${brandName}.`);
       window.open(`https://wa.me/${waNumber}?text=${waText}`, '_blank');
       return;
     }
     handleSend(action.action);
   };
 
-  // Hide on admin/supplier/agent pages
-  const isHidden = location.pathname.startsWith('/admin') || 
+  // Chatbot belongs strictly to tenant customer storefronts, never on master SaaS platform or admin portals
+  const isHidden = isMaster || 
+                   settings?.enableChatbot === false ||
+                   location.pathname.startsWith('/admin') || 
                    location.pathname.startsWith('/supplier') || 
                    location.pathname.startsWith('/agent');
 
   useEffect(() => {
     if (settings && messages.length === 0) {
-      const brand = settings.siteName || "Bali Adventours";
       setMessages([
         { 
           role: 'model', 
-          parts: `Halo! I'm your virtual assistant. Welcome to ${brand}!\n\nWhat can we help you today?\n1. **Check booking status**\n2. **Book a tour**\n3. **General Questions**\n4. **Chat with Real Person**`
+          parts: `Halo! I'm your virtual assistant. Welcome to ${brandName}!\n\nWhat can we help you today?\n1. **Check booking status**\n2. **Book a tour**\n3. **General Questions**\n4. **Chat with Real Person**`
         }
       ]);
     }
-  }, [settings, messages.length]);
+  }, [settings, messages.length, brandName]);
 
   useEffect(() => {
     const handleToggle = () => setIsOpen(prev => !prev);
@@ -88,7 +93,7 @@ export default function Chatbot() {
     } catch (error: any) {
       console.error('Chat Error:', error);
       const waNumber = (settings?.whatsappNumber || settings?.supportPhone || '+6281246502939').replace(/\D/g, '');
-      const waText = encodeURIComponent(`Hi! I have a question about ${settings?.siteName || "Bali Adventours"}.`);
+      const waText = encodeURIComponent(`Hi! I have a question about ${brandName}.`);
       const waLink = `https://wa.me/${waNumber}?text=${waText}`;
       
       setMessages(prev => [...prev, { 
