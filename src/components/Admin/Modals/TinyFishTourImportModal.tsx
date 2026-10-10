@@ -46,11 +46,11 @@ export const TinyFishTourImportModal: React.FC<TinyFishTourImportModalProps> = (
     try {
       const stepTimer1 = setTimeout(() => {
         setProgressStep('Bypassing anti-bot protection & extracting live page content...');
-      }, 2500);
+      }, 800);
 
       const stepTimer2 = setTimeout(() => {
         setProgressStep('Parsing itinerary, pricing tiers & image galleries into Tripbone schema...');
-      }, 6000);
+      }, 1800);
 
       const response = await fetch('/api/tinyfish/extract-tour', {
         method: 'POST',

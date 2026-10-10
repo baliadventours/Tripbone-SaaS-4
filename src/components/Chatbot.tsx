@@ -48,7 +48,7 @@ export default function Chatbot() {
 
   // Chatbot belongs strictly to tenant customer storefronts, never on master SaaS platform or admin portals
   const isHidden = isMaster || 
-                   settings?.enableChatbot === false ||
+                   (settings as any)?.enableChatbot === false ||
                    location.pathname.startsWith('/admin') || 
                    location.pathname.startsWith('/supplier') || 
                    location.pathname.startsWith('/agent');

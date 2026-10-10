@@ -190,7 +190,7 @@ export async function extractTourFromUrl(
   let pageMarkdown = '';
   let source: 'tinyfish' | 'fallback_crawler' = 'tinyfish';
 
-  // Step 1: Call TinyFish Fetch / Agent API if API key is present
+  // Step 1: Call TinyFish Fetch / Agent API if API key is present (with fast 6s timeout)
   if (apiKey) {
     try {
       console.log(`[TinyFish] Fetching web content via TinyFish API for: ${url}`);
@@ -207,7 +207,7 @@ export async function extractTourFromUrl(
             'X-API-Key': apiKey,
             'Content-Type': 'application/json'
           },
-          timeout: 35000
+          timeout: 6000
         }
       );
 
@@ -233,20 +233,21 @@ export async function extractTourFromUrl(
     }
   }
 
-  // Step 2: Fallback direct fetch if TinyFish key returned empty content
-  if (!pageMarkdown || pageMarkdown.length < 100) {
+  // Step 2: Fallback direct fetch with ultra-fast 2s timeout (skipped for known protected OTAs to ensure instant response)
+  const isProtectedOTA = /viator\.com|getyourguide\.com|tripadvisor\.com|airbnb\.com|klook\.com|expedia\.com/i.test(url);
+  
+  if ((!pageMarkdown || pageMarkdown.length < 100) && !isProtectedOTA) {
     try {
-      console.log(`[TinyFish] Attempting direct fetch fallback for: ${url}`);
+      console.log(`[TinyFish] Attempting fast direct fetch for: ${url}`);
       const directResponse = await axios.get(url, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
           'Accept-Language': 'en-US,en;q=0.9'
         },
-        timeout: 15000,
-        maxRedirects: 5
+        timeout: 2000,
+        maxRedirects: 3
       });
-      // Strip script/style tags for concise extraction
       const rawHtml = String(directResponse.data || '');
       pageMarkdown = rawHtml
         .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
@@ -258,7 +259,7 @@ export async function extractTourFromUrl(
         source = 'fallback_crawler';
       }
     } catch (directErr: any) {
-      console.warn(`[TinyFish] Direct fetch warning: ${directErr.message}`);
+      console.warn(`[TinyFish] Direct fetch bypassed or timed out: ${directErr.message}`);
     }
   }
 
